@@ -52,7 +52,7 @@ instalación limpia, boletín del día en menos de 15 s (SC-002); suite sin disp
 deterministas sin red real y sin reloj del sistema; ningún color, tamaño ni espaciado literal fuera
 del tema; nunca se borra una publicación guardada
 
-**Scale/Scope**: ~1.900 publicaciones en la primera sincronización, 19 fuentes, 9 secciones y 12
+**Scale/Scope**: ~1.900 publicaciones en la primera sincronización, 19 fuentes, 9 secciones y 14
 subsecciones. 2 pantallas nuevas de relleno, 1 pantalla reescrita, 1 panel lateral. ~40 ficheros de
 producción y ~20 de prueba
 

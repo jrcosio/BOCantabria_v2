@@ -74,59 +74,60 @@ cuatro historias necesitan.
 
 **⚠️ CRÍTICO**: ninguna historia puede empezar hasta que esta fase esté completa.
 
-- [ ] T006 [P] Crear los cuatro enumerados de dominio en `MAIN/domain/model/`: `EditionType.kt`
+- [X] T006 [P] Crear los cuatro enumerados de dominio en `MAIN/domain/model/`: `EditionType.kt`
       (`ORD`, `EXT`, `UNKNOWN`), `IdSource.kt` (`BLOB_ID`, `CANONICAL_URL`, `CONTENT_HASH`),
       `ParserWarning.kt` (los cuatro avisos de data-model.md §2) y `SectionColorGroup.kt` (los cinco
       grupos de research.md D-013)
-- [ ] T007 [P] Crear `MAIN/domain/model/Publication.kt` con los catorce campos de data-model.md §2 y
+- [X] T007 [P] Crear `MAIN/domain/model/Publication.kt` con los catorce campos de data-model.md §2 y
       su prueba `TEST/domain/model/PublicationTest.kt`, que verifica los invariantes: clave externa y
       título no vacíos, enlace `https`, ruta de organismo sin elementos vacíos (FR-018)
-- [ ] T008 [P] Crear `MAIN/domain/model/BocSection.kt` y su prueba `TEST/domain/model/BocSectionTest.kt`:
+- [X] T008 [P] Crear `MAIN/domain/model/BocSection.kt` y su prueba `TEST/domain/model/BocSectionTest.kt`:
       código, nombre, nombre corto, sección padre, orden y grupo cromático. La prueba fija el mapeo
       de las nueve secciones sobre los cinco colores de D-013 (FR-043)
-- [ ] T009 [P] Crear `MAIN/domain/model/HomeSelection.kt` (sellado: boletín del día o sección) y su
+- [X] T009 [P] Crear `MAIN/domain/model/HomeSelection.kt` (sellado: boletín del día o sección) y su
       prueba `TEST/domain/model/HomeSelectionTest.kt` (FR-034, FR-035)
-- [ ] T010 [P] Crear `MAIN/domain/model/SyncSummary.kt` con los seis recuentos y las derivadas
+- [X] T010 [P] Crear `MAIN/domain/model/SyncSummary.kt` con los seis recuentos y las derivadas
       `allFailed` e `isComplete`, y su prueba `TEST/domain/model/SyncSummaryTest.kt` (FR-004, FR-027)
-- [ ] T011 [P] Crear `MAIN/domain/model/BulletinHeaderData.kt` —título de la selección, fecha y
+- [X] T011 [P] Crear `MAIN/domain/model/BulletinHeaderData.kt` —título de la selección, fecha y
       recuento— y su prueba `TEST/domain/model/BulletinHeaderDataTest.kt` (FR-032, FR-033)
-- [ ] T012 Declarar los contratos en `MAIN/domain/repository/PublicationRepository.kt` y
+- [X] T012 Declarar los contratos en `MAIN/domain/repository/PublicationRepository.kt` y
       `MAIN/domain/repository/BocSectionRepository.kt` con las firmas de
       `contracts/internal-contracts.md` §1.1. Documentar en KDoc que **nunca lanzan** y que
       `CancellationException` se repropaga
-- [ ] T013 [P] Crear `MAIN/core/util/Clock.kt` con su implementación real y su prueba
-      `TEST/core/util/ClockTest.kt`. Sin esto la caducidad de treinta minutos no es comprobable de
+- [X] T013 [P] Crear `MAIN/core/util/TimeProvider.kt` con su implementación real y su prueba
+      `TEST/core/util/TimeProviderTest.kt` —el nombre evita confundirlo con `java.time.Clock` en el
+      punto de uso—. Sin esto la caducidad de treinta minutos no es comprobable de
       forma determinista (research.md, tabla de *Complexity Tracking*)
-- [ ] T014 [P] Crear `MAIN/core/util/RandomProvider.kt` con su implementación real y su prueba
+- [X] T014 [P] Crear `MAIN/core/util/RandomProvider.kt` con su implementación real y su prueba
       `TEST/core/util/RandomProviderTest.kt`, para que la espera aleatoria del reintento sea
       determinista en pruebas (research.md D-010)
-- [ ] T015 [P] Crear `MAIN/data/source/local/Converters.kt` (`LocalDate` ↔ texto ISO, lista de
+- [X] T015 [P] Crear `MAIN/data/source/local/Converters.kt` (`LocalDate` ↔ texto ISO, lista de
       organismo y conjunto de avisos) y su prueba `TEST/data/source/local/ConvertersTest.kt`,
       incluida la ida y vuelta con caracteres separadores dentro de un nombre de organismo
       (research.md D-004)
-- [ ] T016 Crear las entidades `MAIN/data/source/local/PublicationEntity.kt` y
+- [X] T016 Crear las entidades `MAIN/data/source/local/PublicationEntity.kt` y
       `FeedSyncStateEntity.kt` con las columnas e índices de data-model.md §4.3: clave primaria
       `external_key`, índice **único** sobre `blob_id` cuando no es nulo, e índices sobre
       `publication_date`, `section_code`, `subsection_code`, `edition_type` y el compuesto
       `feed_id` + `publication_date`
-- [ ] T017 Escribir `TEST/data/source/local/PublicationDaoTest.kt` **antes** que el DAO, con
+- [X] T017 Escribir `TEST/data/source/local/PublicationDaoTest.kt` **antes** que el DAO, con
       Robolectric y base en memoria (`@Config(sdk = [ROBOLECTRIC_SDK], application = Application::class)`):
       inserción, actualización que conserva `first_seen_at` y refresca `last_seen_at`, unicidad por
       `blob_id`, consulta del boletín del día, consulta por sección principal que incluye sus
       subsecciones, consulta por subsección, recuento, y **orden estable** con fechas iguales
       (FR-020, FR-028)
-- [ ] T018 Crear `MAIN/data/source/local/PublicationDao.kt`, `FeedSyncStateDao.kt` y
+- [X] T018 Crear `MAIN/data/source/local/PublicationDao.kt`, `FeedSyncStateDao.kt` y
       `BocDatabase.kt` (versión 1, esquema exportado a `app/schemas/`) hasta hacer pasar T017.
       **El DAO no declara ninguna sentencia de borrado de publicaciones**: es lo que garantiza FR-021
       (depende de T015, T016, T017)
-- [ ] T019 [P] Crear `MAIN/data/source/remote/BocFeedCatalog.kt` con las diecinueve definiciones de
+- [X] T019 [P] Crear `MAIN/data/source/remote/BocFeedCatalog.kt` con las diecinueve definiciones de
       data-model.md §4.2 y su prueba `TEST/data/source/remote/BocFeedCatalogTest.kt`, que verifica:
       hay diecinueve entradas, los identificadores son los publicados, **las direcciones están
       escritas literalmente y no compuestas por cálculo**, y entre todas cubren las nueve secciones y
-      las doce subsecciones sin solapes (FR-002, FR-003)
-- [ ] T020 [P] Crear `MAIN/data/repository/BocSectionRepositoryImpl.kt` con el árbol oficial de
+      las catorce subsecciones sin solapes (FR-002, FR-003)
+- [X] T020 [P] Crear `MAIN/data/repository/BocSectionRepositoryImpl.kt` con el árbol oficial de
       secciones y su prueba `TEST/data/repository/BocSectionRepositoryImplTest.kt`: nueve principales,
-      doce subsecciones, orden oficial, y que las secciones 2, 4, 7 y 8 se declaran sin fuente propia
+      catorce subsecciones, orden oficial, y que las secciones 2, 4, 7 y 8 se declaran sin fuente propia
       (FR-043, FR-044)
 - [ ] T021 Retirar la cadena de relleno de la feature 001 (research.md D-015): eliminar de `MAIN/`
       `domain/model/ContentItem.kt`, `domain/repository/ContentRepository.kt`,
