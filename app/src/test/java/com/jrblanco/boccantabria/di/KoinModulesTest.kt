@@ -8,12 +8,20 @@ import com.jrblanco.boccantabria.core.telemetry.AnalyticsTracker
 import com.jrblanco.boccantabria.core.telemetry.CrashReporter
 import com.jrblanco.boccantabria.core.telemetry.NoOpAnalyticsTracker
 import com.jrblanco.boccantabria.core.telemetry.NoOpCrashReporter
+import com.jrblanco.boccantabria.core.util.AppVersionProvider
 import com.jrblanco.boccantabria.core.util.DispatcherProvider
 import com.jrblanco.boccantabria.data.source.local.ContentLocalDataSource
+import com.jrblanco.boccantabria.data.source.local.ConnectivityDataSource
 import com.jrblanco.boccantabria.data.source.remote.ContentRemoteDataSource
+import com.jrblanco.boccantabria.data.source.remote.RemoteConfigDataSource
+import com.jrblanco.boccantabria.data.source.remote.RemoteConfigValues
+import com.jrblanco.boccantabria.domain.repository.AppConfigRepository
+import com.jrblanco.boccantabria.domain.repository.ConnectivityRepository
 import com.jrblanco.boccantabria.domain.repository.ContentRepository
 import com.jrblanco.boccantabria.domain.usecase.GetContentItemsUseCase
+import com.jrblanco.boccantabria.domain.usecase.PrepareStartupUseCase
 import com.jrblanco.boccantabria.ui.home.HomeViewModel
+import com.jrblanco.boccantabria.ui.splash.SplashViewModel
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.koin.android.ext.koin.androidContext
@@ -63,6 +71,13 @@ class KoinModulesTest {
                 module {
                     single<AnalyticsTracker> { NoOpAnalyticsTracker() }
                     single<CrashReporter> { NoOpCrashReporter() }
+                    // Remote Config needs a real FirebaseApp too, which does not exist off-device.
+                    single<RemoteConfigDataSource> {
+                        object : RemoteConfigDataSource {
+                            override suspend fun fetchValues() =
+                                RemoteConfigValues(minSupportedVersionCode = 0L, maintenanceMessage = "")
+                        }
+                    }
                 },
             ),
             allowOverride = true,
@@ -72,6 +87,12 @@ class KoinModulesTest {
         // both data sources. The rest are declarations nothing injects yet, checked one by one
         // so an unreachable binding still fails here rather than the first time it is needed.
         koin.get<HomeViewModel>()
+        koin.get<SplashViewModel>()
+        koin.get<PrepareStartupUseCase>()
+        koin.get<AppConfigRepository>()
+        koin.get<ConnectivityRepository>()
+        koin.get<ConnectivityDataSource>()
+        koin.get<AppVersionProvider>()
         koin.get<ContentRepository>()
         koin.get<GetContentItemsUseCase>()
         koin.get<ContentRemoteDataSource>()
@@ -92,6 +113,11 @@ class KoinModulesTest {
             DispatcherProvider::class,
             GetContentItemsUseCase::class,
             AnalyticsTracker::class,
+            CrashReporter::class,
+            AppConfigRepository::class,
+            ConnectivityRepository::class,
+            AppVersionProvider::class,
+            PrepareStartupUseCase::class,
         )
     }
 }

@@ -66,6 +66,9 @@ dependencies {
 
     // --- Corrutinas ---
     implementation(libs.kotlinx.coroutines.android)
+    // Provides Task.await(), used to consume the Firebase Remote Config API from a coroutine.
+    // Declared explicitly rather than relied on transitively: the code imports it directly.
+    implementation(libs.kotlinx.coroutines.play.services)
 
     // --- Firebase (BOM gobierna las versiones) ---
     implementation(platform(libs.firebase.bom))
