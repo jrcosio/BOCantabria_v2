@@ -232,6 +232,20 @@ tenga su fichero de prueba. Si añades una clase de dominio sin test, la build f
 - El splash del sistema recorta el icono a un círculo: el escudo debe ir inscrito en la zona segura
   (192 dp dentro de un lienzo de 288). Para eso existe `ic_splash_emblem`.
 
+- **`setContent` solo se llama una vez por prueba.** `createAndroidComposeRule<MainActivity>()`
+  lanza la actividad real, que ya pone su contenido: llamar a `composeRule.setContent` encima
+  lanza `IllegalStateException`. Si necesitas montar tú la composición —para inyectar un
+  `NavHostController` o forzar una configuración— usa `createComposeRule()`, que arranca una
+  actividad en blanco. Y si una prueba necesita capturar dos escenarios, hazlo dentro de **una
+  sola** llamada a `setContent`.
+- **El gesto de Atrás no es comprobable de forma fiable en una tanda larga.** Se intentaron tres
+  mecanismos y los tres fallaron por razones distintas: `onBackPressedDispatcher.onBackPressed()`
+  solo ejecuta las devoluciones registradas y con retroceso predictivo quien cierra la actividad es
+  la plataforma; `Espresso.pressBackUnconditionally()` exige foco de ventana que no siempre llega; y
+  la acción global del sistema tampoco alcanzó la app dentro de la suite. Lo que esta aplicación
+  controla es la **pila de retroceso**, así que es eso lo que se afirma (`SplashBackStackTest`); el
+  cierre efectivo es comportamiento de Android y se comprueba a mano según `quickstart.md`.
+
 **Intermitencia conocida** — `SplashRestorationTest` falló una vez en cinco ejecuciones con
 `Activity never becomes requested state "[DESTROYED]"`. Es un tiempo de espera agotado dentro de
 `recreate()`, no la aserción de la prueba, y solo ocurrió en una tanda completa de 13 minutos; en

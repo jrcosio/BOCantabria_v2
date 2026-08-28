@@ -94,7 +94,9 @@ Contrastar contra `docs/diseno/Screen_Inicial_y_carga.png`: proporciones del esc
 `BOC`, las dos líneas de la denominación, la línea divisoria y **los dos colores de la autoría**.
 El texto de autoría es el acordado en la especificación, no el de la imagen.
 
-**Retroceso** (FR-007):
+**Retroceso** (FR-007) — **paso manual obligatorio**: la prueba automática afirma que la portada
+sale de la pila de retroceso, que es lo que esta feature controla; que la aplicación se cierre al no
+quedar nada debajo es comportamiento de Android y se confirma aquí:
 
 ```bash
 $ADB shell input keyevent KEYCODE_BACK
