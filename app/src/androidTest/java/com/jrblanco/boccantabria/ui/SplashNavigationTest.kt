@@ -9,7 +9,8 @@ import com.jrblanco.boccantabria.MainActivity
 import com.jrblanco.boccantabria.fake.FakeConnectivityDataSource
 import com.jrblanco.boccantabria.fake.FakeRemoteConfigDataSource
 import com.jrblanco.boccantabria.fake.KoinOverrideRule
-import com.jrblanco.boccantabria.fake.startupGraphOverrides
+import com.jrblanco.boccantabria.fake.FakeBocRemoteDataSource
+import com.jrblanco.boccantabria.fake.testGraphOverrides
 import com.jrblanco.boccantabria.ui.splash.TAG_SPLASH_ROOT
 import org.junit.Rule
 import org.junit.Test
@@ -24,7 +25,7 @@ class SplashNavigationTest {
     private val remoteConfig = FakeRemoteConfigDataSource()
 
     @get:Rule(order = 0)
-    val koinRule = KoinOverrideRule(startupGraphOverrides(connectivity, remoteConfig))
+    val koinRule = KoinOverrideRule(testGraphOverrides(FakeBocRemoteDataSource()))
 
     @get:Rule(order = 1)
     val composeRule = createAndroidComposeRule<MainActivity>()
@@ -41,6 +42,6 @@ class SplashNavigationTest {
 
     private companion object {
         const val TIMEOUT_MILLIS = 10_000L
-        const val HOME_TITLE = "BOCantabria"
+        const val HOME_TITLE = "BOC Cantabria"
     }
 }

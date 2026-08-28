@@ -78,17 +78,22 @@ core/
   util/       DispatcherProvider, AppVersionProvider y utilidades transversales
 data/
   repository/     Implementaciones de las interfaces de domain
-  source/local/   Fuentes locales (+ entidades)
-  source/remote/  Fuentes remotas (+ DTOs)
+  source/local/   Room: BocDatabase, entidades, DAOs y Converters
+  source/remote/  OkHttp, el catálogo de las 19 fuentes, el analizador y el normalizador
   telemetry/      Implementaciones de Firebase. ÚNICO sitio que toca el SDK
 domain/
-  model/          Modelos de dominio, Kotlin puro (AppResult, DomainError, ContentItem)
+  model/          Modelos de dominio, Kotlin puro (AppResult, DomainError, Publication,
+                  BocSection, HomeSelection, SyncSummary…)
   repository/     Interfaces de repositorio (contratos)
   usecase/        Casos de uso, una operación por clase
 ui/
   splash/         Arranque: SplashScreen + SplashViewModel + SplashUiState
-  home/           Pantalla: HomeScreen + HomeViewModel + HomeUiState
-  navigation/     Rutas tipadas y NavHost (el arranque es el destino inicial)
+  main/           MainShell: panel lateral + barra inferior alrededor del NavHost interno
+  home/           Inicio: HomeScreen + HomeViewModel + HomeUiState + component/
+  sections/       Panel lateral de secciones del BOC
+  search/         Marcador de posición «Próximamente»
+  saved/          Marcador de posición «Próximamente»
+  navigation/     Rutas tipadas, NavHost exterior y barra inferior
 BOCantabriaApp    Application: arranca Koin
 MainActivity      Anfitrión de la navegación Compose
 ```
@@ -165,11 +170,32 @@ Composable → ViewModel → UseCase → Repository (interfaz en domain)
 - Las excepciones **no** salen de `data`: se capturan y se traducen ahí. `CancellationException`
   se repropaga siempre.
 
+### Capa de datos
+
+- **Persistencia: Room.** `BocDatabase` es la única fuente de verdad de lo que la pantalla
+  muestra. La pantalla observa la base de datos; la sincronización solo escribe.
+- **Red: OkHttp a secas**, sin Retrofit. Diecinueve GET de XML crudo, máximo cuatro simultáneos.
+- **El XML se analiza con DOM de `javax.xml.parsers`**, no con `XmlPullParser`, para que el
+  analizador sea Kotlin puro y sus pruebas corran sin emulador. Va endurecido en dos capas: una
+  guarda de texto contra `<!DOCTYPE` y `<!ENTITY` —portátil— y el endurecimiento de la fábrica,
+  cada bandera dentro de un `runCatching`, porque la JVM y Android no aceptan las mismas.
+- **Nunca se borra una publicación.** El DAO no declara ninguna sentencia de borrado, y eso es
+  deliberado: una fuente solo publica sus últimos cien anuncios. Si aparece un `@Query` de borrado
+  en una revisión, hay que rechazarlo.
+- **La sección la manda la fuente**, no el campo `categorias`, que se guarda en crudo y solo sirve
+  para enriquecer y verificar. Razón: el feed 4.3 trae entradas con los componentes permutados.
+- `java.time` funciona con `minSdk 24` gracias al **azucarado** (`desugar_jdk_libs`).
+
 ### Dependencias Gradle
 
 - **Todas** en `gradle/libs.versions.toml`. Nunca una coordenada o versión literal dentro de
   un `build.gradle.kts`.
-- Familias con BOM (Compose, Firebase, Koin): sus artefactos van **sin versión**.
+- Familias con BOM (Compose, Firebase, Koin, OkHttp): sus artefactos van **sin versión**.
+- La versión de KSP lleva el Kotlin del proyecto como prefijo (`2.2.10-2.0.2`): plugin y compilador
+  van atados. Al subir Kotlin hay que subir KSP en el mismo cambio.
+- `gradle.properties` lleva `android.disallowKotlinSourceSets=false`. AGP 9 prohíbe que un plugin
+  añada fuentes por `kotlin.sourceSets` y KSP hace justo eso con sus directorios generados; es la
+  vía que AGP documenta. Cuando KSP migre a `android.sourceSets`, la bandera sobra.
 
 ### Firebase
 
@@ -203,9 +229,11 @@ borrar un test para que pase la build.
 - Todo bug corregido lleva un test de regresión que falla **antes** del arreglo.
 - Tests deterministas: sin red real, sin reloj del sistema, sin depender del orden.
 
-**Reglas de arquitectura** (`ArchitectureRulesTest`, Konsist): seis reglas hacen cumplir la
-separación de capas y exigen que toda clase de dominio de nivel superior y todo `ViewModel`
-tenga su fichero de prueba. Si añades una clase de dominio sin test, la build falla.
+**Reglas de arquitectura** (`ArchitectureRulesTest`, Konsist): **ocho** reglas —el texto decía seis
+y quedó desfasado cuando la feature 002 añadió las dos del tema—. Hacen cumplir la separación de
+capas, que solo `data` toque Firebase, que solo `core/ui/theme` importe `Color`, que nada dependa
+del tema del sistema, y que toda clase de dominio de nivel superior y todo `ViewModel` tenga su
+fichero de prueba. Si añades una clase de dominio sin test, la build falla.
 
 **Trampas conocidas al escribir tests** — estas costaron tiempo, no las repitas:
 
@@ -231,6 +259,17 @@ tenga su fichero de prueba. Si añades una clase de dominio sin test, la build f
   aplica. Fija también `aspectRatio`.
 - El splash del sistema recorta el icono a un círculo: el escudo debe ir inscrito en la zona segura
   (192 dp dentro de un lienzo de 288). Para eso existe `ic_splash_emblem`.
+- **MockWebServer habla HTTP y `BocFeedDefinition` exige HTTPS.** Relajar la invariante para que
+  encajara la prueba sería comprobar algo que la aplicación no hace, así que el servidor de pruebas
+  sirve TLS con `okhttp-tls` y un certificado que el cliente de la prueba confía.
+- **Comparar un `Long?` con `assertEquals` y un literal sin `L` nunca coincide**: el literal se
+  autoboxea a `Integer` y `assertEquals(Object, Object)` falla. Con tipos no nulos no pasa, porque
+  ahí resuelve la sobrecarga primitiva.
+- **El conjunto básico de iconos de Material no está en el classpath** con este BOM: no existe
+  `androidx.compose.material.icons`. Los diecinueve iconos son vectores propios en `RES/drawable`,
+  con el trazado tomado de Material Symbols sin modificar. El `android:fillColor` de un vector es
+  un marcador de posición que Compose tiñe en el punto de uso; no cuenta como color literal.
+- **`ksp { }` es una extensión de proyecto, no de `android { }`.** Ponerla dentro no compila.
 
 - **`setContent` solo se llama una vez por prueba.** `createAndroidComposeRule<MainActivity>()`
   lanza la actividad real, que ya pone su contenido: llamar a `composeRule.setContent` encima
@@ -287,5 +326,9 @@ Antes de dar una feature por terminada, en este orden:
   `google-services.json` está registrado con ese package exacto en el proyecto Firebase
   `bocantabria-6e90f`. **No lo renombres** sin registrar antes una app nueva en la consola de
   Firebase.
+- **Fuentes del BOC**: `Datos_modelo/BOC_Cantabria_Consumo_Feeds_RSS.md` es la fuente de verdad del
+  formato. Las muestras de prueba en `app/src/test/resources/fixtures/` se tomaron del servicio real
+  e incluyen las anomalías que importan: el feed 4.3 con las categorías permutadas y el 8.1 vacío.
+  Si el servicio cambia de forma, se actualizan las muestras y las pruebas lo dicen.
 - `Datos_modelo/` contiene material de referencia y **no se versiona**.
 - AGP 9.x aplica Kotlin de forma integrada: no existe ni hace falta el plugin `kotlin-android`.

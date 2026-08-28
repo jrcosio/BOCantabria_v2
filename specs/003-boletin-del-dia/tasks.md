@@ -129,7 +129,7 @@ cuatro historias necesitan.
       secciones y su prueba `TEST/data/repository/BocSectionRepositoryImplTest.kt`: nueve principales,
       catorce subsecciones, orden oficial, y que las secciones 2, 4, 7 y 8 se declaran sin fuente propia
       (FR-043, FR-044)
-- [ ] T021 Retirar la cadena de relleno de la feature 001 (research.md D-015): eliminar de `MAIN/`
+- [X] T021 Retirar la cadena de relleno de la feature 001 (research.md D-015): eliminar de `MAIN/`
       `domain/model/ContentItem.kt`, `domain/repository/ContentRepository.kt`,
       `domain/usecase/GetContentItemsUseCase.kt`, `data/repository/ContentRepositoryImpl.kt`,
       `data/source/remote/ContentItemDto.kt`, `ContentRemoteDataSource.kt`,
@@ -140,7 +140,7 @@ cuatro historias necesitan.
       `TEST/integration/ContentFlowIntegrationTest.kt` y
       `ATEST/fake/FakeContentRemoteDataSource.kt`. Es sustitución, no supresión: lo que cubrían lo
       cubren las pruebas de la cadena real (depende de T012)
-- [ ] T022 Actualizar el grafo tras la retirada: `MAIN/core/di/DataModule.kt`, `DomainModule.kt` y
+- [X] T022 Actualizar el grafo tras la retirada: `MAIN/core/di/DataModule.kt`, `DomainModule.kt` y
       `CoreModule.kt` (registrar `Clock`, `RandomProvider`, base de datos, DAOs y el repositorio de
       secciones mediante **funciones factoría en `data`**, porque `core.di` no puede importar el
       SDK); `TEST/di/KoinModulesTest.kt` (ampliar `CROSS_MODULE_TYPES` y la lista de `koin.get<…>()`,
@@ -226,38 +226,38 @@ organismo, su título y su fecha, y la cabecera con la fecha de la última edici
       `ObservePublicationsUseCase.kt`, `ObserveBulletinHeaderUseCase.kt`,
       `RefreshPublicationsUseCase.kt` y `GetBocSectionsUseCase.kt`, cada uno con un único
       `operator fun invoke` (depende de T012, T033)
-- [ ] T035 [US1] Registrar en `MAIN/core/di/DataModule.kt`, `DomainModule.kt` y `UiModule.kt` el
+- [X] T035 [US1] Registrar en `MAIN/core/di/DataModule.kt`, `DomainModule.kt` y `UiModule.kt` el
       cliente HTTP, la fuente remota, el analizador, el normalizador, el repositorio de publicaciones,
       los cuatro casos de uso y `HomeViewModel`; y ampliar `TEST/di/KoinModulesTest.kt` en
       consecuencia (depende de T034)
-- [ ] T036 [US1] Reescribir `MAIN/ui/home/HomeUiState.kt` como la `data class` de data-model.md §5,
+- [X] T036 [US1] Reescribir `MAIN/ui/home/HomeUiState.kt` como la `data class` de data-model.md §5,
       con el sellado `HomeContent` dentro y `isRefreshing` e `isOffline` **fuera**, porque son ejes
       independientes del contenido (FR-026, FR-041)
-- [ ] T037 [US1] Reescribir `MAIN/ui/home/HomeViewModel.kt` hasta hacer pasar T028: observa
+- [X] T037 [US1] Reescribir `MAIN/ui/home/HomeViewModel.kt` hasta hacer pasar T028: observa
       publicaciones y cabecera, distingue arranque en frío de arranque con caché (research.md D-009),
       y registra la vista de pantalla (depende de T034, T036)
-- [ ] T038 [P] [US1] Crear `MAIN/ui/home/component/PublicationCard.kt` y `PublicationCardSkeleton.kt`
+- [X] T038 [P] [US1] Crear `MAIN/ui/home/component/PublicationCard.kt` y `PublicationCardSkeleton.kt`
       según el apartado 12.1 y el contrato visual: línea de sección de 4 dp con el color del grupo,
       organismo en `labelMedium` a dos líneas, título en `titleMedium` a cuatro, fecha con icono, y
       las acciones abajo a la derecha. Sin estado, todo por parámetro. Ni un literal de color, tamaño
       o espaciado (FR-037, FR-038, FR-039, FR-058)
-- [ ] T039 [P] [US1] Crear `MAIN/ui/home/component/BulletinHeader.kt` según el apartado 14.3: fondo
+- [X] T039 [P] [US1] Crear `MAIN/ui/home/component/BulletinHeader.kt` según el apartado 14.3: fondo
       `primary`, título en `headlineLarge`, fecha en formato largo español y distintivo perfilado con
       **el recuento de publicaciones, no un número de boletín** (FR-032, FR-033)
-- [ ] T040 [P] [US1] Crear `MAIN/ui/home/component/HomeTopBar.kt` con la composición de FR-031: menú
+- [X] T040 [P] [US1] Crear `MAIN/ui/home/component/HomeTopBar.kt` con la composición de FR-031: menú
       al inicio, escudo de 34 dp y título, lupa e información al final. **Sin campana**
-- [ ] T041 [US1] Reescribir `MAIN/ui/home/HomeScreen.kt` componiendo lo anterior sobre `Scaffold`, con
+- [X] T041 [US1] Reescribir `MAIN/ui/home/HomeScreen.kt` componiendo lo anterior sobre `Scaffold`, con
       los cuatro estados del contenido y las etiquetas de prueba de
       `contracts/internal-contracts.md` §4.3 (depende de T037, T038, T039, T040)
-- [ ] T042 [P] [US1] Escribir `ATEST/ui/home/PublicationCardTest.kt` con `createComposeRule()`:
+- [X] T042 [P] [US1] Escribir `ATEST/ui/home/PublicationCardTest.kt` con `createComposeRule()`:
       organismo, título largo a cuatro líneas, fecha, línea de sección y las dos acciones (FR-064)
-- [ ] T043 [P] [US1] Escribir `ATEST/ui/home/HomeContentTest.kt` con `createComposeRule()`: esqueletos,
+- [X] T043 [P] [US1] Escribir `ATEST/ui/home/HomeContentTest.kt` con `createComposeRule()`: esqueletos,
       contenido, vacío y error con su acción de reintentar, sobre el componible sin estado y sin
       grafo (FR-064)
-- [ ] T044 [P] [US1] Escribir `ATEST/ui/BocRssParserDeviceTest.kt`: prueba de humo que confirma que el
+- [X] T044 [P] [US1] Escribir `ATEST/ui/BocRssParserDeviceTest.kt`: prueba de humo que confirma que el
       analizador también funciona en un dispositivo real, con las banderas de seguridad que Android
       sí acepta. Sin ella, research.md D-003 sería una suposición
-- [ ] T045 [US1] Escribir `TEST/integration/BulletinFlowIntegrationTest.kt`, que sustituye al de la
+- [X] T045 [US1] Escribir `TEST/integration/BulletinFlowIntegrationTest.kt`, que sustituye al de la
       feature 001: grafo real con base en memoria y fuente remota doble, recorriendo
       `HomeViewModel → caso de uso → repositorio → analizador → base de datos` (depende de T035)
 
@@ -276,30 +276,30 @@ de inmediato, con aviso de falta de conexión.
 
 ### Tests for User Story 2 ⚠️
 
-- [ ] T046 [P] [US2] Ampliar `TEST/data/repository/PublicationRepositoryImplTest.kt` con la caducidad
+- [X] T046 [P] [US2] Ampliar `TEST/data/repository/PublicationRepositoryImplTest.kt` con la caducidad
       de treinta minutos usando el `Clock` inyectado: caché fresca no toca la red, caché caducada sí,
       y `force = true` sincroniza siempre (FR-023, FR-024)
-- [ ] T047 [P] [US2] Ampliar `TEST/ui/home/HomeViewModelTest.kt`: `isOffline` cuando el resumen dice
+- [X] T047 [P] [US2] Ampliar `TEST/ui/home/HomeViewModelTest.kt`: `isOffline` cuando el resumen dice
       que todas las fuentes fallaron pero hay contenido; `isRefreshing` durante la actualización sin
       que el contenido se vacíe; y que dos gestos seguidos no lanzan dos sincronizaciones (FR-025,
       FR-026, FR-041)
 
 ### Implementation for User Story 2
 
-- [ ] T048 [P] [US2] Crear `MAIN/core/ui/component/OfflineBanner.kt` según el apartado 26.5: icono de
+- [X] T048 [P] [US2] Crear `MAIN/core/ui/component/OfflineBanner.kt` según el apartado 26.5: icono de
       sin conexión, forma `BocBannerShape`, texto breve, **y que no tapa el contenido** (FR-041)
-- [ ] T049 [US2] Implementar en `MAIN/ui/home/HomeViewModel.kt` la caducidad y las banderas hasta
+- [X] T049 [US2] Implementar en `MAIN/ui/home/HomeViewModel.kt` la caducidad y las banderas hasta
       hacer pasar T046 y T047: sincronización al abrir solo si la caché está caducada, guarda contra
       sincronizaciones simultáneas, y `isOffline` a partir de `SyncSummary.allFailed`
       (depende de T037, T046, T047)
-- [ ] T050 [US2] Añadir a `MAIN/ui/home/HomeScreen.kt` el gesto de deslizar para refrescar con
+- [X] T050 [US2] Añadir a `MAIN/ui/home/HomeScreen.kt` el gesto de deslizar para refrescar con
       indicador lineal fino bajo la barra superior, manteniendo el contenido visible durante toda la
       actualización, y colocar el aviso de falta de conexión (FR-024, FR-026, FR-041)
       (depende de T041, T048, T049)
-- [ ] T051 [P] [US2] Ampliar `ATEST/ui/home/HomeContentTest.kt` con los dos estados nuevos: aviso de
+- [X] T051 [P] [US2] Ampliar `ATEST/ui/home/HomeContentTest.kt` con los dos estados nuevos: aviso de
       falta de conexión con contenido a la vista, y actualización en curso sin que el contenido
       desaparezca (FR-064)
-- [ ] T052 [P] [US2] Emitir la telemetría de sincronización desde
+- [X] T052 [P] [US2] Emitir la telemetría de sincronización desde
       `MAIN/data/repository/PublicationRepositoryImpl.kt` a través de `AnalyticsTracker`: evento
       `boc_sync` con `succeeded`, `failed`, `inserted` y `updated`; los fallos de fuente, a
       `CrashReporter` como no fatales. **Ningún dato personal** (FR-029)
@@ -318,41 +318,41 @@ subsección y ver que la lista y la cabecera cambian; el chip «Todo» devuelve 
 
 ### Tests for User Story 3 ⚠️
 
-- [ ] T053 [P] [US3] Escribir `TEST/ui/sections/SectionsViewModelTest.kt` con `runTest` y Turbine:
+- [X] T053 [P] [US3] Escribir `TEST/ui/sections/SectionsViewModelTest.kt` con `runTest` y Turbine:
       árbol completo al inicio, filtrado por texto que **expande automáticamente** las secciones cuyas
       subsecciones coinciden, desplegar y contraer, y filtro sin coincidencias (FR-044, FR-045)
-- [ ] T054 [P] [US3] Ampliar `TEST/ui/home/HomeViewModelTest.kt` con la selección: leerla del
+- [X] T054 [P] [US3] Ampliar `TEST/ui/home/HomeViewModelTest.kt` con la selección: leerla del
       `SavedStateHandle`, cambiar de boletín del día a sección, sección sin publicaciones que da
       `Empty` y no `Error`, y que la cabecera pasa a nombrar la sección (FR-035, FR-040, FR-048)
 
 ### Implementation for User Story 3
 
-- [ ] T055 [P] [US3] Crear `MAIN/ui/sections/SectionsUiState.kt` con `SectionRow` según
+- [X] T055 [P] [US3] Crear `MAIN/ui/sections/SectionsUiState.kt` con `SectionRow` según
       data-model.md §5
-- [ ] T056 [US3] Crear `MAIN/ui/sections/SectionsViewModel.kt` hasta hacer pasar T053, y registrarlo
+- [X] T056 [US3] Crear `MAIN/ui/sections/SectionsViewModel.kt` hasta hacer pasar T053, y registrarlo
       en `MAIN/core/di/UiModule.kt` y en `TEST/di/KoinModulesTest.kt` (depende de T053, T055)
-- [ ] T057 [US3] Crear `MAIN/ui/sections/SectionsDrawerContent.kt` según el apartado 16: campo de
+- [X] T057 [US3] Crear `MAIN/ui/sections/SectionsDrawerContent.kt` según el apartado 16: campo de
       filtro, filas de 72 dp con icono de 28 dp, número y nombre en `titleMedium`, chevron con
       animación de rotación, y subsecciones sobre `surfaceSoft` con radio 12 dp y sangría.
       **Sin campanas y sin tarjeta de alertas** (FR-043 … FR-047) (depende de T004, T055)
-- [ ] T058 [P] [US3] Crear `MAIN/ui/home/component/SectionFilterChips.kt` según el apartado 14.4:
+- [X] T058 [P] [US3] Crear `MAIN/ui/home/component/SectionFilterChips.kt` según el apartado 14.4:
       fila con desplazamiento horizontal, «Todo» más las nueve secciones con su nombre corto, y el
       estado seleccionado marcado por forma además de por color (FR-036, FR-038)
-- [ ] T059 [US3] Modificar `MAIN/ui/navigation/Routes.kt` para que `Home` sea `data class` con
+- [X] T059 [US3] Modificar `MAIN/ui/navigation/Routes.kt` para que `Home` sea `data class` con
       `sectionCode` y `subsectionCode` opcionales, y actualizar `BOCantabriaNavHost.kt`: el arranque
       navega a `Home()` con `popUpTo(Splash) { inclusive = true }` **sin cambios**, y elegir sección
       navega con `popUpTo<Home> { inclusive = true }` para que la pila conserve una sola entrada de
       Inicio (research.md D-014) (FR-046, FR-057)
-- [ ] T060 [US3] Crear `MAIN/ui/main/MainShell.kt`: `ModalNavigationDrawer` con el panel, alrededor
+- [X] T060 [US3] Crear `MAIN/ui/main/MainShell.kt`: `ModalNavigationDrawer` con el panel, alrededor
       del `NavHost`, con el arranque **fuera** del armazón (research.md D-016)
       (depende de T057, T059)
-- [ ] T061 [US3] Conectar la selección en `MAIN/ui/home/HomeViewModel.kt` leyéndola del
+- [X] T061 [US3] Conectar la selección en `MAIN/ui/home/HomeViewModel.kt` leyéndola del
       `SavedStateHandle` hasta hacer pasar T054, y enlazar los chips y el panel a la navegación
       (depende de T054, T058, T060)
-- [ ] T062 [P] [US3] Escribir `ATEST/ui/sections/SectionsDrawerTest.kt` con `createComposeRule()`:
+- [X] T062 [P] [US3] Escribir `ATEST/ui/sections/SectionsDrawerTest.kt` con `createComposeRule()`:
       las nueve secciones, desplegar y contraer, filtrar por texto, y que elegir emite el evento con
       el código correcto (FR-064)
-- [ ] T063 [US3] Escribir `ATEST/ui/HomeNavigationTest.kt` con `createAndroidComposeRule<MainActivity>()`
+- [X] T063 [US3] Escribir `ATEST/ui/HomeNavigationTest.kt` con `createAndroidComposeRule<MainActivity>()`
       y `testGraphOverrides()`: tras el arranque, abrir el panel desde la barra superior, elegir una
       subsección y comprobar que la cabecera y la lista cambian. **Una sola llamada a `setContent`**
       (trampa documentada en `CLAUDE.md`) (FR-064)
@@ -371,22 +371,22 @@ ninguna deja sin respuesta.
 
 ### Tests for User Story 4 ⚠️
 
-- [ ] T064 [P] [US4] Escribir `ATEST/ui/BottomBarNavigationTest.kt`: los tres destinos navegan, la
+- [X] T064 [P] [US4] Escribir `ATEST/ui/BottomBarNavigationTest.kt`: los tres destinos navegan, la
       barra marca el activo, y **no existe un destino de Avisos** (FR-049, FR-050)
-- [ ] T065 [P] [US4] Ampliar `ATEST/ui/home/PublicationCardTest.kt`: guardar invoca su callback y
+- [X] T065 [P] [US4] Ampliar `ATEST/ui/home/PublicationCardTest.kt`: guardar invoca su callback y
       pulsar el cuerpo de la tarjeta **no** invoca ninguna navegación (FR-055, FR-056)
 
 ### Implementation for User Story 4
 
-- [ ] T066 [P] [US4] Crear `MAIN/core/ui/component/ComingSoonMessage.kt` con la composición de estado
+- [X] T066 [P] [US4] Crear `MAIN/core/ui/component/ComingSoonMessage.kt` con la composición de estado
       vacío del apartado 26.3, reutilizable por las dos pantallas de relleno (FR-051)
-- [ ] T067 [P] [US4] Crear `MAIN/ui/search/SearchScreen.kt` y `MAIN/ui/saved/SavedScreen.kt` usando
+- [X] T067 [P] [US4] Crear `MAIN/ui/search/SearchScreen.kt` y `MAIN/ui/saved/SavedScreen.kt` usando
       `ComingSoonMessage`, y añadir `Route.Search` y `Route.Saved` a
       `MAIN/ui/navigation/Routes.kt` y al `NavHost` (FR-051) (depende de T059, T066)
-- [ ] T068 [US4] Crear `MAIN/ui/navigation/BocBottomBar.kt` según el apartado 10.1 con **tres**
+- [X] T068 [US4] Crear `MAIN/ui/navigation/BocBottomBar.kt` según el apartado 10.1 con **tres**
       destinos, `launchSingleTop`, `popUpTo(Home) { saveState = true }` y `restoreState = true`;
       integrarla en `MainShell.kt` (FR-049, FR-050) (depende de T060, T067)
-- [ ] T069 [US4] Conectar las acciones aplazadas en `MAIN/ui/home/HomeScreen.kt`: la lupa muestra un
+- [X] T069 [US4] Conectar las acciones aplazadas en `MAIN/ui/home/HomeScreen.kt`: la lupa muestra un
       aviso «Próximamente», el icono de información está presente y no hace nada, guardar en la
       tarjeta muestra el aviso, y compartir lanza la hoja del sistema con el enlace del documento
       (FR-052 … FR-055) (depende de T041, T068)
@@ -402,19 +402,19 @@ ninguna deja sin respuesta.
 
 **Purpose**: dejar la documentación sin contradecir al código y pasar las cuatro puertas.
 
-- [ ] T071 Actualizar `docs/diseno/especificaciones-diseno.md` con las cuatro desviaciones acordadas,
+- [X] T071 Actualizar `docs/diseno/especificaciones-diseno.md` con las cuatro desviaciones acordadas,
       cada una con su motivo (FR-060): **§10.1** tres destinos en lugar de cuatro, Avisos aplazado;
       **§10.2 y §14.2** nueva composición de la barra superior, sin campana; **§14.3** el distintivo
       muestra el recuento porque el servicio oficial no publica el número de boletín en estas fuentes;
       **§16** «Pantalla Secciones» pasa a ser panel lateral, sin campanas ni tarjeta de alertas, con
       una frase que aclare que no choca con §33 porque este panel no lleva cabecera de autor.
       Ajustar también la checklist del §36
-- [ ] T072 [P] Actualizar `CLAUDE.md`: los paquetes nuevos en la sección de arquitectura, Room y
+- [X] T072 [P] Actualizar `CLAUDE.md`: los paquetes nuevos en la sección de arquitectura, Room y
       OkHttp en la de dependencias, la nota de que la elección de datos ya está tomada, y **corregir
       que las reglas de Konsist son ocho, no seis** (el texto quedó desfasado en el commit `f42fe40`)
-- [ ] T073 [P] Actualizar `README.md`: estado de la feature, recuento de pruebas, y sustituir «Datos:
+- [X] T073 [P] Actualizar `README.md`: estado de la feature, recuento de pruebas, y sustituir «Datos:
       *Por decidir*» por la decisión tomada
-- [ ] T074 Revisar la lista blanca `DOMAIN_CLASSES_WITHOUT_BEHAVIOUR` de
+- [X] T074 Revisar la lista blanca `DOMAIN_CLASSES_WITHOUT_BEHAVIOUR` de
       `TEST/architecture/ArchitectureRulesTest.kt`: retirar `ContentItem`, que ya no existe, y **no
       añadir** ninguna clase nueva salvo que se justifique por escrito. Cada entrada es un agujero en
       SC-011

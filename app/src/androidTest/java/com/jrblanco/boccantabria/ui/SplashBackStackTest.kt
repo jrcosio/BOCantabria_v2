@@ -5,10 +5,9 @@ import androidx.compose.ui.test.onAllNodesWithText
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.rememberNavController
 import com.jrblanco.boccantabria.core.ui.theme.BOCantabriaTheme
-import com.jrblanco.boccantabria.fake.FakeConnectivityDataSource
-import com.jrblanco.boccantabria.fake.FakeRemoteConfigDataSource
+import com.jrblanco.boccantabria.fake.FakeBocRemoteDataSource
 import com.jrblanco.boccantabria.fake.KoinOverrideRule
-import com.jrblanco.boccantabria.fake.startupGraphOverrides
+import com.jrblanco.boccantabria.fake.testGraphOverrides
 import com.jrblanco.boccantabria.ui.navigation.BOCantabriaNavHost
 import com.jrblanco.boccantabria.ui.navigation.Route
 import org.junit.Assert.assertEquals
@@ -33,11 +32,10 @@ import org.junit.Test
  */
 class SplashBackStackTest {
 
-    private val connectivity = FakeConnectivityDataSource(online = true)
-    private val remoteConfig = FakeRemoteConfigDataSource()
-
+    // The whole chain is replaced, not just the startup one: since this feature Inicio reads the
+    // bulletin, and a test that let it reach the real service would depend on the network.
     @get:Rule(order = 0)
-    val koinRule = KoinOverrideRule(startupGraphOverrides(connectivity, remoteConfig))
+    val koinRule = KoinOverrideRule(testGraphOverrides(FakeBocRemoteDataSource()))
 
     @get:Rule(order = 1)
     val composeRule = createComposeRule()
@@ -69,7 +67,7 @@ class SplashBackStackTest {
 
     private companion object {
         const val TIMEOUT_MILLIS = 10_000L
-        const val HOME_TITLE = "BOCantabria"
+        const val HOME_TITLE = "BOC Cantabria"
         val SPLASH_ROUTE_SUFFIX: String = Route.Splash::class.simpleName!!
     }
 }
