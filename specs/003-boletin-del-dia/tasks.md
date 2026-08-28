@@ -33,29 +33,29 @@ Antes de cualquier comando Gradle:
 
 **Purpose**: dependencias, recursos y muestras de prueba. Sin esto no compila nada de lo demás.
 
-- [ ] T001 Añadir al catálogo `gradle/libs.versions.toml` las cuatro dependencias nuevas con las
+- [X] T001 Añadir al catálogo `gradle/libs.versions.toml` las cuatro dependencias nuevas con las
       versiones verificadas en research.md D-017: plugin `com.google.devtools.ksp` `2.2.10-2.0.2`
       (el prefijo **debe** ser el Kotlin del proyecto), Room `2.8.4` (`room-runtime`, `room-ktx`,
       `room-compiler`, `room-testing`), `okhttp-bom` `5.5.0` con `okhttp` y `mockwebserver3-junit4`
       **sin versión**, y `com.android.tools:desugar_jdk_libs` `2.1.5`. Ninguna coordenada ni versión
       literal fuera del catálogo
-- [ ] T002 Configurar el build: registrar el plugin KSP en `build.gradle.kts` raíz (`apply false`) y
+- [X] T002 Configurar el build: registrar el plugin KSP en `build.gradle.kts` raíz (`apply false`) y
       en `app/build.gradle.kts`; activar `isCoreLibraryDesugaringEnabled = true` con
       `coreLibraryDesugaring(libs.desugar.jdk.libs)`; declarar
       `ksp { arg("room.schemaLocation", "$projectDir/schemas") }`; añadir las dependencias de Room,
       OkHttp y las de prueba (`room-testing`, `mockwebserver3-junit4`) (research.md D-001, D-002,
       D-004)
-- [ ] T003 [P] Crear las diez muestras de prueba en `TRES/fixtures/`, tomadas de contenido público
+- [X] T003 [P] Crear las diez muestras de prueba en `TRES/fixtures/`, tomadas de contenido público
       real del BOC y recortadas: `feed_1_disposiciones.xml`, `feed_2_2_oposiciones.xml`,
       `feed_4_3_anomalo.xml` (con los componentes de `categorias` permutados),
       `feed_8_1_vacio.xml` (canal válido con cero items), `feed_size_incorrecto.xml`,
       `feed_item_sin_categorias.xml`, `feed_fecha_invalida.xml`, `feed_campos_desconocidos.xml`,
       `feed_con_doctype.xml` y `feed_con_entidad_externa.xml` (apartado 29 del documento de feeds)
-- [ ] T004 [P] Añadir a `RES/drawable/` los once vectores que faltan, con los trazados **tomados de
+- [X] T004 [P] Añadir a `RES/drawable/` los once vectores que faltan, con los trazados **tomados de
       las fuentes oficiales de Material Symbols Outlined, no inventados** (research.md D-005):
       marcador, sin conexión, y los nueve de sección (disposiciones, personal, contratación,
       economía, expropiación, subvenciones, anuncios, judicial, elecciones)
-- [ ] T005 [P] Añadir a `RES/values/strings.xml` los textos nuevos, en español: título y fecha de la
+- [X] T005 [P] Añadir a `RES/values/strings.xml` los textos nuevos, en español: título y fecha de la
       cabecera, etiqueta del recuento, nombres cortos de las nueve secciones para los chips,
       etiquetas de la barra inferior, mensajes de estado vacío por selección, mensaje de error de
       sincronización, texto del aviso de falta de conexión, «Próximamente», y las descripciones de

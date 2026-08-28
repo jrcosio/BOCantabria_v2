@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="utf-8"?>
+<rss version="2.0">
+  <channel>
+    <title>Filtro BOC</title>
+    <link>https://www.cantabria.es/o/BOC/feed/6802097</link>
+    <description>Contenidos del BOC por categorias: 7.1.Urbanismo</description>
+    <size>cien</size>
+    <item>
+      <guidPropio>no-estandar</guidPropio>
+      <pubDate>2026-08-27</pubDate>
+      <categorias>7.Otros Anuncios|7.1.Urbanismo|Consejería de Fomento, Vivienda, Ordenación del Territorio y Medio Ambiente|Dirección General de Urbanismo y Ordenación del Territorio|ORD</categorias>
+      <link>https://boc.cantabria.es/boces/verAnuncioAction.do?idAnuBlob=430001</link>
+      <title>CONSEJERIA DE FOMENTO, VIVIENDA, ORDENACION DEL TERRITORIO Y MEDIO AMBIENTE: Informacion publica del expediente de autorizacion ambiental integrada Informacion publica del expediente de autorizacion ambiental integrada Informacion publica del expediente de autorizacion ambiental integrada Informacion publica del expediente de autorizacion ambiental integrada Informacion publica del expediente de autorizacion ambiental integrada Informacion publica del expediente de autorizacion ambiental integrada</title>
+      <extension:desconocida xmlns:extension="urn:boc:test">se ignora</extension:desconocida>
+    </item>
+    <item>
+      <title>AYUNTAMIENTO DE SANTA MARÍA DE CAYÓN: Aprobación &amp; publicación del «Plan General» (2.ª fase) — información pública.</title>
+      <link>https://boc.cantabria.es/boces/verAnuncioAction.do?idAnuBlob=430002</link>
+      <pubDate>2026-08-26</pubDate>
+      <categorias>7.Otros Anuncios|7.1.Urbanismo|Ayuntamiento de Santa María de Cayón|ORD</categorias>
+    </item>
+    <item>
+      <title>AYUNTAMIENTO DE VAL DE SAN VICENTE: Anuncio clasificado en otra seccion.</title>
+      <link>https://boc.cantabria.es/boces/verAnuncioAction.do?idAnuBlob=430003</link>
+      <pubDate>2026-08-25</pubDate>
+      <categorias>1.Disposiciones Generales|Ayuntamiento de Val de San Vicente|ORD</categorias>
+    </item>
+  </channel>
+</rss>

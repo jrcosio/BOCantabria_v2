@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="utf-8"?>
+<rss version="2.0">
+  <channel>
+    <title>Filtro BOC</title>
+    <link>https://www.cantabria.es/o/BOC/feed/6802094</link>
+    <description>Contenidos del BOC por categorias: 5.Expropiacion Forzosa</description>
+    <size>4</size>
+    <item>
+      <title>AYUNTAMIENTO DE CAMARGO: Acta previa de ocupacion.</title>
+      <link>https://boc.cantabria.es/boces/verAnuncioAction.do?idAnuBlob=420001</link>
+      <pubDate>26/08/2026</pubDate>
+      <categorias>5.Expropiación Forzosa|Ayuntamiento de Camargo|ORD</categorias>
+    </item>
+    <item>
+      <title>CONSEJERIA DE FOMENTO: Relacion de bienes y derechos afectados.</title>
+      <link>https://boc.cantabria.es/boces/verAnuncioAction.do</link>
+      <pubDate>2026-08-24</pubDate>
+      <categorias>5.Expropiación Forzosa|Consejería de Fomento|ORD</categorias>
+    </item>
+    <item>
+      <title>AYUNTAMIENTO DE LAREDO: Informacion publica.</title>
+      <link>http://boc.cantabria.es/boces/verAnuncioAction.do?idAnuBlob=420003</link>
+      <pubDate>2026-08-23</pubDate>
+      <categorias>5.Expropiación Forzosa|Ayuntamiento de Laredo|ORD</categorias>
+    </item>
+    <item>
+      <title></title>
+      <link>https://boc.cantabria.es/boces/verAnuncioAction.do?idAnuBlob=420004</link>
+      <pubDate>2026-08-22</pubDate>
+      <categorias>5.Expropiación Forzosa|Ayuntamiento de Santoña|ORD</categorias>
+    </item>
+  </channel>
+</rss>

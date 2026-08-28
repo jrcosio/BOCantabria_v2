@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="utf-8"?>
+<rss version="2.0">
+  <channel>
+    <title>Filtro BOC</title>
+    <link>https://www.cantabria.es/o/BOC/feed/6802095</link>
+    <description>Contenidos del BOC por categorias: 6.Subvenciones y Ayudas</description>
+    <size>3</size>
+    <item>
+      <title>GOBIERNO DE CANTABRIA: Convocatoria de ayudas para entidades locales.</title>
+      <link>https://boc.cantabria.es/boces/verAnuncioAction.do?idAnuBlob=410001</link>
+      <pubDate>2026-08-27</pubDate>
+      
+    </item>
+    <item>
+      <title>AYUNTAMIENTO DE PIELAGOS: Extracto de la convocatoria de becas.</title>
+      <link>https://boc.cantabria.es/boces/verAnuncioAction.do?idAnuBlob=410002</link>
+      <pubDate>2026-08-27</pubDate>
+      <categorias>6.Subvenciones y Ayudas|Ayuntamiento de Piélagos|ORD|</categorias>
+    </item>
+    <item>
+      <title>Anuncio sin organismo en el titulo</title>
+      <link>https://boc.cantabria.es/boces/verAnuncioAction.do?idAnuBlob=410003</link>
+      <pubDate>2026-08-25</pubDate>
+      <categorias>6.Subvenciones y Ayudas||   |Ayuntamiento de Reocín|ORD</categorias>
+    </item>
+  </channel>
+</rss>

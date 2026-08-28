@@ -22,4 +22,51 @@
     <string name="splash_update_required_title">Actualiza la aplicación</string>
     <string name="splash_update_required_message">Esta versión ha dejado de estar soportada. Instala la última versión para seguir consultando el boletín.</string>
     <string name="splash_maintenance_title">Servicio en mantenimiento</string>
+    <!-- ===== Feature 003: boletín del día ===== -->
+
+    <!-- Barra superior -->
+    <string name="app_bar_title">BOC Cantabria</string>
+    <string name="app_bar_open_sections">Abrir las secciones del boletín</string>
+    <string name="app_bar_search">Buscar</string>
+    <string name="app_bar_info">Información</string>
+
+    <!-- Cabecera editorial -->
+    <string name="home_bulletin_today">Boletín de hoy</string>
+    <plurals name="home_publication_count">
+        <item quantity="one">%d anuncio</item>
+        <item quantity="other">%d anuncios</item>
+    </plurals>
+
+    <!-- Filtros rápidos -->
+    <string name="chip_all">Todo</string>
+
+    <!-- Estados del listado -->
+    <string name="home_empty_today">Todavía no hay publicaciones para esta fecha.</string>
+    <string name="home_empty_section">Esta sección no tiene publicaciones guardadas.</string>
+    <string name="home_error_sync">No hemos podido traer el boletín. Comprueba tu conexión.</string>
+    <string name="home_offline">Sin conexión. Estás viendo lo último descargado.</string>
+
+    <!-- Tarjeta de publicación -->
+    <string name="publication_date">Publicado el %1$s</string>
+    <string name="publication_save">Guardar</string>
+    <string name="publication_share">Compartir</string>
+    <string name="publication_share_chooser">Compartir publicación</string>
+    <string name="publication_section">Sección %1$s</string>
+
+    <!-- Panel de secciones -->
+    <string name="sections_title">Secciones</string>
+    <string name="sections_search_hint">Buscar una sección</string>
+    <string name="sections_expand">Desplegar %1$s</string>
+    <string name="sections_collapse">Contraer %1$s</string>
+    <string name="sections_empty">Ninguna sección coincide con la búsqueda.</string>
+
+    <!-- Barra de navegación inferior -->
+    <string name="nav_home">Inicio</string>
+    <string name="nav_search">Buscar</string>
+    <string name="nav_saved">Guardados</string>
+
+    <!-- Funcionalidades aplazadas -->
+    <string name="coming_soon">Próximamente</string>
+    <string name="coming_soon_search">La búsqueda llegará en una próxima versión.</string>
+    <string name="coming_soon_saved">Aquí podrás consultar lo que guardes.</string>
 </resources>

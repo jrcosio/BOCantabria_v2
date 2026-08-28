@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!DOCTYPE rss [ <!ENTITY xxe SYSTEM "file:///etc/passwd"> ]>
+<rss version="2.0">
+  <channel>
+    <title>Filtro BOC</title>
+    <link>https://www.cantabria.es/o/BOC/feed/6802081</link>
+    <description>Contenidos del BOC por categorias: 1.Disposiciones Generales</description>
+    <size>1</size>
+    <item>
+      <title>&xxe;</title>
+      <link>https://boc.cantabria.es/boces/verAnuncioAction.do?idAnuBlob=1</link>
+      <pubDate>2026-08-27</pubDate>
+      <categorias>1.Disposiciones Generales|Ayuntamiento|ORD</categorias>
+    </item>
+  </channel>
+</rss>
