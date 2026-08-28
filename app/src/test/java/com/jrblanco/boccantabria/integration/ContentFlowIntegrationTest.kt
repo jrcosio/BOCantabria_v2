@@ -4,6 +4,10 @@ import android.app.Application
 import androidx.test.core.app.ApplicationProvider
 import app.cash.turbine.test
 import com.jrblanco.boccantabria.core.di.appModules
+import com.jrblanco.boccantabria.core.telemetry.AnalyticsTracker
+import com.jrblanco.boccantabria.core.telemetry.CrashReporter
+import com.jrblanco.boccantabria.core.telemetry.NoOpAnalyticsTracker
+import com.jrblanco.boccantabria.core.telemetry.NoOpCrashReporter
 import com.jrblanco.boccantabria.core.util.DispatcherProvider
 import com.jrblanco.boccantabria.data.source.remote.ContentItemDto
 import com.jrblanco.boccantabria.data.source.remote.ContentRemoteDataSource
@@ -83,16 +87,33 @@ class ContentFlowIntegrationTest {
         koin.close()
     }
 
+    /**
+     * Starts the real graph and then replaces the outermost boundary.
+     *
+     * The overrides go through `loadModules(allowOverride = true)` rather than a second
+     * `modules(...)` call inside the builder: definitions declared in the same builder do not
+     * replace each other, so the test would silently run against the real stub source and pass
+     * or fail for the wrong reason.
+     *
+     * Telemetry is swapped for the no-op implementations because the Firebase clients need a
+     * real FirebaseApp; their own tests cover them.
+     */
     private fun startGraph(): Koin = koinApplication {
         androidContext(ApplicationProvider.getApplicationContext())
         modules(appModules)
-        modules(
-            module {
-                single<ContentRemoteDataSource> { remote }
-                single<DispatcherProvider> { TestDispatcherProvider(dispatcher) }
-            },
+    }.koin.apply {
+        loadModules(
+            listOf(
+                module {
+                    single<ContentRemoteDataSource> { remote }
+                    single<DispatcherProvider> { TestDispatcherProvider(dispatcher) }
+                    single<AnalyticsTracker> { NoOpAnalyticsTracker() }
+                    single<CrashReporter> { NoOpCrashReporter() }
+                },
+            ),
+            allowOverride = true,
         )
-    }.koin
+    }
 
     private class SwitchableRemoteDataSource : ContentRemoteDataSource {
         var failWith: Throwable? = null

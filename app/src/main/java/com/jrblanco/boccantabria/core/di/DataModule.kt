@@ -2,21 +2,24 @@ package com.jrblanco.boccantabria.core.di
 
 import com.jrblanco.boccantabria.core.telemetry.AnalyticsTracker
 import com.jrblanco.boccantabria.core.telemetry.CrashReporter
-import com.jrblanco.boccantabria.core.telemetry.NoOpAnalyticsTracker
-import com.jrblanco.boccantabria.core.telemetry.NoOpCrashReporter
 import com.jrblanco.boccantabria.data.repository.ContentRepositoryImpl
 import com.jrblanco.boccantabria.data.source.local.ContentLocalDataSource
 import com.jrblanco.boccantabria.data.source.local.InMemoryContentLocalDataSource
 import com.jrblanco.boccantabria.data.source.remote.ContentRemoteDataSource
 import com.jrblanco.boccantabria.data.source.remote.StubContentRemoteDataSource
+import com.jrblanco.boccantabria.data.telemetry.firebaseAnalyticsTracker
+import com.jrblanco.boccantabria.data.telemetry.firebaseCrashReporter
 import com.jrblanco.boccantabria.domain.repository.ContentRepository
+import org.koin.android.ext.koin.androidContext
 import org.koin.dsl.module
 
 /**
  * Data sources, repositories and telemetry implementations.
  *
- * Telemetry is still bound to the no-op implementations; the Firebase ones land with user
- * story 3. Keeping the binding in one place means that swap is a one-line change here.
+ * Everything above this module depends on the [AnalyticsTracker] and [CrashReporter]
+ * contracts, never on the SDK, which is what lets a test swap them for a double. The Firebase
+ * types are built by factories inside `data.telemetry` so that not even this module imports
+ * the SDK: there is an architecture test asserting exactly that.
  */
 val dataModule = module {
     single<ContentRemoteDataSource> { StubContentRemoteDataSource() }
@@ -28,6 +31,6 @@ val dataModule = module {
             dispatchers = get(),
         )
     }
-    single<AnalyticsTracker> { NoOpAnalyticsTracker() }
-    single<CrashReporter> { NoOpCrashReporter() }
+    single<AnalyticsTracker> { firebaseAnalyticsTracker(androidContext()) }
+    single<CrashReporter> { firebaseCrashReporter() }
 }

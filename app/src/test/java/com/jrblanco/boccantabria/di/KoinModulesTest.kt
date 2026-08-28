@@ -6,6 +6,8 @@ import androidx.test.core.app.ApplicationProvider
 import com.jrblanco.boccantabria.core.di.appModules
 import com.jrblanco.boccantabria.core.telemetry.AnalyticsTracker
 import com.jrblanco.boccantabria.core.telemetry.CrashReporter
+import com.jrblanco.boccantabria.core.telemetry.NoOpAnalyticsTracker
+import com.jrblanco.boccantabria.core.telemetry.NoOpCrashReporter
 import com.jrblanco.boccantabria.core.util.DispatcherProvider
 import com.jrblanco.boccantabria.data.source.local.ContentLocalDataSource
 import com.jrblanco.boccantabria.data.source.remote.ContentRemoteDataSource
@@ -17,6 +19,7 @@ import org.junit.runner.RunWith
 import org.koin.android.ext.koin.androidContext
 import org.koin.core.annotation.KoinExperimentalAPI
 import org.koin.dsl.koinApplication
+import org.koin.dsl.module
 import org.koin.test.verify.verify
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
@@ -52,6 +55,18 @@ class KoinModulesTest {
             androidContext(ApplicationProvider.getApplicationContext())
             modules(appModules)
         }.koin
+        // Telemetry is the one thing that cannot be built here: the Firebase clients need a
+        // real FirebaseApp, which does not exist outside a device. The bindings themselves are
+        // still checked below; the implementations behind them have their own tests.
+        koin.loadModules(
+            listOf(
+                module {
+                    single<AnalyticsTracker> { NoOpAnalyticsTracker() }
+                    single<CrashReporter> { NoOpCrashReporter() }
+                },
+            ),
+            allowOverride = true,
+        )
 
         // Resolving the view model walks the entire chain: view model, use case, repository and
         // both data sources. The rest are declarations nothing injects yet, checked one by one
