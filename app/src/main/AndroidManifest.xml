@@ -15,10 +15,19 @@
         android:roundIcon="@mipmap/ic_launcher_round"
         android:supportsRtl="true"
         android:theme="@style/Theme.BOCantabria.Starting">
+        <!--
+          El bloqueo vertical es una decisión de producto explícita del propietario: la aplicación
+          no tiene utilidad en horizontal en un móvil. Se suprimen los dos avisos de lint a
+          conciencia:
+            - LockedOrientationActivity avisa de que se limita al usuario, que es lo pretendido.
+            - DiscouragedApi avisa de que a partir de Android 16 se ignora en pantallas grandes.
+              Es cierto y está aceptado: en tablets no se intentará forzar (research.md, D-011).
+        -->
         <activity
             android:name=".MainActivity"
             android:exported="true"
             android:screenOrientation="portrait"
+            tools:ignore="LockedOrientationActivity,DiscouragedApi"
             android:windowSoftInputMode="adjustResize">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />

@@ -8,6 +8,8 @@
 especificación los exige en FR-024 … FR-027. Dentro de cada historia, las pruebas se escriben
 **antes** que la implementación y deben fallar antes de hacerlas pasar.
 
+**Estado**: las 55 tareas están completadas y verificadas contra `quickstart.md`.
+
 **Organization**: las tareas se agrupan por historia de usuario, de forma que cada una pueda
 implementarse, probarse y demostrarse por separado.
 
@@ -32,18 +34,18 @@ Antes de cualquier comando Gradle:
 
 **Purpose**: dependencias, recursos y documentación versionada.
 
-- [ ] T001 Añadir al catálogo `gradle/libs.versions.toml` la librería
+- [x] T001 Añadir al catálogo `gradle/libs.versions.toml` la librería
       `androidx.core:core-splashscreen` 1.2.0 y `com.google.firebase:firebase-config` (sin versión,
       la gobierna el BoM), y declararlas en `app/build.gradle.kts`
-- [ ] T002 [P] Copiar el escudo aportado a `RES/drawable/ic_escudo_cantabria.xml`, verificando que
+- [x] T002 [P] Copiar el escudo aportado a `RES/drawable/ic_escudo_cantabria.xml`, verificando que
       conserva su viewport 79×137 y sus colores originales (FR-021)
-- [ ] T003 [P] Versionar la documentación de diseño: mover el documento de especificaciones y la
+- [x] T003 [P] Versionar la documentación de diseño: mover el documento de especificaciones y la
       imagen de referencia a `docs/diseno/`. Sin esto, el criterio SC-007 no es verificable por
       nadie que no tenga los ficheros en su máquina. `Datos_modelo/` sigue ignorado y así debe
       quedarse: conserva material de trabajo que no procede versionar (SC-007)
-- [ ] T004 [P] Corregir en el documento de diseño los apartados 13.3 y 25.3, que siguen diciendo
+- [x] T004 [P] Corregir en el documento de diseño los apartados 13.3 y 25.3, que siguen diciendo
       «Aplicación creada por José Ramón Blanco», para que documento y aplicación no se contradigan
-- [ ] T005 Declarar `android:screenOrientation="portrait"` en `MainActivity` dentro de
+- [x] T005 Declarar `android:screenOrientation="portrait"` en `MainActivity` dentro de
       `app/src/main/AndroidManifest.xml`. Es el mecanismo estándar y el único que el sistema
       respeta; en pantallas de 600 dp o más lo ignora y no se intentará sortearlo (research.md
       D-011) (FR-023)
@@ -58,32 +60,32 @@ Antes de cualquier comando Gradle:
 
 **⚠️ CRITICAL**: ninguna historia puede empezar hasta que esta fase esté completa.
 
-- [ ] T006 Reescribir `MAIN/core/ui/theme/Color.kt` con los 22 tokens del modo claro (§4.1), los 10
+- [x] T006 Reescribir `MAIN/core/ui/theme/Color.kt` con los 22 tokens del modo claro (§4.1), los 10
       del oscuro (§5.1) y los 5 de sección (§4.4). Nombres de token, no de color (FR-016)
-- [ ] T007 [P] Crear `MAIN/core/ui/theme/Spacing.kt` con los nueve valores de §7.1 y su
+- [x] T007 [P] Crear `MAIN/core/ui/theme/Spacing.kt` con los nueve valores de §7.1 y su
       `CompositionLocal` (FR-018)
-- [ ] T008 [P] Crear `MAIN/core/ui/theme/Shape.kt` con los radios de §8.1 sobre las formas de
+- [x] T008 [P] Crear `MAIN/core/ui/theme/Shape.kt` con los radios de §8.1 sobre las formas de
       Material 3, más los que no tienen equivalente (FR-018)
-- [ ] T009 [P] Crear `MAIN/core/ui/theme/Elevation.kt` con los cinco niveles de §8.2 (FR-018)
-- [ ] T010 Reescribir `MAIN/core/ui/theme/Type.kt` con los 14 estilos de §6.2: tamaño, interlineado
+- [x] T009 [P] Crear `MAIN/core/ui/theme/Elevation.kt` con los cinco niveles de §8.2 (FR-018)
+- [x] T010 Reescribir `MAIN/core/ui/theme/Type.kt` con los 14 estilos de §6.2: tamaño, interlineado
       y peso exactos. Los pesos 650 se implementan como `SemiBold` (research.md D-012) (FR-018)
-- [ ] T011 Reescribir `MAIN/core/ui/theme/Theme.kt`: esquemas claro y oscuro desde los tokens,
+- [x] T011 Reescribir `MAIN/core/ui/theme/Theme.kt`: esquemas claro y oscuro desde los tokens,
       `BocExtendedColors` con los diez tokens sin equivalente más los de sección, el objeto
       `BocTheme` con sus accesos (research.md D-001), y **eliminar el parámetro de color dinámico**
       (research.md D-002).
       `BocTheme` fuera del tema debe fallar de forma explícita (FR-016, FR-017)
       (depende de T006, T007, T008, T009, T010)
-- [ ] T012 Ampliar `RES/values/themes.xml` con el tema de arranque del sistema: fondo azul
+- [x] T012 Ampliar `RES/values/themes.xml` con el tema de arranque del sistema: fondo azul
       institucional e icono el escudo, para que no haya destello blanco. El tema posterior al
       arranque sigue siendo el actual: la aplicación es Compose puro y **no** debe añadirse la
       librería de componentes Material para XML, que no usa (research.md D-003) (FR-002)
       (depende de T002)
-- [ ] T013 Instalar el arranque del sistema en `MAIN/MainActivity.kt` y liberar su condición de
+- [x] T013 Instalar el arranque del sistema en `MAIN/MainActivity.kt` y liberar su condición de
       permanencia en cuanto la primera composición esté lista, de modo que la preparación ocurra ya
       en la pantalla de Compose (research.md D-003) (FR-002) (depende de T012)
-- [ ] T014 [P] Crear `MAIN/core/util/AppVersionProvider.kt`: la interfaz y su implementación
+- [x] T014 [P] Crear `MAIN/core/util/AppVersionProvider.kt`: la interfaz y su implementación
       leyendo el número de versión generado en la compilación (research.md D-009)
-- [ ] T015 Verificar que el proyecto compila y que la aplicación sigue arrancando en el emulador con
+- [x] T015 Verificar que el proyecto compila y que la aplicación sigue arrancando en el emulador con
       la identidad visual nueva. La pantalla Home de la feature 001 cambiará de aspecto al heredar
       la paleta institucional: es lo esperado
 
@@ -101,24 +103,24 @@ intervención, pasa al contenido principal.
 
 ### Tests for User Story 1 ⚠️ (escribir primero; deben fallar)
 
-- [ ] T016 [P] [US1] `TEST/domain/usecase/PrepareStartupUseCaseTest.kt`: con conexión y
+- [x] T016 [P] [US1] `TEST/domain/usecase/PrepareStartupUseCaseTest.kt`: con conexión y
       configuración correcta devuelve `Ready`; propaga el fallo del repositorio de configuración;
       no lanza nunca (FR-003, FR-024)
-- [ ] T017 [P] [US1] `TEST/data/repository/AppConfigRepositoryImplTest.kt`: traduce los valores
+- [x] T017 [P] [US1] `TEST/data/repository/AppConfigRepositoryImplTest.kt`: traduce los valores
       remotos a dominio ajustando el tipo numérico, convierte el mensaje vacío en nulo, devuelve los
       valores por defecto cuando no hay nada publicado, y **ninguna excepción escapa** (FR-014,
       FR-024)
-- [ ] T018 [P] [US1] `TEST/ui/splash/SplashViewModelTest.kt`, parte de la historia 1, con Turbine:
+- [x] T018 [P] [US1] `TEST/ui/splash/SplashViewModelTest.kt`, parte de la historia 1, con Turbine:
       estado inicial `Loading`; `Loading → Ready`; el evento de pantalla vista se registra
       exactamente una vez; **el tiempo mínimo de 1,2 s se respeta y no se suma al trabajo real**,
       comprobado con tiempo virtual (FR-005, FR-027, SC-002)
-- [ ] T019 [P] [US1] `ATEST/ui/splash/SplashContentTest.kt`, parte de la historia 1: render del
+- [x] T019 [P] [US1] `ATEST/ui/splash/SplashContentTest.kt`, parte de la historia 1: render del
       estado de preparación comprobando las etiquetas `splash_root`, `splash_emblem` y
       `splash_loading` (FR-025)
-- [ ] T020 [US1] `ATEST/ui/SplashNavigationTest.kt`: al completarse el arranque se llega al
+- [x] T020 [US1] `ATEST/ui/SplashNavigationTest.kt`: al completarse el arranque se llega al
       contenido principal, y el retroceso **cierra la aplicación** en lugar de volver a la portada
       (FR-007, FR-026)
-- [ ] T021 [P] [US1] `ATEST/ui/splash/SplashRestorationTest.kt`: durante la preparación se llama a
+- [x] T021 [P] [US1] `ATEST/ui/splash/SplashRestorationTest.kt`: durante la preparación se llama a
       `recreate()` y se afirma que **no** se dispara una segunda —el contador del doble sigue en
       uno— y que el estado no retrocede. Con el bloqueo vertical ya no hay giro, pero el modo
       oscuro, el tamaño de letra y el idioma siguen recreando la actividad; cubre además el caso
@@ -126,51 +128,51 @@ intervención, pasa al contenido principal.
 
 ### Implementation for User Story 1
 
-- [ ] T022 [P] [US1] `MAIN/domain/model/AppConfig.kt` y `MAIN/domain/model/StartupStatus.kt` según
+- [x] T022 [P] [US1] `MAIN/domain/model/AppConfig.kt` y `MAIN/domain/model/StartupStatus.kt` según
       `data-model.md`, con los valores por defecto que equivalen a «todo permitido»
-- [ ] T023 [P] [US1] `MAIN/domain/repository/AppConfigRepository.kt` y
+- [x] T023 [P] [US1] `MAIN/domain/repository/AppConfigRepository.kt` y
       `MAIN/domain/repository/ConnectivityRepository.kt` con los contratos de
       `contracts/internal-contracts.md`
-- [ ] T024 [P] [US1] Configuración remota en `MAIN/data/source/remote/`: `RemoteConfigValues.kt`
+- [x] T024 [P] [US1] Configuración remota en `MAIN/data/source/remote/`: `RemoteConfigValues.kt`
       (campos con los nombres del servicio), `RemoteConfigDataSource.kt` y
       `FirebaseRemoteConfigDataSource.kt`, más los valores por defecto en
       `RES/xml/remote_config_defaults.xml` (research.md D-008) (FR-014)
-- [ ] T025 [P] [US1] Conectividad en `MAIN/data/source/local/`: `ConnectivityDataSource.kt` y
+- [x] T025 [P] [US1] Conectividad en `MAIN/data/source/local/`: `ConnectivityDataSource.kt` y
       `AndroidConnectivityDataSource.kt`, que responde si hay red **con acceso validado a
       internet**, no si hay una interfaz activa (research.md D-010)
-- [ ] T026 [US1] `MAIN/data/repository/AppConfigRepositoryImpl.kt` y
+- [x] T026 [US1] `MAIN/data/repository/AppConfigRepositoryImpl.kt` y
       `MAIN/data/repository/ConnectivityRepositoryImpl.kt`: traducción a dominio, captura de
       excepciones y trabajo sobre el despachador de entrada/salida inyectado
       (depende de T022, T023, T024, T025)
-- [ ] T027 [US1] `MAIN/domain/usecase/PrepareStartupUseCase.kt` con la precedencia documentada en
+- [x] T027 [US1] `MAIN/domain/usecase/PrepareStartupUseCase.kt` con la precedencia documentada en
       `data-model.md`. Un único caso de uso orquesta las tres comprobaciones, para que la política
       de arranque sea Kotlin puro y no viva en la capa de presentación (research.md D-006)
       (depende de T022, T023)
-- [ ] T028 [P] [US1] `MAIN/ui/splash/SplashUiState.kt`: sellado con `Loading`, `Ready`, `Error` y
+- [x] T028 [P] [US1] `MAIN/ui/splash/SplashUiState.kt`: sellado con `Loading`, `Ready`, `Error` y
       `Blocked`, y `BlockReason` sellado. `Blocked` es un estado propio y no un `Error` con
       bandera, para que la combinación «bloqueado pero con salida» no se pueda ni escribir
       (research.md D-007) (FR-009)
-- [ ] T029 [US1] `MAIN/ui/splash/SplashViewModel.kt`, parte de la historia 1: preparación única al
+- [x] T029 [US1] `MAIN/ui/splash/SplashViewModel.kt`, parte de la historia 1: preparación única al
       construirse, tiempo mínimo **en paralelo** al trabajo (research.md D-004), y registro del
       evento de pantalla vista (depende de T027, T028)
-- [ ] T030 [US1] `MAIN/ui/splash/SplashScreen.kt`: `SplashScreen` con `koinViewModel()` y
+- [x] T030 [US1] `MAIN/ui/splash/SplashScreen.kt`: `SplashScreen` con `koinViewModel()` y
       `SplashContent` sin estado. Composición exacta del contrato visual de
       `contracts/internal-contracts.md`: escudo 104 dp, `BOC`, denominación en dos líneas, línea
       divisoria, autoría en dos colores e indicador discreto, sobre fondo azul a pantalla completa
       extendido tras las barras con iconos claros (FR-019, FR-020, FR-021, FR-022)
       (depende de T011, T028)
-- [ ] T031 [US1] Ajustar la apariencia de las barras del sistema por pantalla: iconos **claros**
+- [x] T031 [US1] Ajustar la apariencia de las barras del sistema por pantalla: iconos **claros**
       mientras la portada azul está visible e **oscuros** al pasar al contenido principal, que tiene
       fondo claro. Sin esto los iconos del sistema quedan ilegibles en una de las dos (FR-022)
       (depende de T030)
-- [ ] T032 [P] [US1] Añadir a `RES/values/strings.xml` los textos de la portada: siglas,
+- [x] T032 [P] [US1] Añadir a `RES/values/strings.xml` los textos de la portada: siglas,
       denominación en dos líneas, «Diseñada y desarrollada por» y «José Ramón Blanco Gutiérrez»
-- [ ] T033 [US1] Navegación: `Route.Splash` en `MAIN/ui/navigation/Routes.kt` como destino inicial,
+- [x] T033 [US1] Navegación: `Route.Splash` en `MAIN/ui/navigation/Routes.kt` como destino inicial,
       y en `MAIN/ui/navigation/BOCantabriaNavHost.kt` la navegación a Home descartando la portada de
       la pila (FR-001, FR-004, FR-007) (depende de T030)
-- [ ] T034 [US1] Registrar en `MAIN/core/di/` las siete dependencias nuevas: fuentes, repositorios,
+- [x] T034 [US1] Registrar en `MAIN/core/di/` las siete dependencias nuevas: fuentes, repositorios,
       caso de uso, proveedor de versión y modelo de pantalla (depende de T026, T027, T029)
-- [ ] T035 [US1] Poner en verde T016–T020 con `./gradlew :app:testDebugUnitTest` y
+- [x] T035 [US1] Poner en verde T016–T020 con `./gradlew :app:testDebugUnitTest` y
       `./gradlew :app:connectedDebugAndroidTest`
 
 **Checkpoint**: la historia 1 es demostrable por sí sola. Es el producto mínimo viable.
@@ -187,32 +189,32 @@ acciones, y «continuar» lleva al contenido principal.
 
 ### Tests for User Story 2 ⚠️
 
-- [ ] T036 [P] [US2] Ampliar `TEST/domain/usecase/PrepareStartupUseCaseTest.kt` con la precedencia
+- [x] T036 [P] [US2] Ampliar `TEST/domain/usecase/PrepareStartupUseCaseTest.kt` con la precedencia
       completa: sin conexión manda sobre todo; versión por debajo del mínimo → `UpdateRequired`;
       versión obsoleta **y** mantenimiento a la vez → gana `UpdateRequired`; mensaje de
       mantenimiento → `Maintenance` (FR-012, FR-013)
-- [ ] T037 [P] [US2] Ampliar `TEST/ui/splash/SplashViewModelTest.kt`: `Loading → Error`;
+- [x] T037 [P] [US2] Ampliar `TEST/ui/splash/SplashViewModelTest.kt`: `Loading → Error`;
       `Loading → Blocked`; reintentar desde `Error` alcanza `Ready`; **reintentar durante una
       preparación en curso no lanza una segunda**; continuar sin conexión desde `Error` emite
       `Ready`; continuar sin conexión desde `Blocked` **se ignora**; superar el límite de espera de
       8 s produce `Error`, comprobado con tiempo virtual (FR-006, FR-010, FR-011, FR-012)
-- [ ] T038 [P] [US2] Ampliar `ATEST/ui/splash/SplashContentTest.kt` con los estados de error y de
+- [x] T038 [P] [US2] Ampliar `ATEST/ui/splash/SplashContentTest.kt` con los estados de error y de
       acceso bloqueado: el estado de error muestra `splash_retry` y `splash_continue_offline` y
       ambos invocan su devolución de llamada; el estado bloqueado muestra `splash_blocked` y
       **`splash_continue_offline` no existe** (FR-010, FR-012, FR-025)
 
 ### Implementation for User Story 2
 
-- [ ] T039 [US2] Completar `PrepareStartupUseCase` con la precedencia completa (depende de T027)
-- [ ] T040 [US2] Completar `SplashViewModel` con `onRetry()`, `onContinueOffline()`, la guarda
+- [x] T039 [US2] Completar `PrepareStartupUseCase` con la precedencia completa (depende de T027)
+- [x] T040 [US2] Completar `SplashViewModel` con `onRetry()`, `onContinueOffline()`, la guarda
       contra preparaciones simultáneas, el límite de espera de 8 s (research.md D-005) y el reporte
       de los fallos al servicio de errores (FR-015) (depende de T029)
-- [ ] T041 [US2] Completar `SplashContent` con los estados de error y bloqueado, cada uno con sus
+- [x] T041 [US2] Completar `SplashContent` con los estados de error y bloqueado, cada uno con sus
       propias acciones, reutilizando los componibles compartidos de `core/ui/component` donde
       encajen (depende de T030)
-- [ ] T042 [P] [US2] Añadir a `RES/values/strings.xml` los textos de error, de actualización
+- [x] T042 [P] [US2] Añadir a `RES/values/strings.xml` los textos de error, de actualización
       requerida y de las acciones
-- [ ] T043 [US2] Poner en verde T036–T038 y comprobar en el emulador, siguiendo el paso 5 de
+- [x] T043 [US2] Poner en verde T036–T038 y comprobar en el emulador, siguiendo el paso 5 de
       `quickstart.md`, que sin conexión se llega al contenido principal en dos toques como máximo
       (SC-003)
 
@@ -230,24 +232,24 @@ los colores no cambian. Girar el dispositivo: permanece vertical.
 
 ### Tests for User Story 3 ⚠️
 
-- [ ] T044 [P] [US3] Añadir a `TEST/architecture/ArchitectureRulesTest.kt` una regla que falle si
+- [x] T044 [P] [US3] Añadir a `TEST/architecture/ArchitectureRulesTest.kt` una regla que falle si
       algún fichero fuera de `core/ui/theme` importa `androidx.compose.ui.graphics.Color`: los
       colores se consumen del tema, no se declaran en el punto de uso. Se expresa como regla de
       **importación** y no buscando literales `Color(0xFF…)` dentro de los cuerpos, porque eso
       último produce falsos positivos con `Color.Transparent` y con los modificadores de alfa
       (FR-018, SC-005)
-- [ ] T045 [P] [US3] Añadir `AppConfig` y `RemoteConfigValues` a la lista de portadores de datos sin
+- [x] T045 [P] [US3] Añadir `AppConfig` y `RemoteConfigValues` a la lista de portadores de datos sin
       comportamiento de `ArchitectureRulesTest`, o darles prueba propia si acaban teniéndolo. La
       lista debe seguir siendo corta: cada entrada es un hueco en SC-004
 
 ### Implementation for User Story 3
 
-- [ ] T046 [US3] Corregir lo que destape T044 y verificar en el emulador, siguiendo el paso 6 de
+- [x] T046 [US3] Corregir lo que destape T044 y verificar en el emulador, siguiendo el paso 6 de
       `quickstart.md`, que con dos fondos de pantalla de colores opuestos la interfaz no cambia
       (FR-017, SC-005)
-- [ ] T047 [US3] Verificar la orientación siguiendo el paso 4 de `quickstart.md`: al girar el
+- [x] T047 [US3] Verificar la orientación siguiendo el paso 4 de `quickstart.md`: al girar el
       dispositivo la captura sigue en vertical (FR-023)
-- [ ] T048 [US3] Verificar el modo oscuro y el texto al 200 % siguiendo el paso 6 de
+- [x] T048 [US3] Verificar el modo oscuro y el texto al 200 % siguiendo el paso 6 de
       `quickstart.md`: la portada conserva el azul institucional, el resto adopta la paleta oscura y
       ningún texto queda recortado (SC-006)
 
@@ -257,20 +259,20 @@ los colores no cambian. Girar el dispositivo: permanece vertical.
 
 ## Phase 6: Polish & Cross-Cutting Concerns
 
-- [ ] T049 Ejecutar `quickstart.md` completo, incluida la comprobación de que las reglas de
+- [x] T049 Ejecutar `quickstart.md` completo, incluida la comprobación de que las reglas de
       arquitectura fallan ante una violación deliberada
-- [ ] T050 Verificar la ausencia de destello siguiendo el paso 4 de `quickstart.md`, grabando el
+- [x] T050 Verificar la ausencia de destello siguiendo el paso 4 de `quickstart.md`, grabando el
       arranque y revisando los primeros fotogramas (FR-002)
-- [ ] T051 Comparar la captura real contra la imagen de referencia: proporciones del escudo,
+- [x] T051 Comparar la captura real contra la imagen de referencia: proporciones del escudo,
       jerarquía de `BOC`, línea divisoria y los dos colores de la autoría (SC-007)
-- [ ] T052 Medir SC-001 con `adb shell am start -W` sobre instalación limpia: `TotalTime` por
+- [x] T052 Medir SC-001 con `adb shell am start -W` sobre instalación limpia: `TotalTime` por
       debajo de 3000 ms. Anotar la cifra
-- [ ] T053 `./gradlew :app:lintDebug` sin avisos nuevos atribuibles a esta feature. Con esto las
+- [x] T053 `./gradlew :app:lintDebug` sin avisos nuevos atribuibles a esta feature. Con esto las
       cuatro comprobaciones de calidad quedan en verde (SC-008)
-- [ ] T054 [P] Actualizar `CLAUDE.md`: el mapa de paquetes con `ui/splash`, el sistema de diseño y
+- [x] T054 [P] Actualizar `CLAUDE.md`: el mapa de paquetes con `ui/splash`, el sistema de diseño y
       la regla de consumir tokens en lugar de valores sueltos. Si algo de esto afecta a la
       constitución, enmendarla en el mismo cambio
-- [ ] T055 Empujar la rama, comprobar que la integración continua queda en verde y abrir la
+- [x] T055 Empujar la rama, comprobar que la integración continua queda en verde y abrir la
       solicitud de incorporación hacia `main`
 
 ---

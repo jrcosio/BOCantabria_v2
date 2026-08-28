@@ -73,9 +73,9 @@ core/
   di/         Módulos Koin (coreModule, dataModule, domainModule, uiModule)
               y appModules, único punto de entrada del grafo
   telemetry/  Contratos AnalyticsTracker y CrashReporter + AnalyticsEvent
-  ui/theme/       Tema (Color, Theme, Type)
+  ui/theme/       Sistema de diseño: Color, Type, Spacing, Shape, Elevation, Theme
   ui/component/   Componibles compartidos sin estado
-  util/       DispatcherProvider y utilidades transversales
+  util/       DispatcherProvider, AppVersionProvider y utilidades transversales
 data/
   repository/     Implementaciones de las interfaces de domain
   source/local/   Fuentes locales (+ entidades)
@@ -86,8 +86,9 @@ domain/
   repository/     Interfaces de repositorio (contratos)
   usecase/        Casos de uso, una operación por clase
 ui/
+  splash/         Arranque: SplashScreen + SplashViewModel + SplashUiState
   home/           Pantalla: HomeScreen + HomeViewModel + HomeUiState
-  navigation/     Rutas tipadas y NavHost
+  navigation/     Rutas tipadas y NavHost (el arranque es el destino inicial)
 BOCantabriaApp    Application: arranca Koin
 MainActivity      Anfitrión de la navegación Compose
 ```
@@ -133,6 +134,19 @@ Composable → ViewModel → UseCase → Repository (interfaz en domain)
 
 - Los `Dispatchers` se **inyectan** (`DispatcherProvider`), nunca se referencian
   estáticamente. Es lo que hace deterministas los tests.
+
+### Sistema de diseño
+
+- **Nunca escribas un color, un tamaño o un espaciado literal.** Los tokens con equivalente en
+  Material 3 se consumen por `MaterialTheme`; los propios (`textMuted`, `surfaceSoft`, `aiAccent`,
+  los de sección…), por `BocTheme.colors`. También `BocTheme.spacing` y `BocTheme.elevation`.
+- Hay una regla de Konsist que **falla la build** si un fichero fuera de `core/ui/theme` importa
+  `androidx.compose.ui.graphics.Color`.
+- `BOCantabriaTheme` **no** tiene parámetro de color dinámico, y no debe tenerlo: el azul
+  institucional no cambia entre pantallas ni entre dispositivos.
+- El único color declarado en XML es el fondo del arranque del sistema, en `colors.xml`, porque se
+  configura antes de que Compose exista. Debe mantenerse sincronizado con `BocPrimary`.
+- Los pesos 650 del documento se implementan como `SemiBold` (600), el peso real más cercano.
 
 ### Resultados y errores
 
@@ -198,6 +212,18 @@ tenga su fichero de prueba. Si añades una clase de dominio sin test, la build f
 - En Robolectric usa `@Config(application = Application::class)`: la `BOCantabriaApp` real
   arranca el Koin global, que sobrevive entre tests del mismo JVM y hace fallar al segundo.
 - Robolectric aún no tiene descriptor para la API 37: los tests usan `@Config(sdk = [36])`.
+- `unloadKoinModules` **elimina** las definiciones, no restaura las que tapaba. `KoinOverrideRule`
+  recarga `appModules` al terminar; si escribes otra regla que cargue módulos, haz lo mismo o
+  dejarás agujeros en el grafo para las clases de prueba siguientes.
+- Toda pantalla queda detrás del arranque, así que una prueba instrumentada de cualquier pantalla
+  pasa por él. Usa `testGraphOverrides()`, que ya sustituye la cadena de arranque por dobles y
+  mantiene la prueba fuera de la red.
+- Firebase (Analytics, Crashlytics, Remote Config) necesita un `FirebaseApp` real: bajo Robolectric
+  hay que sustituirlo por dobles.
+- Un `Image` con solo `height` ajusta al ancho intrínseco del vector y la altura pedida no se
+  aplica. Fija también `aspectRatio`.
+- El splash del sistema recorta el icono a un círculo: el escudo debe ir inscrito en la zona segura
+  (192 dp dentro de un lienzo de 288). Para eso existe `ic_splash_emblem`.
 
 ---
 
@@ -222,6 +248,12 @@ Antes de dar una feature por terminada, en este orden:
 
 ## Notas del proyecto
 
+- **Orientación**: la aplicación está **bloqueada en vertical** por decisión de producto. En
+  pantallas de 600 dp o más Android ignora la restricción desde la API 36 y no se intentará
+  sortearlo. Los dos avisos de lint correspondientes están suprimidos a conciencia en el manifest.
+- **Documentación de diseño**: `docs/diseno/` contiene las especificaciones visuales y la imagen de
+  referencia del arranque. Es la fuente de verdad de la interfaz; si cambias algo acordado, actualiza
+  también el documento.
 - **Package**: `com.jrblanco.boccantabria` (con doble «c»). Es intencionado: el
   `google-services.json` está registrado con ese package exacto en el proyecto Firebase
   `bocantabria-6e90f`. **No lo renombres** sin registrar antes una app nueva en la consola de

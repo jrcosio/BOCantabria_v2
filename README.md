@@ -39,9 +39,10 @@ tests que fallan si alguien la rompe.**
 | | |
 |---|---|
 | **Versión** | 2.0.0 |
-| **Fase** | Esqueleto de arquitectura completo, listo para features de negocio |
-| **Pruebas** | 39 en verde — 31 sin dispositivo, 8 de interfaz |
-| **Arranque** | 546 ms medidos *(objetivo: < 2 s)* |
+| **Fase** | Identidad visual implantada y pantalla de arranque funcional |
+| **Pruebas** | 73 en verde — 57 sin dispositivo, 16 de interfaz |
+| **Arranque** | 648 ms medidos *(objetivo: < 3 s)* |
+| **Orientación** | Solo vertical en teléfonos |
 | **Capa de datos** | Fuentes en memoria. El acceso a red y la persistencia se deciden en la primera feature real |
 
 ---
@@ -182,7 +183,7 @@ com.jrblanco.boccantabria
 ├── core
 │   ├── di            Módulos Koin · appModules es el único punto de entrada
 │   ├── telemetry     Contratos AnalyticsTracker y CrashReporter
-│   ├── ui/theme      Paleta, tipografía y tema Material 3
+│   ├── ui/theme      Sistema de diseño: 39 tokens de color, 14 estilos, espaciado, formas
 │   ├── ui/component  Componibles compartidos sin estado
 │   └── util          DispatcherProvider y utilidades transversales
 ├── data
@@ -195,6 +196,7 @@ com.jrblanco.boccantabria
 │   ├── repository    Interfaces (contratos)
 │   └── usecase       Casos de uso, una operación por clase
 ├── ui
+│   ├── splash        Arranque: comprueba, prepara y da paso a Home
 │   ├── home          HomeScreen + HomeViewModel + HomeUiState
 │   └── navigation    Rutas tipadas y NavHost
 ├── BOCantabriaApp    Application · arranca Koin
@@ -211,6 +213,7 @@ com.jrblanco.boccantabria
 | **Navegación** | Navigation Compose 2.10 | Rutas tipadas: una ruta mal escrita es un error de compilación |
 | **Asincronía** | Corrutinas + `Flow` | Los `Dispatchers` se inyectan, nunca se referencian estáticamente |
 | **Telemetría** | Firebase Analytics + Crashlytics | Siempre tras abstracción propia, sustituible en pruebas |
+| **Configuración** | Firebase Remote Config | Versión mínima soportada y avisos de mantenimiento, sin publicar versión nueva |
 | **Datos** | *Por decidir* | Se elegirá y justificará en el plan de la primera feature que lo necesite |
 
 Todas las dependencias se declaran en
@@ -232,8 +235,8 @@ ignorar o comentar una prueba para que pase la build.
 | **Interfaz** | `app/src/androidTest` | Compose UI Test | Los cuatro estados de pantalla, el reintento y el giro del dispositivo |
 
 ```bash
-./gradlew :app:testDebugUnitTest        # 31 pruebas · ~6 s · sin emulador
-./gradlew :app:connectedDebugAndroidTest # 8 pruebas · requiere emulador
+./gradlew :app:testDebugUnitTest         # 57 pruebas · ~6 s · sin emulador
+./gradlew :app:connectedDebugAndroidTest # 16 pruebas · requiere emulador
 ```
 
 La integración continua ejecuta compilación, pruebas sin dispositivo y análisis estático en cada
