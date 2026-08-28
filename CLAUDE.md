@@ -70,20 +70,26 @@ Arquitectura limpia + MVVM, módulo único `:app`, separación por paquetes bajo
 
 ```
 core/
-  di/       Módulos Koin (appModule, dataModule, domainModule, uiModule)
-  ui/       Tema (Color, Theme, Type) y componentes Compose compartidos
-  util/     Result, DispatcherProvider, extensiones transversales
+  di/         Módulos Koin (coreModule, dataModule, domainModule, uiModule)
+              y appModules, único punto de entrada del grafo
+  telemetry/  Contratos AnalyticsTracker y CrashReporter + AnalyticsEvent
+  ui/theme/       Tema (Color, Theme, Type)
+  ui/component/   Componibles compartidos sin estado
+  util/       DispatcherProvider y utilidades transversales
 data/
   repository/     Implementaciones de las interfaces de domain
-  source/local/   Fuentes locales
-  source/remote/  Fuentes remotas
+  source/local/   Fuentes locales (+ entidades)
+  source/remote/  Fuentes remotas (+ DTOs)
+  telemetry/      Implementaciones de Firebase. ÚNICO sitio que toca el SDK
 domain/
-  model/          Modelos de dominio (Kotlin puro)
+  model/          Modelos de dominio, Kotlin puro (AppResult, DomainError, ContentItem)
   repository/     Interfaces de repositorio (contratos)
   usecase/        Casos de uso, una operación por clase
-ui/               Pantallas: Screen + ViewModel + UiState por feature
+ui/
+  home/           Pantalla: HomeScreen + HomeViewModel + HomeUiState
+  navigation/     Rutas tipadas y NavHost
 BOCantabriaApp    Application: arranca Koin
-MainActivity      Host de navegación Compose
+MainActivity      Anfitrión de la navegación Compose
 ```
 
 **Regla de dependencias**: `ui → domain ← data`. Siempre hacia dentro.
@@ -128,6 +134,16 @@ Composable → ViewModel → UseCase → Repository (interfaz en domain)
 - Los `Dispatchers` se **inyectan** (`DispatcherProvider`), nunca se referencian
   estáticamente. Es lo que hace deterministas los tests.
 
+### Resultados y errores
+
+- Las operaciones de dominio devuelven `AppResult<T>` (`Success` / `Failure`), **no**
+  `kotlin.Result`: el error viaja como `DomainError` sellado, así el `when` de la pantalla es
+  exhaustivo y el compilador avisa al añadir un caso.
+- Una lista vacía es `Success(emptyList())`, no un fallo. «Vacío» y «error» se distinguen en la
+  capa de presentación.
+- Las excepciones **no** salen de `data`: se capturan y se traducen ahí. `CancellationException`
+  se repropaga siempre.
+
 ### Dependencias Gradle
 
 - **Todas** en `gradle/libs.versions.toml`. Nunca una coordenada o versión literal dentro de
@@ -165,6 +181,23 @@ borrar un test para que pase la build.
 - ViewModels: `runTest` + Turbine observando el `StateFlow`.
 - Todo bug corregido lleva un test de regresión que falla **antes** del arreglo.
 - Tests deterministas: sin red real, sin reloj del sistema, sin depender del orden.
+
+**Reglas de arquitectura** (`ArchitectureRulesTest`, Konsist): seis reglas hacen cumplir la
+separación de capas y exigen que toda clase de dominio de nivel superior y todo `ViewModel`
+tenga su fichero de prueba. Si añades una clase de dominio sin test, la build falla.
+
+**Trampas conocidas al escribir tests** — estas costaron tiempo, no las repitas:
+
+- Los tests instrumentados **comparten proceso** y el grafo es de `single`. Una caché o un
+  repositorio ya resuelto se filtran de una prueba a la siguiente. Usa `testGraphOverrides()`
+  (androidTest), que reconstruye la cadena entera por prueba.
+- Declarar un módulo dos veces dentro del mismo `koinApplication { }` **no** sustituye nada.
+  Para sustituir, `koin.loadModules(listOf(...), allowOverride = true)`.
+- `ActivityScenario.recreate()` **conserva el ViewModel** por diseño. No sirve para forzar una
+  recarga; para eso, haz que el origen falle desde el arranque.
+- En Robolectric usa `@Config(application = Application::class)`: la `BOCantabriaApp` real
+  arranca el Koin global, que sobrevive entre tests del mismo JVM y hace fallar al segundo.
+- Robolectric aún no tiene descriptor para la API 37: los tests usan `@Config(sdk = [36])`.
 
 ---
 

@@ -20,6 +20,7 @@ local.properties
 /.idea/deploymentTargetSelector.xml
 /.idea/deploymentTargetDropDown.xml
 /.idea/appInsightsSettings.xml
+/.idea/markdown.xml
 
 # ---------- macOS ----------
 .DS_Store

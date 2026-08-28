@@ -1,4 +1,4 @@
-package com.jrblanco.boccantabria.ui.theme
+package com.jrblanco.boccantabria.core.ui.theme
 
 import android.app.Activity
 import android.os.Build

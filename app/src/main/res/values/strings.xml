@@ -1,3 +1,10 @@
 <resources>
     <string name="app_name">BOCantabria</string>
+
+    <!-- Pantalla de inicio -->
+    <string name="home_title">BOCantabria</string>
+    <string name="home_empty">No hay contenido disponible por ahora.</string>
+    <string name="home_error_network">No hemos podido cargar el contenido. Comprueba tu conexión.</string>
+    <string name="home_error_unknown">Se ha producido un error inesperado.</string>
+    <string name="action_retry">Reintentar</string>
 </resources>
