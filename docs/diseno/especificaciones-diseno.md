@@ -182,7 +182,16 @@ No se utilizará como fondo completo de la tarjeta.
 
 ---
 
-## 5. Modo oscuro
+## 5. Modo oscuro — SUPERADO
+
+> **Este apartado queda sin efecto.** Por decisión del propietario (28 de agosto de 2026), la
+> aplicación tiene un **único aspecto, el claro**, y no responde al ajuste de tema del sistema.
+> Motivo: una publicación oficial debe verse igual en todos los dispositivos, y mantener un segundo
+> aspecto duplicaría el coste de diseñar y verificar cada pantalla sin aportar valor.
+>
+> El contenido se conserva por si la decisión se revisara en el futuro, pero **no se implementa**.
+> El único valor que sobrevive es `#8FD3EE`, que no se usa como color de modo oscuro sino como
+> acento *sobre* el azul institucional (línea divisoria y autoría de la portada).
 
 ## 5.1. Paleta oscura
 
@@ -201,7 +210,7 @@ No se utilizará como fondo completo de la tarjeta.
 
 ## 5.2. Reglas del modo oscuro
 
-- No usar negro puro como fondo general.
+- No usar negro puro como fondo general. *(No aplicable: ver la nota del apartado 5.)*
 - No invertir el escudo ni modificar sus colores.
 - Reducir la intensidad de las sombras y sustituirlas por diferencias de superficie.
 - Evitar blanco puro en grandes bloques de texto.
@@ -1598,7 +1607,7 @@ El nuevo diseño se considerará correctamente implementado cuando:
 - Los títulos largos no se recortan en la pantalla de detalle.
 - Todos los controles respetan un área mínima de 48 dp.
 - La interfaz funciona visualmente con texto ampliado.
-- Existe diseño claro y oscuro.
+- La aplicación tiene un único aspecto, el claro, y no cambia con el tema del sistema.
 - Los estados de carga, vacío, error y sin conexión están definidos.
 - Las animaciones son breves y discretas.
 - El escudo utilizado es el recurso oficial.

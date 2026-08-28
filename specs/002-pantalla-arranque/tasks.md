@@ -257,6 +257,33 @@ los colores no cambian. Girar el dispositivo: permanece vertical.
 
 ---
 
+## Phase 7: Enmienda — un único tema (posterior a la implementación)
+
+**Motivo**: decisión de producto del propietario tomada tras completar las fases 1–6. La aplicación
+tiene un único aspecto, el claro, y no responde al ajuste de tema del sistema (research.md, D-013).
+
+- [x] T056 Enmendar `spec.md`: FR-016b nuevo, FR-017 ampliado a cualquier personalización del
+      sistema, escenario 3 de la historia 3 reescrito y SC-005 ampliado con la verificación mecánica
+- [x] T057 Documentar la decisión en `research.md` (D-013) y ajustar `data-model.md` y `quickstart.md`
+- [x] T058 `MAIN/core/ui/theme/Color.kt`: eliminar la paleta oscura y renombrar el azul claro a
+      `BocOnPrimaryAccent`, que es lo que de verdad es: el acento sobre el azul institucional
+- [x] T059 `MAIN/core/ui/theme/Theme.kt`: un único esquema y un único `BocExtendedColors`; se
+      **elimina** el parámetro `darkTheme`, no se fija a `false` (FR-016b)
+- [x] T060 `MAIN/MainActivity.kt`: fijar la apariencia clara de las barras del sistema, porque
+      `enableEdgeToEdge` la elige según el tema del móvil y en uno oscuro los iconos saldrían
+      ilegibles sobre el fondo claro (FR-022)
+- [x] T061 `MAIN/ui/splash/SplashScreen.kt`: la portada devuelve los iconos a oscuros al salir, en
+      lugar de restaurar el valor previo del sistema, que reintroduciría la dependencia del tema
+- [x] T062 Regla de arquitectura que falla si algún fichero importa `isSystemInDarkTheme`,
+      `darkColorScheme` o los esquemas dinámicos (SC-005)
+- [x] T063 `ATEST/core/ui/theme/SingleThemeTest.kt`: forzar la configuración a modo noche no altera
+      ningún color, comprobado desde fuera y no solo por ausencia del mecanismo (FR-016b)
+- [x] T064 Marcar como superado el apartado 5 del documento de diseño y corregir su criterio de
+      aceptación, para que documento y aplicación no se contradigan
+- [x] T065 Verificar en el emulador que las capturas con tema claro y oscuro son idénticas
+
+---
+
 ## Phase 6: Polish & Cross-Cutting Concerns
 
 - [x] T049 Ejecutar `quickstart.md` completo, incluida la comprobación de que las reglas de

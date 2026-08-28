@@ -141,16 +141,21 @@ Y con la conexión restaurada, «Reintentar» debe completar el arranque.
 uno de color intenso, abrir la aplicación y comprobar que ni la portada ni el contenido principal
 cambian de color. Repetir con un fondo de color opuesto.
 
-**Modo oscuro** (SC-006):
+**El tema del sistema no altera la aplicación** (FR-016b, SC-005): capturar la pantalla con el tema
+claro y con el oscuro, y comprobar que son idénticas.
 
 ```bash
+$ADB shell "cmd uimode night no"
+$ADB shell am force-stop com.jrblanco.boccantabria && $ADB shell am start -n com.jrblanco.boccantabria/.MainActivity
+sleep 3 && $ADB exec-out screencap -p > /tmp/claro.png
 $ADB shell "cmd uimode night yes"
 $ADB shell am force-stop com.jrblanco.boccantabria && $ADB shell am start -n com.jrblanco.boccantabria/.MainActivity
+sleep 3 && $ADB exec-out screencap -p > /tmp/oscuro.png
 $ADB shell "cmd uimode night no"
+cmp /tmp/claro.png /tmp/oscuro.png && echo "IDÉNTICAS (correcto)"
 ```
 
-**Esperado**: la portada conserva el azul institucional; el contenido principal adopta la paleta
-oscura.
+**Esperado**: las dos capturas son idénticas, iconos de las barras del sistema incluidos.
 
 **Texto al 200 %** (SC-006):
 

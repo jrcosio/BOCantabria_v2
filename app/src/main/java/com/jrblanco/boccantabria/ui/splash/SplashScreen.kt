@@ -76,10 +76,14 @@ fun SplashScreen(
 }
 
 /**
- * Light system bar icons while the institutional blue is on screen, restored on the way out.
+ * Light system bar icons while the institutional blue is on screen, dark again on the way out.
  *
- * The rest of the application sits on a light background and needs dark icons; without this, the
+ * The rest of the application sits on a light background and needs dark icons; without this the
  * clock and the battery are illegible on one screen or the other (FR-022).
+ *
+ * Restores the icons to dark rather than to "whatever they were": the activity pins the light bar
+ * style precisely so the appearance never depends on the phone's theme, and reinstating a captured
+ * previous value would quietly reintroduce that dependency.
  */
 @Composable
 private fun LightSystemBars() {
@@ -89,12 +93,11 @@ private fun LightSystemBars() {
     DisposableEffect(view) {
         val window = (view.context as? android.app.Activity)?.window ?: return@DisposableEffect onDispose { }
         val controller = WindowCompat.getInsetsController(window, view)
-        val previous = controller.isAppearanceLightStatusBars
         controller.isAppearanceLightStatusBars = false
         controller.isAppearanceLightNavigationBars = false
         onDispose {
-            controller.isAppearanceLightStatusBars = previous
-            controller.isAppearanceLightNavigationBars = previous
+            controller.isAppearanceLightStatusBars = true
+            controller.isAppearanceLightNavigationBars = true
         }
     }
 }

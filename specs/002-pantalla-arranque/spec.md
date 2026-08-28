@@ -73,17 +73,18 @@ dos acciones; «continuar» debe llevar al contenido principal.
 
 Una persona que consulta el boletín reconoce de inmediato que está ante información oficial: el
 azul institucional, el escudo y una tipografía sobria y ordenada. Ese aspecto es idéntico en su
-móvil y en el de cualquier otra persona, con independencia del fondo de pantalla que cada cual
-tenga configurado. Al girar el teléfono, la aplicación no rota: se lee siempre en vertical.
+móvil y en el de cualquier otra persona: no cambia con el fondo de pantalla que cada cual tenga, ni
+con que el sistema esté en tema claro u oscuro. Al girar el teléfono, la aplicación no rota: se lee
+siempre en vertical.
 
 **Why this priority**: la identidad institucional es un requisito del producto, no un adorno.
 Hoy la aplicación se pinta con colores tomados del fondo de pantalla del usuario, lo que resulta
 incompatible con una publicación oficial. Va después de las historias 1 y 2 porque el arranque debe
 funcionar antes de poder juzgar cómo se ve.
 
-**Independent Test**: cambiar el fondo de pantalla del dispositivo por uno de color llamativo y
-abrir la aplicación: los colores no deben cambiar. Girar el dispositivo: la interfaz permanece
-vertical.
+**Independent Test**: abrir la aplicación con el tema claro del sistema y de nuevo con el oscuro, y
+comparar: deben ser indistinguibles. Cambiar además el fondo de pantalla por uno de color llamativo:
+los colores tampoco cambian. Girar el dispositivo: la interfaz permanece vertical.
 
 **Acceptance Scenarios**:
 
@@ -91,8 +92,9 @@ vertical.
    aplicación, **Then** los colores de la interfaz son los institucionales, sin verse alterados.
 2. **Given** la aplicación abierta en un teléfono, **When** la persona lo gira, **Then** la
    interfaz permanece en vertical.
-3. **Given** el dispositivo en modo oscuro, **When** la persona abre la aplicación, **Then** la
-   portada conserva el azul institucional y el resto de la aplicación adopta la paleta oscura.
+3. **Given** el dispositivo con el tema oscuro del sistema activado, **When** la persona abre la
+   aplicación, **Then** ésta se ve **exactamente igual** que con el tema claro: la aplicación tiene
+   un único aspecto.
 4. **Given** el tamaño de texto del sistema al 200 %, **When** la persona abre la aplicación,
    **Then** la portada conserva su jerarquía y ningún texto queda recortado.
 
@@ -156,10 +158,11 @@ vertical.
 
 **Identidad visual**
 
-- **FR-016**: La aplicación MUST usar la paleta institucional definida en el documento de diseño,
-  en modo claro y oscuro.
-- **FR-017**: Los colores de la aplicación MUST NOT verse alterados por la personalización
-  cromática del sistema operativo.
+- **FR-016**: La aplicación MUST usar la paleta institucional definida en el documento de diseño.
+- **FR-016b**: La aplicación MUST tener un **único aspecto**, el claro. Su apariencia MUST NOT
+  cambiar con el ajuste de tema claro u oscuro del sistema operativo.
+- **FR-017**: Los colores de la aplicación MUST NOT verse alterados por ninguna personalización del
+  sistema operativo: ni por la cromática tomada del fondo de pantalla, ni por el ajuste de tema.
 - **FR-018**: La aplicación MUST disponer de la escala tipográfica completa, del sistema de
   espaciado, de las formas y de los niveles de elevación definidos en el documento de diseño,
   accesibles como valores con nombre y no como cifras sueltas.
@@ -212,8 +215,10 @@ vertical.
 - **SC-004**: Toda pieza de reglas de negocio y todo modelo de pantalla que introduce esta feature
   tiene su propia prueba automática. Se verifica de forma mecánica: una comprobación automatizada
   falla si alguno carece de fichero de prueba asociado.
-- **SC-005**: Ningún color de la interfaz cambia al modificar el fondo de pantalla del dispositivo,
-  comprobado con dos fondos de colores opuestos.
+- **SC-005**: Ningún color de la interfaz cambia al modificar el fondo de pantalla del dispositivo
+  —comprobado con dos fondos de colores opuestos— ni al alternar el tema claro y oscuro del
+  sistema. Se verifica de forma mecánica: una comprobación automatizada falla si algún punto del
+  código puede hacer que la apariencia dependa del tema del sistema.
 - **SC-006**: La composición de la pantalla de arranque conserva su jerarquía y no recorta ningún
   texto con el tamaño de letra del sistema al 200 %.
 - **SC-007**: La pantalla de arranque implementada es indistinguible de la imagen de referencia en
@@ -237,6 +242,11 @@ vertical.
   autoría está desactualizado respecto a lo acordado aquí y se corregirá en el mismo cambio, para
   que documento y aplicación no se contradigan.
 - El escudo aportado es el recurso oficial y se usa tal cual.
+- **La aplicación tiene un único tema, el claro.** Es una decisión de producto del propietario,
+  tomada después de redactar la primera versión de esta especificación: una publicación oficial debe
+  verse igual en todos los dispositivos, y un segundo aspecto duplicaría el coste de diseñar y
+  verificar cada pantalla futura sin aportar valor. Deja sin efecto el apartado 5 del documento de
+  diseño, que se anota como superado en el mismo cambio.
 - El bloqueo vertical se aplica a teléfonos. En pantallas de 600 dp o más el sistema operativo
   ignora las restricciones de orientación y no existe forma soportada de imponerlas; queda fuera de
   alcance y no se intentará.

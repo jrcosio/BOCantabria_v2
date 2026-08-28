@@ -142,4 +142,5 @@ No son datos de la aplicación, pero sí un vocabulario cerrado que el resto del
 | `BocSpacing` | Los nueve valores de espaciado | `BocTheme.spacing.*` |
 | `BocElevation` | Los cinco niveles de elevación | `BocTheme.elevation.*` |
 
-`BocExtendedColors` es inmutable y tiene una instancia por modo, clara y oscura.
+`BocExtendedColors` es inmutable y tiene **una sola instancia**: la aplicación tiene un único
+tema, el claro (research.md, D-013).

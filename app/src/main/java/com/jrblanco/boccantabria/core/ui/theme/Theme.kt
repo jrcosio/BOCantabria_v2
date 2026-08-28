@@ -1,8 +1,6 @@
 package com.jrblanco.boccantabria.core.ui.theme
 
-import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
@@ -42,7 +40,7 @@ data class BocExtendedColors(
     val sectionAnnouncements: Color,
 )
 
-private val LightExtendedColors = BocExtendedColors(
+private val ExtendedColors = BocExtendedColors(
     textPrimary = BocTextPrimary,
     textSecondary = BocTextSecondary,
     textMuted = BocTextMuted,
@@ -54,7 +52,7 @@ private val LightExtendedColors = BocExtendedColors(
     aiContainer = BocAiContainer,
     success = BocSuccess,
     warning = BocWarning,
-    onPrimaryAccent = BocPrimaryDark,
+    onPrimaryAccent = BocOnPrimaryAccent,
     onPrimaryMuted = BocOnPrimaryMuted,
     sectionGeneral = BocSectionGeneral,
     sectionPersonnel = BocSectionPersonnel,
@@ -63,17 +61,7 @@ private val LightExtendedColors = BocExtendedColors(
     sectionAnnouncements = BocSectionAnnouncements,
 )
 
-private val DarkExtendedColors = LightExtendedColors.copy(
-    textPrimary = BocTextPrimaryDark,
-    textSecondary = BocTextSecondaryDark,
-    textMuted = BocTextSecondaryDark,
-    surfaceSoft = BocSurfaceSoftDark,
-    surfaceStrong = BocSurfaceSoftDark,
-    divider = BocOutlineDark,
-    aiContainer = BocAiContainerDark,
-)
-
-private val LightColorScheme = lightColorScheme(
+private val ColorScheme = lightColorScheme(
     primary = BocPrimary,
     onPrimary = BocOnPrimary,
     primaryContainer = BocPrimaryContainer,
@@ -94,51 +82,31 @@ private val LightColorScheme = lightColorScheme(
     onError = BocOnPrimary,
 )
 
-private val DarkColorScheme = darkColorScheme(
-    primary = BocPrimaryDark,
-    onPrimary = BocOnPrimaryDark,
-    primaryContainer = BocPrimaryContainerDark,
-    onPrimaryContainer = BocTextPrimaryDark,
-    secondary = BocPrimaryDark,
-    onSecondary = BocOnPrimaryDark,
-    secondaryContainer = BocPrimaryContainerDark,
-    onSecondaryContainer = BocTextPrimaryDark,
-    background = BocBackgroundDark,
-    onBackground = BocTextPrimaryDark,
-    surface = BocSurfaceDark,
-    onSurface = BocTextPrimaryDark,
-    surfaceVariant = BocSurfaceSoftDark,
-    onSurfaceVariant = BocTextSecondaryDark,
-    outline = BocOutlineDark,
-    outlineVariant = BocOutlineDark,
-    error = BocError,
-    onError = BocOnPrimary,
-)
-
 private val LocalBocExtendedColors = staticCompositionLocalOf<BocExtendedColors> {
     error("BocExtendedColors not provided. Wrap the composable in BOCantabriaTheme.")
 }
 
 /**
- * The application theme.
+ * The application theme. There is exactly one, and it does not vary.
  *
- * There is deliberately **no** dynamic-colour parameter. The specification requires that the
- * institutional blue never change between screens, and a switch with a safe default is still a
- * switch: sooner or later someone turns it on "just to try". If the parameter does not exist, the
- * rule does not depend on anyone's discipline (research.md, D-002).
+ * No dark-mode parameter and no dynamic-colour parameter, on purpose. An official publication has
+ * to look the same on every device, so the appearance must not depend on the phone's wallpaper or
+ * on its light/dark setting. Both mechanisms are **removed** rather than defaulted to a safe value:
+ * a switch with a safe default is still a switch, and sooner or later someone flips it. With
+ * `isSystemInDarkTheme()` never called and no dark scheme to select, the appearance cannot vary by
+ * accident (research.md, D-002 and D-013).
+ *
+ * There is an architecture test that fails the build if either mechanism comes back.
  */
 @Composable
-fun BOCantabriaTheme(
-    darkTheme: Boolean = isSystemInDarkTheme(),
-    content: @Composable () -> Unit,
-) {
+fun BOCantabriaTheme(content: @Composable () -> Unit) {
     CompositionLocalProvider(
-        LocalBocExtendedColors provides if (darkTheme) DarkExtendedColors else LightExtendedColors,
+        LocalBocExtendedColors provides ExtendedColors,
         LocalBocSpacing provides BocSpacing(),
         LocalBocElevation provides BocElevation(),
     ) {
         MaterialTheme(
-            colorScheme = if (darkTheme) DarkColorScheme else LightColorScheme,
+            colorScheme = ColorScheme,
             typography = BocTypography,
             shapes = BocShapes,
             content = content,

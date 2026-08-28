@@ -218,3 +218,40 @@ imperceptible en pantalla.
 **Alternativas descartadas**:
 - Empaquetar una fuente variable: alcanzaría el 650 exacto a cambio de varios cientos de kilobytes
   y de gestionar una fuente propia. Queda anotado por si en revisión se aprecia la diferencia.
+
+
+---
+
+## D-013: Un único tema, el claro
+
+**Decisión**: se elimina el modo oscuro. `BOCantabriaTheme` no consulta el ajuste del sistema y no
+existe un esquema oscuro que consultar. Los tokens de la paleta oscura desaparecen del código, salvo
+el azul claro `#8FD3EE`, que se conserva renombrado porque no era un token de modo oscuro sino el
+acento que se usa **sobre** el azul institucional, en la línea divisoria y en la autoría.
+
+**Rationale**: decisión de producto del propietario, tomada tras la primera redacción de la
+especificación. Una publicación oficial debe verse igual en cualquier dispositivo; un segundo
+aspecto duplica el coste de diseñar, revisar y verificar cada pantalla futura, y multiplica por dos
+las combinaciones que hay que comprobar en accesibilidad y contraste, a cambio de una preferencia
+estética que aquí no aporta valor.
+
+La implementación **elimina** el mecanismo en lugar de fijarlo a claro, por la misma razón que se
+eliminó el parámetro de color dinámico (D-002): un interruptor con valor seguro sigue siendo un
+interruptor. Si `isSystemInDarkTheme()` no se invoca en ninguna parte y no hay `darkColorScheme`, la
+apariencia no puede depender del sistema por accidente.
+
+**Consecuencia sobre las barras del sistema**: `enableEdgeToEdge()` decide por su cuenta el color de
+los iconos según el tema del sistema. Con un fondo claro fijo, en un móvil configurado en oscuro los
+iconos saldrían claros sobre blanco y serían ilegibles. Se fija explícitamente la apariencia clara
+para ambas barras, y la portada azul la invierte mientras está en pantalla.
+
+**Cómo se hace cumplir**: una regla de Konsist falla si algún fichero importa
+`isSystemInDarkTheme` o `darkColorScheme`, y una prueba de interfaz comprueba que forzar la
+configuración a modo noche no altera los colores. Sin eso, «tema único» sería una intención, no una
+propiedad del sistema.
+
+**Alternativas descartadas**:
+- Mantener el esquema oscuro y forzar `darkTheme = false`: deja el código muerto a la vista y el
+  interruptor a un carácter de distancia de reactivarse.
+- Declarar recursos `values-night` idénticos a los claros: obliga a mantener dos copias de todo y a
+  recordar sincronizarlas.

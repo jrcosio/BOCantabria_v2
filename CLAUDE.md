@@ -137,13 +137,20 @@ Composable → ViewModel → UseCase → Repository (interfaz en domain)
 
 ### Sistema de diseño
 
+- **La aplicación tiene un único tema, el claro.** No responde al ajuste claro/oscuro del sistema.
+  `BOCantabriaTheme` **no tiene** parámetro `darkTheme` ni de color dinámico, y no debe tenerlo: los
+  mecanismos están eliminados, no puestos a un valor seguro. Una regla de Konsist falla la build si
+  alguien importa `isSystemInDarkTheme`, `darkColorScheme` o los esquemas dinámicos. El apartado 5
+  del documento de diseño está marcado como superado.
+- **Las barras del sistema** llevan apariencia clara fijada en `MainActivity`, para que los iconos
+  sean oscuros aunque el móvil esté en tema oscuro. La portada azul los invierte mientras está
+  visible y los devuelve a oscuros al salir.
 - **Nunca escribas un color, un tamaño o un espaciado literal.** Los tokens con equivalente en
   Material 3 se consumen por `MaterialTheme`; los propios (`textMuted`, `surfaceSoft`, `aiAccent`,
   los de sección…), por `BocTheme.colors`. También `BocTheme.spacing` y `BocTheme.elevation`.
 - Hay una regla de Konsist que **falla la build** si un fichero fuera de `core/ui/theme` importa
   `androidx.compose.ui.graphics.Color`.
-- `BOCantabriaTheme` **no** tiene parámetro de color dinámico, y no debe tenerlo: el azul
-  institucional no cambia entre pantallas ni entre dispositivos.
+- El azul institucional no cambia entre pantallas ni entre dispositivos.
 - El único color declarado en XML es el fondo del arranque del sistema, en `colors.xml`, porque se
   configura antes de que Compose exista. Debe mantenerse sincronizado con `BocPrimary`.
 - Los pesos 650 del documento se implementan como `SemiBold` (600), el peso real más cercano.

@@ -3,7 +3,10 @@ package com.jrblanco.boccantabria.core.ui.theme
 import androidx.compose.ui.graphics.Color
 
 /**
- * Institutional palette, from the design specification (§4.1, §4.4 and §5.1).
+ * Institutional palette, from the design specification (§4.1 and §4.4).
+ *
+ * There is no dark palette: the application has a single appearance, the light one. Section 5 of
+ * the design document is superseded (research.md, D-013).
  *
  * Names are tokens, not colours: `BocPrimary`, never `BocBlue`. A token survives a change of hue;
  * a colour name becomes a lie the first time the palette is revised.
@@ -11,7 +14,7 @@ import androidx.compose.ui.graphics.Color
  * Nothing outside this package may declare a colour. There is an architecture test asserting it.
  */
 
-// ---------- Light mode (§4.1) ----------
+// ---------- Palette (§4.1) ----------
 
 val BocPrimary = Color(0xFF063B5C)
 val BocOnPrimary = Color(0xFFFFFFFF)
@@ -43,21 +46,17 @@ val BocSuccess = Color(0xFF2E7D32)
 val BocWarning = Color(0xFFED6C02)
 val BocError = Color(0xFFBA1A1A)
 
-// ---------- Dark mode (§5.1) ----------
+// ---------- Accent over the institutional background ----------
 
-val BocPrimaryDark = Color(0xFF8FD3EE)
-val BocOnPrimaryDark = Color(0xFF003549)
-val BocPrimaryContainerDark = Color(0xFF064A6B)
-
-val BocBackgroundDark = Color(0xFF0F171C)
-val BocSurfaceDark = Color(0xFF182229)
-val BocSurfaceSoftDark = Color(0xFF202D35)
-
-val BocTextPrimaryDark = Color(0xFFE7F0F4)
-val BocTextSecondaryDark = Color(0xFFB5C5CD)
-
-val BocOutlineDark = Color(0xFF647680)
-val BocAiContainerDark = Color(0xFF29243A)
+/**
+ * Light atlantic blue, used **on** the institutional blue: the divider line and the authorship
+ * name on the cover.
+ *
+ * The design specification lists this value under its dark palette, but that is not what it is
+ * here. The application has a single theme (research.md, D-013), and this token exists because a
+ * dark background needs an accent that reads on it — not because there is a dark mode.
+ */
+val BocOnPrimaryAccent = Color(0xFF8FD3EE)
 
 // ---------- Section colours (§4.4) ----------
 
