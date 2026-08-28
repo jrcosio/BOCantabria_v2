@@ -114,6 +114,8 @@ dependencies {
     testImplementation(libs.androidx.room.testing)
     testImplementation(platform(libs.okhttp.bom))
     testImplementation(libs.okhttp.mockwebserver)
+    // El catálogo de fuentes exige https, así que el servidor de pruebas también lo habla.
+    testImplementation(libs.okhttp.tls)
 
     // --- Tests instrumentados y de UI (src/androidTest) ---
     androidTestImplementation(platform(libs.androidx.compose.bom))

@@ -83,6 +83,7 @@ androidx-room-testing = { group = "androidx.room", name = "room-testing", versio
 okhttp-bom = { group = "com.squareup.okhttp3", name = "okhttp-bom", version.ref = "okhttpBom" }
 okhttp = { group = "com.squareup.okhttp3", name = "okhttp" }
 okhttp-mockwebserver = { group = "com.squareup.okhttp3", name = "mockwebserver3-junit4" }
+okhttp-tls = { group = "com.squareup.okhttp3", name = "okhttp-tls" }
 
 # Azucarado de la biblioteca estándar: habilita java.time con minSdk 24
 desugar-jdk-libs = { group = "com.android.tools", name = "desugar_jdk_libs", version.ref = "desugarJdkLibs" }

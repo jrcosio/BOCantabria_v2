@@ -167,18 +167,18 @@ organismo, su título y su fecha, y la cabecera con la fecha de la última edici
 
 > Se escriben **antes** que la implementación y deben fallar antes de hacerlas pasar.
 
-- [ ] T023 [P] [US1] Escribir `TEST/data/source/remote/BocRssParserTest.kt` con la matriz completa del
+- [X] T023 [P] [US1] Escribir `TEST/data/source/remote/BocRssParserTest.kt` con la matriz completa del
       apartado 28 sobre las muestras de T003: canal válido, `size` 100, `size` 0, `size` ausente,
       `size` no numérico, sin items, nodo desconocido, los cuatro campos, campos en orden distinto,
       título largo, título con caracteres especiales, sin `categorias`, fecha inválida, enlace
       inválido, y **rechazo del cuerpo con declaración de tipo de documento y con entidad externa**
       (FR-008, FR-010, FR-061)
-- [ ] T024 [P] [US1] Escribir `TEST/data/source/remote/PublicationNormalizerTest.kt`: tres, cuatro y
+- [X] T024 [P] [US1] Escribir `TEST/data/source/remote/PublicationNormalizerTest.kt`: tres, cuatro y
       cinco componentes; `ORD` al final, al principio y en medio; `EXT`; sin tipo de edición;
       sección que no corresponde a la fuente; componentes vacíos; barra final; el desorden real del
       feed 4.3; enlace sin identificador (los tres escalones de la cascada); y que el título se
       conserva íntegro (FR-011 … FR-018, FR-061)
-- [ ] T025 [P] [US1] Escribir `TEST/data/source/remote/OkHttpPublicationRemoteDataSourceTest.kt` con
+- [X] T025 [P] [US1] Escribir `TEST/data/source/remote/OkHttpPublicationRemoteDataSourceTest.kt` con
       MockWebServer: respuesta correcta, 404 sin reintento, 500 con tres reintentos y esperas
       inyectadas, tipo de contenido inesperado, cuerpo por encima del tope de 5 MB, agotamiento de
       espera, huella coincidente que devuelve `NotModified`, y que un esquema distinto de `https` se
@@ -199,19 +199,19 @@ organismo, su título y su fecha, y la cabecera con la fecha de la última edici
 
 ### Implementation for User Story 1
 
-- [ ] T029 [P] [US1] Crear los DTO `MAIN/data/source/remote/RssChannelDto.kt` y `RssItemDto.kt`, con
+- [X] T029 [P] [US1] Crear los DTO `MAIN/data/source/remote/RssChannelDto.kt` y `RssItemDto.kt`, con
       todos los campos anulables a propósito: reflejan lo que llega, no lo que debería llegar
       (data-model.md §4.1)
-- [ ] T030 [US1] Implementar `MAIN/data/source/remote/BocRssParser.kt` hasta hacer pasar T023: guarda
+- [X] T030 [US1] Implementar `MAIN/data/source/remote/BocRssParser.kt` hasta hacer pasar T023: guarda
       previa de texto contra `<!DOCTYPE` y `<!ENTITY`, endurecimiento de la fábrica con **cada
       bandera dentro de un `runCatching`**, análisis por nombre de etiqueta, nodos desconocidos
       ignorados y tope de 500 publicaciones. **Kotlin puro: ni un `import android.*`**
       (research.md D-003) (depende de T029)
-- [ ] T031 [US1] Implementar `MAIN/data/source/remote/PublicationNormalizer.kt` hasta hacer pasar
+- [X] T031 [US1] Implementar `MAIN/data/source/remote/PublicationNormalizer.kt` hasta hacer pasar
       T024, siguiendo el algoritmo del apartado 10.2 y las once reglas de
       `contracts/internal-contracts.md` §2.5. La sección la manda la fuente; `categorias` se conserva
       en crudo (research.md D-006, D-007) (depende de T029)
-- [ ] T032 [US1] Implementar la fuente remota hasta hacer pasar T025:
+- [X] T032 [US1] Implementar la fuente remota hasta hacer pasar T025:
       `MAIN/data/source/remote/PublicationRemoteDataSource.kt` con el sellado `FeedFetchResult`,
       `OkHttpPublicationRemoteDataSource.kt` y `OkHttpFactory.kt` (función factoría, para que
       `core.di` no vea el SDK). Límites 10/45/60 s, cabeceras por interceptor, cuerpo en *streaming*
