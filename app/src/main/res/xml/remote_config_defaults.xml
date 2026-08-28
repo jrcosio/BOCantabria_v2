@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Packaged defaults for the remote configuration.
+
+  They mean "everything allowed", so the application starts normally when the console has nothing
+  published — which is its state today. Loading them into the client means reading a parameter
+  never comes back empty.
+-->
+<defaultsMap>
+    <entry>
+        <key>min_supported_version_code</key>
+        <value>0</value>
+    </entry>
+    <entry>
+        <key>maintenance_message</key>
+        <value></value>
+    </entry>
+</defaultsMap>

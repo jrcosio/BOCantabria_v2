@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!--
+      The only colour declared in XML. The system splash screen is configured through resources,
+      before Compose exists, so this value cannot come from the theme tokens. It must stay in sync
+      with BocPrimary in core/ui/theme/Color.kt.
+    -->
+    <color name="splash_background">#063B5C</color>
+</resources>

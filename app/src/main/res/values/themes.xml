@@ -1,5 +1,22 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
 
+    <!--
+      Theme the activity runs with once the system splash is gone. The application is pure
+      Compose, so it needs no Material Components XML theme: adding that dependency for a theme
+      nobody styles in XML would be dead weight.
+    -->
     <style name="Theme.BOCantabria" parent="android:Theme.Material.Light.NoActionBar" />
+
+    <!--
+      System splash screen. The system ALWAYS shows one; left unstyled it paints the window
+      background, which is white, and every launch flashes white before the institutional blue.
+      Painting it the same blue makes the handover invisible.
+    -->
+    <style name="Theme.BOCantabria.Starting" parent="Theme.SplashScreen">
+        <item name="windowSplashScreenBackground">@color/splash_background</item>
+        <item name="windowSplashScreenAnimatedIcon">@drawable/ic_splash_emblem</item>
+        <item name="postSplashScreenTheme">@style/Theme.BOCantabria</item>
+    </style>
+
 </resources>

@@ -57,6 +57,7 @@ dependencies {
 
     // --- AndroidX ---
     implementation(libs.androidx.core.ktx)
+    implementation(libs.androidx.core.splashscreen)
     implementation(libs.androidx.activity.compose)
     implementation(libs.androidx.lifecycle.runtime.ktx)
     implementation(libs.androidx.lifecycle.runtime.compose)
@@ -65,11 +66,15 @@ dependencies {
 
     // --- Corrutinas ---
     implementation(libs.kotlinx.coroutines.android)
+    // Provides Task.await(), used to consume the Firebase Remote Config API from a coroutine.
+    // Declared explicitly rather than relied on transitively: the code imports it directly.
+    implementation(libs.kotlinx.coroutines.play.services)
 
     // --- Firebase (BOM gobierna las versiones) ---
     implementation(platform(libs.firebase.bom))
     implementation(libs.firebase.analytics)
     implementation(libs.firebase.crashlytics)
+    implementation(libs.firebase.config)
 
     // --- Inyección de dependencias (BOM gobierna las versiones) ---
     implementation(platform(libs.koin.bom))

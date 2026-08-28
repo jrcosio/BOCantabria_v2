@@ -7,6 +7,7 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import com.jrblanco.boccantabria.ui.home.HomeScreen
+import com.jrblanco.boccantabria.ui.splash.SplashScreen
 
 @Composable
 fun BOCantabriaNavHost(
@@ -15,9 +16,21 @@ fun BOCantabriaNavHost(
 ) {
     NavHost(
         navController = navController,
-        startDestination = Route.Home,
+        startDestination = Route.Splash,
         modifier = modifier,
     ) {
+        composable<Route.Splash> {
+            SplashScreen(
+                onStartupComplete = {
+                    navController.navigate(Route.Home) {
+                        // The cover is dropped from the back stack, so pressing back from Home
+                        // closes the application instead of returning to a screen whose work is
+                        // already done.
+                        popUpTo(Route.Splash) { inclusive = true }
+                    }
+                },
+            )
+        }
         composable<Route.Home> {
             HomeScreen()
         }

@@ -35,4 +35,10 @@ fun testGraphOverrides(remote: ContentRemoteDataSource): List<Module> = listOf(
             )
         }
     },
+) + startupGraphOverrides(
+    // Every screen now sits behind the splash, so a content test has to get through it. Faking the
+    // startup chain keeps these tests off the network and independent of what Remote Config has
+    // published, which is what "deterministic" means here.
+    connectivity = FakeConnectivityDataSource(online = true),
+    remoteConfig = FakeRemoteConfigDataSource(),
 )

@@ -73,9 +73,9 @@ core/
   di/         Módulos Koin (coreModule, dataModule, domainModule, uiModule)
               y appModules, único punto de entrada del grafo
   telemetry/  Contratos AnalyticsTracker y CrashReporter + AnalyticsEvent
-  ui/theme/       Tema (Color, Theme, Type)
+  ui/theme/       Sistema de diseño: Color, Type, Spacing, Shape, Elevation, Theme
   ui/component/   Componibles compartidos sin estado
-  util/       DispatcherProvider y utilidades transversales
+  util/       DispatcherProvider, AppVersionProvider y utilidades transversales
 data/
   repository/     Implementaciones de las interfaces de domain
   source/local/   Fuentes locales (+ entidades)
@@ -86,8 +86,9 @@ domain/
   repository/     Interfaces de repositorio (contratos)
   usecase/        Casos de uso, una operación por clase
 ui/
+  splash/         Arranque: SplashScreen + SplashViewModel + SplashUiState
   home/           Pantalla: HomeScreen + HomeViewModel + HomeUiState
-  navigation/     Rutas tipadas y NavHost
+  navigation/     Rutas tipadas y NavHost (el arranque es el destino inicial)
 BOCantabriaApp    Application: arranca Koin
 MainActivity      Anfitrión de la navegación Compose
 ```
@@ -133,6 +134,26 @@ Composable → ViewModel → UseCase → Repository (interfaz en domain)
 
 - Los `Dispatchers` se **inyectan** (`DispatcherProvider`), nunca se referencian
   estáticamente. Es lo que hace deterministas los tests.
+
+### Sistema de diseño
+
+- **La aplicación tiene un único tema, el claro.** No responde al ajuste claro/oscuro del sistema.
+  `BOCantabriaTheme` **no tiene** parámetro `darkTheme` ni de color dinámico, y no debe tenerlo: los
+  mecanismos están eliminados, no puestos a un valor seguro. Una regla de Konsist falla la build si
+  alguien importa `isSystemInDarkTheme`, `darkColorScheme` o los esquemas dinámicos. El apartado 5
+  del documento de diseño está marcado como superado.
+- **Las barras del sistema** llevan apariencia clara fijada en `MainActivity`, para que los iconos
+  sean oscuros aunque el móvil esté en tema oscuro. La portada azul los invierte mientras está
+  visible y los devuelve a oscuros al salir.
+- **Nunca escribas un color, un tamaño o un espaciado literal.** Los tokens con equivalente en
+  Material 3 se consumen por `MaterialTheme`; los propios (`textMuted`, `surfaceSoft`, `aiAccent`,
+  los de sección…), por `BocTheme.colors`. También `BocTheme.spacing` y `BocTheme.elevation`.
+- Hay una regla de Konsist que **falla la build** si un fichero fuera de `core/ui/theme` importa
+  `androidx.compose.ui.graphics.Color`.
+- El azul institucional no cambia entre pantallas ni entre dispositivos.
+- El único color declarado en XML es el fondo del arranque del sistema, en `colors.xml`, porque se
+  configura antes de que Compose exista. Debe mantenerse sincronizado con `BocPrimary`.
+- Los pesos 650 del documento se implementan como `SemiBold` (600), el peso real más cercano.
 
 ### Resultados y errores
 
@@ -198,6 +219,40 @@ tenga su fichero de prueba. Si añades una clase de dominio sin test, la build f
 - En Robolectric usa `@Config(application = Application::class)`: la `BOCantabriaApp` real
   arranca el Koin global, que sobrevive entre tests del mismo JVM y hace fallar al segundo.
 - Robolectric aún no tiene descriptor para la API 37: los tests usan `@Config(sdk = [36])`.
+- `unloadKoinModules` **elimina** las definiciones, no restaura las que tapaba. `KoinOverrideRule`
+  recarga `appModules` al terminar; si escribes otra regla que cargue módulos, haz lo mismo o
+  dejarás agujeros en el grafo para las clases de prueba siguientes.
+- Toda pantalla queda detrás del arranque, así que una prueba instrumentada de cualquier pantalla
+  pasa por él. Usa `testGraphOverrides()`, que ya sustituye la cadena de arranque por dobles y
+  mantiene la prueba fuera de la red.
+- Firebase (Analytics, Crashlytics, Remote Config) necesita un `FirebaseApp` real: bajo Robolectric
+  hay que sustituirlo por dobles.
+- Un `Image` con solo `height` ajusta al ancho intrínseco del vector y la altura pedida no se
+  aplica. Fija también `aspectRatio`.
+- El splash del sistema recorta el icono a un círculo: el escudo debe ir inscrito en la zona segura
+  (192 dp dentro de un lienzo de 288). Para eso existe `ic_splash_emblem`.
+
+- **`setContent` solo se llama una vez por prueba.** `createAndroidComposeRule<MainActivity>()`
+  lanza la actividad real, que ya pone su contenido: llamar a `composeRule.setContent` encima
+  lanza `IllegalStateException`. Si necesitas montar tú la composición —para inyectar un
+  `NavHostController` o forzar una configuración— usa `createComposeRule()`, que arranca una
+  actividad en blanco. Y si una prueba necesita capturar dos escenarios, hazlo dentro de **una
+  sola** llamada a `setContent`.
+- **El gesto de Atrás no es comprobable de forma fiable en una tanda larga.** Se intentaron tres
+  mecanismos y los tres fallaron por razones distintas: `onBackPressedDispatcher.onBackPressed()`
+  solo ejecuta las devoluciones registradas y con retroceso predictivo quien cierra la actividad es
+  la plataforma; `Espresso.pressBackUnconditionally()` exige foco de ventana que no siempre llega; y
+  la acción global del sistema tampoco alcanzó la app dentro de la suite. Lo que esta aplicación
+  controla es la **pila de retroceso**, así que es eso lo que se afirma (`SplashBackStackTest`); el
+  cierre efectivo es comportamiento de Android y se comprueba a mano según `quickstart.md`.
+
+**Intermitencia conocida** — `SplashRestorationTest` falló una vez en cinco ejecuciones con
+`Activity never becomes requested state "[DESTROYED]"`. Es un tiempo de espera agotado dentro de
+`recreate()`, no la aserción de la prueba, y solo ocurrió en una tanda completa de 13 minutos; en
+aislamiento y en una segunda tanda completa pasa. No hay causa raíz identificada: apunta a
+saturación del emulador, agravada porque ahora toda prueba instrumentada atraviesa el mínimo de
+1,2 s del arranque. Queda anotado a propósito en lugar de inventar un arreglo sin diagnóstico. Si
+vuelve a fallar, hay que investigarlo de verdad: un test intermitente incumple el principio V.
 
 ---
 
@@ -222,6 +277,12 @@ Antes de dar una feature por terminada, en este orden:
 
 ## Notas del proyecto
 
+- **Orientación**: la aplicación está **bloqueada en vertical** por decisión de producto. En
+  pantallas de 600 dp o más Android ignora la restricción desde la API 36 y no se intentará
+  sortearlo. Los dos avisos de lint correspondientes están suprimidos a conciencia en el manifest.
+- **Documentación de diseño**: `docs/diseno/` contiene las especificaciones visuales y la imagen de
+  referencia del arranque. Es la fuente de verdad de la interfaz; si cambias algo acordado, actualiza
+  también el documento.
 - **Package**: `com.jrblanco.boccantabria` (con doble «c»). Es intencionado: el
   `google-services.json` está registrado con ese package exacto en el proyecto Firebase
   `bocantabria-6e90f`. **No lo renombres** sin registrar antes una app nueva en la consola de
