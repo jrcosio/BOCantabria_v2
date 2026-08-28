@@ -1,6 +1,7 @@
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.compose)
+    alias(libs.plugins.kotlin.serialization)
     alias(libs.plugins.google.services)
     alias(libs.plugins.firebase.crashlytics)
 }
@@ -34,6 +35,8 @@ android {
     }
     buildFeatures {
         compose = true
+        // BOCantabriaApp usa BuildConfig.DEBUG para el nivel de log de Koin.
+        buildConfig = true
     }
     testOptions {
         unitTests {
@@ -83,6 +86,7 @@ dependencies {
     testImplementation(platform(libs.koin.bom))
     testImplementation(libs.koin.test)
     testImplementation(libs.koin.test.junit4)
+    testImplementation(libs.konsist)
 
     // --- Tests instrumentados y de UI (src/androidTest) ---
     androidTestImplementation(platform(libs.androidx.compose.bom))
