@@ -46,3 +46,32 @@
   incluye moverla junto al documento de diseño a una ubicación versionada; sin eso, ese criterio no
   sería verificable por nadie más que quien tenga el fichero en su máquina.
 - Resultado de la validación: **todos los ítems pasan en la primera iteración**.
+
+
+## Enmiendas posteriores a `/speckit-analyze` (2026-08-28)
+
+El análisis de coherencia entre artefactos no encontró nada crítico —cobertura de requisitos
+funcionales del 100 %, sin conflictos con la constitución— pero sí siete asuntos, cerrados con
+aprobación del propietario en el caso que requería decisión:
+
+- **FR-008 sin cobertura automática (HIGH)**: que la preparación sobreviva a un cambio de
+  configuración era requisito y caso límite, y ninguna tarea lo probaba. Con el bloqueo vertical
+  desaparece el giro, pero el modo oscuro, el tamaño de letra y el idioma siguen recreando la
+  actividad. Ahora lo cubre una prueba instrumentada con `recreate()`, que verifica además que no se
+  dispara una segunda preparación.
+- **FR-022 a medias (MEDIUM)**: se pedían iconos de sistema claros sobre la portada azul, pero el
+  resto de la aplicación tiene fondo claro y los necesita oscuros. Ninguna tarea cubría ese cambio;
+  ahora hay una.
+- **Tarea técnicamente equivocada (MEDIUM)**: pedía un tema XML «base de Material 3». El proyecto no
+  tiene ni necesita la librería de componentes Material para XML —es Compose puro— y seguir la
+  tarea al pie de la letra habría añadido una dependencia inútil.
+- **Regla de arquitectura frágil (MEDIUM)**: buscar literales `Color(0xFF…)` dentro de los cuerpos
+  produce falsos positivos con `Color.Transparent` y con los modificadores de alfa. Reformulada como
+  regla de importación, que es lo que la herramienta hace de forma fiable.
+- **Paso innecesario (LOW)**: una tarea pedía tocar `.gitignore` al mover la documentación de
+  diseño; al moverla a `docs/diseno/`, `Datos_modelo/` sigue ignorado y así debe quedarse.
+- **Trazabilidad (LOW)**: FR-001, FR-004, SC-003, SC-004 y SC-008, junto con las decisiones D-001,
+  D-006, D-007 y D-011, estaban cubiertos pero sin citar. Ya se citan.
+
+Tareas renumeradas de 53 a 55, sin referencias huérfanas. La checklist se ha vuelto a validar tras
+las enmiendas: todos los ítems siguen pasando.
