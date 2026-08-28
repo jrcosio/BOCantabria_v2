@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "140041662127",
+    "project_id": "bocantabria-6e90f",
+    "storage_bucket": "bocantabria-6e90f.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:140041662127:android:f8962df99d2ef467966e5a",
+        "android_client_info": {
+          "package_name": "com.jrblanco.boccantabria"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBHIBhQnhT3yVZCNe3GxTizj_uFyYjZXns"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
