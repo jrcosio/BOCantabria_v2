@@ -46,3 +46,20 @@
   en la sección *Assumptions*. Por eso no se abrió ningún `[NEEDS CLARIFICATION]`.
 - Resultado de la validación: **todos los ítems pasan en la primera iteración**. La
   especificación está lista para `/speckit-clarify` o directamente para `/speckit-plan`.
+
+## Enmiendas posteriores a `/speckit-analyze` (2026-08-28)
+
+El análisis de coherencia entre artefactos detectó tres huecos que se han cerrado con la
+aprobación del propietario. Ninguno era crítico; todos afectaban a la *verificabilidad*:
+
+- **FR-023 (nuevo)**: el escenario 4 de la historia P1 —el contenido sobrevive al giro del
+  dispositivo— no tenía prueba automática, solo comprobación manual. Ahora la exige.
+- **SC-002 (reformulado)**: pedía «100 % de cobertura» sin que nada lo midiera. Ahora exige que
+  una comprobación automatizada falle si una pieza de dominio o un modelo de pantalla carece de
+  fichero de prueba, lo que sí es verificable en cada build.
+- **SC-001 (precisado)** y **SC-005 (reetiquetado)**: el primero deja claro que el tiempo se
+  mide (la guía de validación indica cómo); el segundo pasa a ser métrica de seguimiento
+  posterior a la entrega, porque solo puede medirse cuando llegue la primera feature de negocio
+  y no debe bloquear el cierre de esta.
+
+La checklist se ha vuelto a validar tras las enmiendas: todos los ítems siguen pasando.

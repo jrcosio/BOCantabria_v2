@@ -54,6 +54,7 @@ Cubre:
 | El recorrido completo entre capas con el grafo real | FR-012, FR-019 |
 | Que `domain` no importa plataforma ni proveedores, y que `ui` no importa `data` | FR-007, FR-008, FR-009 |
 | Que la analítica no envía parámetros sensibles | FR-016 |
+| Que toda pieza de dominio y todo modelo de pantalla tiene fichero de prueba | SC-002 |
 
 **Comprobación de que las reglas de arquitectura muerden de verdad** (el criterio SC-004 exige
 que una violación se detecte automáticamente; conviene verificar que la red no tiene agujeros):
@@ -92,7 +93,18 @@ pruebas (FR-020).
 1. La aplicación abre sin cerrarse (FR-001).
 2. Aparece brevemente el indicador de carga y después la lista de contenido (FR-002).
 3. Girando el dispositivo, el contenido permanece y **no** reaparece el indicador de carga
-   (FR-005).
+   (FR-005). Esto además está cubierto automáticamente por `HomeStateRestorationTest` (FR-023);
+   la comprobación manual sirve para confirmarlo en un dispositivo real.
+
+**Mide SC-001** (el criterio dice «menos de 2 s»; hay que obtener la cifra, no estimarla):
+
+```bash
+~/Library/Android/sdk/platform-tools/adb shell am force-stop com.jrblanco.boccantabria
+~/Library/Android/sdk/platform-tools/adb shell am start -W -n com.jrblanco.boccantabria/.MainActivity
+```
+
+**Esperado**: el campo `TotalTime` de la salida por debajo de `2000` (milisegundos). Anota la
+cifra: es la evidencia de SC-001.
 
 Comprueba que Firebase quedó inicializado:
 

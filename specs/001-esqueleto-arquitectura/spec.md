@@ -165,6 +165,8 @@ aparece en el panel de errores.
   depender del reloj del sistema ni del orden de ejecución.
 - **FR-022**: Las plantillas de prueba de ejemplo que trae el proyecto generado MUST
   eliminarse, para no confundirlas con pruebas reales.
+- **FR-023**: MUST existir una prueba automática de interfaz que verifique que el contenido
+  sobrevive a un cambio de configuración del dispositivo sin volver a cargarse.
 
 ### Key Entities
 
@@ -183,16 +185,20 @@ aparece en el panel de errores.
 ### Measurable Outcomes
 
 - **SC-001**: En una instalación limpia, la aplicación llega a mostrar la pantalla inicial en
-  menos de 2 segundos en un dispositivo de gama media, sin cierres inesperados.
-- **SC-002**: El 100 % de las reglas de negocio y de los modelos de pantalla incluidos en esta
-  feature está cubierto por pruebas automáticas que se ejecutan sin dispositivo.
+  menos de 2 segundos en un dispositivo de gama media, sin cierres inesperados. El tiempo se
+  mide, no se estima: la guía de validación indica cómo obtener la cifra.
+- **SC-002**: Toda pieza de reglas de negocio y todo modelo de pantalla tiene su propia prueba
+  automática que se ejecuta sin dispositivo. Se verifica de forma mecánica: una comprobación
+  automatizada falla si alguna de esas piezas carece de fichero de prueba asociado.
 - **SC-003**: La batería completa de pruebas sin dispositivo termina en menos de 2 minutos, de
   modo que ejecutarla en cada cambio sea sostenible.
 - **SC-004**: Un error deliberado en el cableado de dependencias o una violación de la regla de
   dependencias entre capas es detectado por las comprobaciones automáticas antes de llegar a
   ejecutarse en un dispositivo, en el 100 % de los casos.
-- **SC-005**: Una persona del equipo que no participó en esta feature añade una pantalla nueva
-  siguiendo el patrón existente en menos de 30 minutos y sin necesitar aclaraciones.
+- **SC-005** *(seguimiento posterior a la entrega, no es puerta de aceptación)*: Una persona del
+  equipo que no participó en esta feature añade una pantalla nueva siguiendo el patrón existente
+  en menos de 30 minutos y sin necesitar aclaraciones. Solo puede medirse cuando llegue la
+  primera feature de negocio, por lo que no bloquea el cierre de esta.
 - **SC-006**: Tras abrir la aplicación, el evento de pantalla vista y, en su caso, la traza de
   un cierre inesperado son consultables en sus paneles respectivos en menos de 24 horas.
 - **SC-007**: Las cuatro comprobaciones de calidad del proyecto (compilación, pruebas sin

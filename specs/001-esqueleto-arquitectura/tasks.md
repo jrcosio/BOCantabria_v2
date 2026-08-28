@@ -69,13 +69,13 @@ Antes de cualquier comando Gradle: `export JAVA_HOME="/Applications/Android Stud
 - [ ] T007 [P] Crear `MAIN/domain/model/ContentItem.kt`: `data class ContentItem(id: String, title: String)`,
       inmutable y sin dependencias de plataforma
 - [ ] T008 [P] Crear `MAIN/core/util/DispatcherProvider.kt`: la interfaz con `main`, `io` y
-      `default`, más `DefaultDispatcherProvider` (research.md D-007)
+      `default`, más `DefaultDispatcherProvider` (research.md D-007, FR-021)
 - [ ] T009 [P] Crear `MAIN/core/telemetry/AnalyticsEvent.kt`: `data class` con `name` y
       `parameters`, y la lista de claves consideradas sensibles que nunca se envían (FR-016)
 - [ ] T010 [P] Crear `MAIN/core/telemetry/AnalyticsTracker.kt` y
       `MAIN/core/telemetry/CrashReporter.kt` con las interfaces de `contracts/internal-contracts.md`,
       más implementaciones sin efecto (`NoOpAnalyticsTracker`, `NoOpCrashReporter`) para que las
-      historias 1 y 2 no dependan de la 3
+      historias 1 y 2 no dependan de la 3 (FR-015)
 - [ ] T011 Mover el tema de `MAIN/ui/theme/` a `MAIN/core/ui/theme/` (`Color.kt`, `Theme.kt`,
       `Type.kt`), actualizando `package` e importaciones
 - [ ] T012 [P] Crear los componibles compartidos sin estado en `MAIN/core/ui/component/`:
@@ -83,12 +83,14 @@ Antes de cualquier comando Gradle: `export JAVA_HOME="/Applications/Android Stud
       cada uno con su etiqueta de prueba según `contracts/internal-contracts.md`
 - [ ] T013 Crear el cableado base: `MAIN/core/di/CoreModule.kt` (despachadores y telemetría sin
       efecto) y `MAIN/core/di/AppModules.kt` con `val appModules: List<Module>` como único punto
-      de entrada del grafo
+      de entrada del grafo (FR-010)
 - [ ] T014 Crear `MAIN/BOCantabriaApp.kt` que arranca Koin con `androidContext` y `appModules`,
       y registrarla en `app/src/main/AndroidManifest.xml` con `android:name=".BOCantabriaApp"`
 - [ ] T015 [P] Crear los dobles compartidos de prueba en `TEST/fake/`:
-      `TestDispatcherProvider.kt` (respaldado por `TestDispatcher`) y
-      `RecordingAnalyticsTracker.kt` (guarda los eventos recibidos para poder afirmarlos)
+      `TestDispatcherProvider.kt` (respaldado por `TestDispatcher`),
+      `RecordingAnalyticsTracker.kt` (guarda los eventos recibidos para poder afirmarlos) y
+      `FakeContentRemoteDataSource.kt` (permite forzar éxito, lista vacía o fallo; lo necesitan
+      T018, T022 y T039) — FR-021
 - [ ] T016 Ejecutar `./gradlew :app:assembleDebug` y confirmar que la aplicación sigue
       arrancando en el emulador con Koin iniciado
 
@@ -121,45 +123,49 @@ intervención; forzando el fallo del origen aparece el mensaje de error y el rei
       componible sin estado, comprobando las etiquetas `home_loading`, `home_content`,
       `home_empty` y `home_error`, y que pulsar `home_retry` invoca la devolución de llamada
       (FR-020)
-- [ ] T021 [US1] `ATEST/ui/HomeScreenEndToEndTest.kt`: la actividad real arranca con Koin
+- [ ] T021 [P] [US1] `ATEST/ui/home/HomeStateRestorationTest.kt`: tras llegar a `Content`, se
+      llama a `recreate()` sobre la actividad y se afirma que el contenido sigue visible y que
+      **no** reaparece el indicador de carga, es decir que no se dispara una segunda carga
+      (FR-005, FR-023, escenario 4 de la historia 1)
+- [ ] T022 [US1] `ATEST/ui/HomeScreenEndToEndTest.kt`: la actividad real arranca con Koin
       sustituyendo únicamente el origen remoto por un doble, y la pantalla llega a mostrar el
       contenido (FR-001, FR-019)
 
 ### Implementation for User Story 1
 
-- [ ] T022 [P] [US1] `MAIN/domain/repository/ContentRepository.kt`: la interfaz
+- [ ] T023 [P] [US1] `MAIN/domain/repository/ContentRepository.kt`: la interfaz
       `suspend fun getContentItems(): AppResult<List<ContentItem>>`
-- [ ] T023 [P] [US1] Origen remoto en `MAIN/data/source/remote/`: `ContentItemDto.kt` (campos
+- [ ] T024 [P] [US1] Origen remoto en `MAIN/data/source/remote/`: `ContentItemDto.kt` (campos
       `id` y `label`), `ContentRemoteDataSource.kt` (interfaz) y `StubContentRemoteDataSource.kt`
       (lista fija con latencia simulada, research.md D-001)
-- [ ] T024 [P] [US1] Origen local en `MAIN/data/source/local/`: `ContentItemEntity.kt`,
+- [ ] T025 [P] [US1] Origen local en `MAIN/data/source/local/`: `ContentItemEntity.kt`,
       `ContentLocalDataSource.kt` (interfaz) e `InMemoryContentLocalDataSource.kt`
-- [ ] T025 [US1] `MAIN/data/repository/ContentRepositoryImpl.kt`: traducción DTO → dominio y
+- [ ] T026 [US1] `MAIN/data/repository/ContentRepositoryImpl.kt`: traducción DTO → dominio y
       entidad → dominio, política de remoto con respaldo local, captura de excepciones y
       traducción a `DomainError`, todo sobre el despachador de entrada/salida inyectado
-      (depende de T022, T023, T024)
-- [ ] T026 [US1] `MAIN/domain/usecase/GetContentItemsUseCase.kt` con `operator fun invoke()`
-      (depende de T022)
-- [ ] T027 [P] [US1] `MAIN/ui/home/HomeUiState.kt`: sellada con `Loading`, `Content(items)`,
+      (depende de T023, T024, T025)
+- [ ] T027 [US1] `MAIN/domain/usecase/GetContentItemsUseCase.kt` con `operator fun invoke()`
+      (depende de T023)
+- [ ] T028 [P] [US1] `MAIN/ui/home/HomeUiState.kt`: sellada con `Loading`, `Content(items)`,
       `Empty` y `Error(error)`, según `data-model.md`
-- [ ] T028 [US1] `MAIN/ui/home/HomeViewModel.kt`: `MutableStateFlow` privado, `StateFlow`
+- [ ] T029 [US1] `MAIN/ui/home/HomeViewModel.kt`: `MutableStateFlow` privado, `StateFlow`
       público, carga inicial única, guarda contra cargas simultáneas en `onRetry()` y registro
-      del evento de pantalla vista a través de `AnalyticsTracker` (depende de T026, T027)
-- [ ] T029 [US1] `MAIN/ui/home/HomeScreen.kt`: `HomeScreen` que obtiene el modelo con
+      del evento de pantalla vista a través de `AnalyticsTracker` (depende de T027, T028)
+- [ ] T030 [US1] `MAIN/ui/home/HomeScreen.kt`: `HomeScreen` que obtiene el modelo con
       `koinViewModel()` y `HomeContent` sin estado que dibuja los cuatro casos reutilizando los
-      componibles de `core/ui/component` (depende de T027, T012)
-- [ ] T030 [P] [US1] Navegación en `MAIN/ui/navigation/`: `Routes.kt` con las rutas tipadas y
+      componibles de `core/ui/component` (depende de T028, T012)
+- [ ] T031 [P] [US1] Navegación en `MAIN/ui/navigation/`: `Routes.kt` con las rutas tipadas y
       `BOCantabriaNavHost.kt` con el grafo (FR-006)
-- [ ] T031 [US1] Reescribir `MAIN/MainActivity.kt` como anfitrión de la navegación con el tema
-      de `core/ui/theme`, eliminando el `Greeting` de la plantilla (depende de T030)
-- [ ] T032 [US1] Completar el cableado: `MAIN/core/di/DataModule.kt` (orígenes y repositorio),
+- [ ] T032 [US1] Reescribir `MAIN/MainActivity.kt` como anfitrión de la navegación con el tema
+      de `core/ui/theme`, eliminando el `Greeting` de la plantilla (depende de T031)
+- [ ] T033 [US1] Completar el cableado: `MAIN/core/di/DataModule.kt` (orígenes y repositorio),
       `MAIN/core/di/DomainModule.kt` (caso de uso) y `MAIN/core/di/UiModule.kt`
-      (`viewModelOf(::HomeViewModel)`), y registrarlos en `AppModules.kt` (depende de T025, T026, T028)
-- [ ] T033 [P] [US1] Añadir a `app/src/main/res/values/strings.xml` los textos visibles en
+      (`viewModelOf(::HomeViewModel)`), y registrarlos en `AppModules.kt` (depende de T026, T027, T029)
+- [ ] T034 [P] [US1] Añadir a `app/src/main/res/values/strings.xml` los textos visibles en
       español: título de la pantalla, mensaje de error, mensaje de sin contenido y etiqueta del
       botón de reintentar
-- [ ] T034 [US1] Ejecutar `./gradlew :app:testDebugUnitTest` y
-      `./gradlew :app:connectedDebugAndroidTest`; poner en verde T017–T021
+- [ ] T035 [US1] Ejecutar `./gradlew :app:testDebugUnitTest` y
+      `./gradlew :app:connectedDebugAndroidTest`; poner en verde T017–T022
 
 **Checkpoint**: la historia 1 es funcional y demostrable por sí sola. Es el producto mínimo
 viable de esta feature.
@@ -176,24 +182,28 @@ cableado hace fallar las comprobaciones antes de llegar al dispositivo.
 
 ### Tests for User Story 2 ⚠️
 
-- [ ] T035 [P] [US2] `TEST/architecture/ArchitectureRulesTest.kt` con Konsist, con las cinco
-      reglas de `research.md` D-006: `domain` sin `android.*`, `androidx.*`,
+- [ ] T036 [P] [US2] `TEST/architecture/ArchitectureRulesTest.kt` con Konsist, con las cinco
+      primeras reglas de `research.md` D-006: `domain` sin `android.*`, `androidx.*`,
       `com.google.firebase.*`, `org.koin.*` ni referencias a `data`/`ui`; `ui` sin importar
       `data`; las clases `*UseCase` en `domain.usecase`; las clases `*ViewModel` en `ui` y
       extendiendo `ViewModel`; y `com.google.firebase.*` importado únicamente desde `data`
       (FR-007, FR-008, FR-009)
-- [ ] T036 [P] [US2] `TEST/di/KoinModulesTest.kt` bajo Robolectric: arranca Koin con
+- [ ] T037 [P] [US2] Añadir a `TEST/architecture/ArchitectureRulesTest.kt` la sexta regla
+      (research.md D-006): toda clase de `domain` y toda clase `*ViewModel` debe tener un fichero
+      de prueba asociado en `TEST/`. Es lo que hace verificable el criterio SC-002 en cada build
+      en lugar de dejarlo como afirmación
+- [ ] T038 [P] [US2] `TEST/di/KoinModulesTest.kt` bajo Robolectric: arranca Koin con
       `appModules` y un `Context` real y verifica que **todas** las dependencias declaradas
       resuelven (FR-011, FR-018, research.md D-008)
-- [ ] T037 [US2] `TEST/integration/ContentFlowIntegrationTest.kt`: recorrido completo
+- [ ] T039 [US2] `TEST/integration/ContentFlowIntegrationTest.kt`: recorrido completo
       `HomeViewModel → GetContentItemsUseCase → ContentRepositoryImpl → orígenes` resolviendo
       desde el grafo real de Koin y sustituyendo únicamente el origen remoto (FR-012, FR-019)
 
 ### Implementation for User Story 2
 
-- [ ] T038 [US2] Corregir cualquier violación que destapen T035 y T036 (movimientos de fichero,
+- [ ] T040 [US2] Corregir cualquier violación que destapen T036, T037 y T038 (movimientos de fichero,
       importaciones o registros de módulo que falten)
-- [ ] T039 [US2] **Verificar que las reglas muerden** siguiendo el paso 2 de `quickstart.md`:
+- [ ] T041 [US2] **Verificar que las reglas muerden** siguiendo el paso 2 de `quickstart.md`:
       introducir `import android.content.Context` en un fichero de `domain`, comprobar que
       `ArchitectureRulesTest` **falla**, revertir y comprobar que vuelve a pasar (SC-004)
 
@@ -212,24 +222,24 @@ panel de analítica; provocar un cierre inesperado y comprobar que la traza apar
 
 ### Tests for User Story 3 ⚠️
 
-- [ ] T040 [P] [US3] `TEST/data/telemetry/FirebaseAnalyticsTrackerTest.kt` con Robolectric y un
+- [ ] T042 [P] [US3] `TEST/data/telemetry/FirebaseAnalyticsTrackerTest.kt` con Robolectric y un
       doble de MockK sobre el cliente de Firebase (research.md D-009): comprueba el nombre y los
       atributos del evento enviado y, sobre todo, que las claves sensibles se descartan y nunca
       se envían (FR-013, FR-016)
-- [ ] T041 [P] [US3] `TEST/data/telemetry/FirebaseCrashReporterTest.kt`: los fallos no fatales y
+- [ ] T043 [P] [US3] `TEST/data/telemetry/FirebaseCrashReporterTest.kt`: los fallos no fatales y
       los mensajes se delegan en el cliente, y el envoltorio **nunca** propaga una excepción a
       quien lo llama (FR-014, contrato de «dispara y olvida»)
 
 ### Implementation for User Story 3
 
-- [ ] T042 [P] [US3] `MAIN/data/telemetry/FirebaseAnalyticsTracker.kt`: implementa
+- [ ] T044 [P] [US3] `MAIN/data/telemetry/FirebaseAnalyticsTracker.kt`: implementa
       `AnalyticsTracker` sobre `FirebaseAnalytics`, compone el `Bundle`, filtra las claves
       sensibles y captura cualquier fallo sin propagarlo
-- [ ] T043 [P] [US3] `MAIN/data/telemetry/FirebaseCrashReporter.kt`: implementa `CrashReporter`
+- [ ] T045 [P] [US3] `MAIN/data/telemetry/FirebaseCrashReporter.kt`: implementa `CrashReporter`
       sobre `FirebaseCrashlytics` con el mismo contrato de no propagación
-- [ ] T044 [US3] Sustituir en `MAIN/core/di/DataModule.kt` las implementaciones sin efecto por
-      las de Firebase, dejando las primeras disponibles para las pruebas (depende de T042, T043)
-- [ ] T045 [US3] Comprobar en el emulador que Firebase inicializa y que el evento de pantalla
+- [ ] T046 [US3] Sustituir en `MAIN/core/di/DataModule.kt` las implementaciones sin efecto por
+      las de Firebase, dejando las primeras disponibles para las pruebas (depende de T044, T045)
+- [ ] T047 [US3] Comprobar en el emulador que Firebase inicializa y que el evento de pantalla
       vista se emite, siguiendo los pasos 4 y 6 de `quickstart.md`
 
 **Checkpoint**: las tres historias funcionan de forma independiente.
@@ -238,14 +248,17 @@ panel de analítica; provocar un cierre inesperado y comprobar que la traza apar
 
 ## Phase 6: Polish & Cross-Cutting Concerns
 
-- [ ] T046 Ejecutar `quickstart.md` completo de principio a fin y confirmar que los pasos 1, 2,
+- [ ] T048 Ejecutar `quickstart.md` completo de principio a fin y confirmar que los pasos 1, 2,
       3 y 5 terminan en verde y que el paso 4 se comporta como describe
-- [ ] T047 `./gradlew :app:lintDebug` sin avisos nuevos atribuibles a esta feature
-- [ ] T048 Confirmar SC-003: la suite sin dispositivo termina por debajo de 2 minutos
-- [ ] T049 [P] Revisar que `CLAUDE.md` sigue describiendo la estructura real; actualizar el mapa
+- [ ] T049 Medir SC-001: `adb shell am start -W -n com.jrblanco.boccantabria/.MainActivity`
+      sobre una instalación limpia y comprobar que el campo `TotalTime` queda por debajo de
+      2000 ms; anotar la cifra obtenida
+- [ ] T050 `./gradlew :app:lintDebug` sin avisos nuevos atribuibles a esta feature
+- [ ] T051 Confirmar SC-003: la suite sin dispositivo termina por debajo de 2 minutos
+- [ ] T052 [P] Revisar que `CLAUDE.md` sigue describiendo la estructura real; actualizar el mapa
       de paquetes con `core/telemetry` y `ui/navigation`, y la constitución si procede (la guía
       y la norma se actualizan en el mismo cambio)
-- [ ] T050 Empujar la rama, comprobar que la integración continua queda en verde y abrir la
+- [ ] T053 Empujar la rama, comprobar que la integración continua queda en verde y abrir la
       solicitud de incorporación hacia `main`
 
 ---
@@ -281,10 +294,10 @@ panel de analítica; provocar un cierre inesperado y comprobar que la traza apar
 ### Parallel Opportunities
 
 - Fase 2: T005–T010, T012 y T015 son independientes entre sí
-- US1: las cuatro pruebas T017–T020 se escriben en paralelo; T022, T023, T024, T027, T030 y T033
+- US1: las seis pruebas T017–T022 se escriben en paralelo; T023, T024, T025, T028, T031 y T034
   tocan ficheros distintos
 - US2 y US3 pueden abordarse en paralelo una vez cerrada US1
-- US3: T040/T041 y T042/T043 son parejas independientes
+- US3: T042/T043 y T044/T045 son parejas independientes
 
 ---
 

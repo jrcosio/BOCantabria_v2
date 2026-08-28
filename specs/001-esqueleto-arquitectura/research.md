@@ -125,6 +125,9 @@ Reglas que se codifican:
 3. Toda clase que termine en `UseCase` reside en `domain.usecase`.
 4. Toda clase que termine en `ViewModel` reside en `ui` y extiende `ViewModel`.
 5. Ningún fichero fuera de `data` importa `com.google.firebase.*`.
+6. Toda clase de `domain` (modelos, casos de uso) y toda clase `*ViewModel` tiene un fichero de
+   prueba asociado en `src/test`. Es lo que convierte el criterio SC-002 en algo verificable
+   mecánicamente en lugar de una afirmación de buena fe.
 
 **Alternativas descartadas**:
 - ArchUnit: maduro, pero trabaja sobre bytecode compilado y su soporte de Kotlin es menos

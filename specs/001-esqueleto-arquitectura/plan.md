@@ -152,13 +152,17 @@ app/src/test/java/com/jrblanco/boccantabria/
 ├── data/telemetry/FirebaseAnalyticsTrackerTest.kt   # Robolectric + MockK
 ├── domain/usecase/GetContentItemsUseCaseTest.kt
 ├── ui/home/HomeViewModelTest.kt                 # Turbine
+├── data/telemetry/FirebaseCrashReporterTest.kt
 ├── di/KoinModulesTest.kt                        # Robolectric: verifica el grafo
 ├── integration/ContentFlowIntegrationTest.kt    # Recorrido completo con grafo real
-└── fake/                                        # FakeContentRemoteDataSource, RecordingAnalyticsTracker,
-                                                 # TestDispatcherProvider
+└── fake/
+    ├── FakeContentRemoteDataSource.kt           # Doble del origen remoto, controlable
+    ├── RecordingAnalyticsTracker.kt             # Guarda los eventos para poder afirmarlos
+    └── TestDispatcherProvider.kt                # Respaldado por TestDispatcher
 
 app/src/androidTest/java/com/jrblanco/boccantabria/
 ├── ui/home/HomeContentTest.kt                   # Los 4 estados + reintento, sin grafo
+├── ui/home/HomeStateRestorationTest.kt          # recreate(): el estado sobrevive al giro
 └── ui/HomeScreenEndToEndTest.kt                 # Actividad real + Koin con módulo de prueba
 ```
 
@@ -166,8 +170,9 @@ app/src/androidTest/java/com/jrblanco/boccantabria/
 diagrama de referencia del propietario. Se descarta la separación en módulos Gradle por capa:
 daría aislamiento estructural sin herramientas extra, pero multiplica la configuración y el
 tiempo de compilación para una aplicación con una sola pantalla. La regla de capas se hace
-cumplir con Konsist en su lugar (`research.md`, D-006), y la modularización se reconsiderará si
-el proyecto crece. Se añaden dos subpaquetes sobre el diagrama original: `core/telemetry` (ver
+cumplir con Konsist en su lugar (`research.md`, D-006, ampliado con una sexta regla que exige
+que toda pieza de dominio y todo modelo de pantalla tenga fichero de prueba, lo que hace
+verificable el criterio SC-002), y la modularización se reconsiderará si el proyecto crece. Se añaden dos subpaquetes sobre el diagrama original: `core/telemetry` (ver
 D-002) y `ui/navigation`, que el diagrama no contemplaba por proceder de una aplicación de una
 sola pantalla.
 
