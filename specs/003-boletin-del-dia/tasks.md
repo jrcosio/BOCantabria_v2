@@ -183,12 +183,12 @@ organismo, su título y su fecha, y la cabecera con la fecha de la última edici
       inyectadas, tipo de contenido inesperado, cuerpo por encima del tope de 5 MB, agotamiento de
       espera, huella coincidente que devuelve `NotModified`, y que un esquema distinto de `https` se
       rechaza sin conectar (FR-006, FR-007, FR-008, FR-022)
-- [ ] T026 [P] [US1] Escribir `TEST/data/repository/PublicationRepositoryImplTest.kt`: primera
+- [X] T026 [P] [US1] Escribir `TEST/data/repository/PublicationRepositoryImplTest.kt`: primera
       obtención, segunda sin cambios, publicación nueva, publicación actualizada, publicación que
       sale de la ventana de cien y **sigue guardada**, una fuente que falla y las demás siguen, todas
       fallan con caché, todas fallan sin caché, duplicado entre fuentes, y que nunca se lanza una
       excepción (FR-004, FR-019 … FR-022, FR-027, FR-062)
-- [ ] T027 [P] [US1] Escribir las pruebas de los cuatro casos de uso en `TEST/domain/usecase/`:
+- [X] T027 [P] [US1] Escribir las pruebas de los cuatro casos de uso en `TEST/domain/usecase/`:
       `ObservePublicationsUseCaseTest.kt`, `ObserveBulletinHeaderUseCaseTest.kt`,
       `RefreshPublicationsUseCaseTest.kt` (incluido `force = false` con caché fresca, que no toca la
       red) y `GetBocSectionsUseCaseTest.kt` (FR-023, FR-063)
@@ -217,12 +217,12 @@ organismo, su título y su fecha, y la cabecera con la fecha de la última edici
       `core.di` no vea el SDK). Límites 10/45/60 s, cabeceras por interceptor, cuerpo en *streaming*
       con corte a 5 MB, tres reintentos con esperas 2/5/15 s más aleatoriedad **inyectada**, y
       `Retry-After` respetado (research.md D-002, D-010) (depende de T014, T030, T031)
-- [ ] T033 [US1] Implementar `MAIN/data/repository/PublicationRepositoryImpl.kt` hasta hacer pasar
+- [X] T033 [US1] Implementar `MAIN/data/repository/PublicationRepositoryImpl.kt` hasta hacer pasar
       T026: semáforo de cuatro fuentes simultáneas, **escritura por fuente en cuanto termina** —no al
       final de todas—, inserción-o-actualización por clave externa, huella del cuerpo guardada, y la
       tabla de política de `contracts/internal-contracts.md` §2.1. Ninguna excepción escapa;
       `CancellationException` se repropaga (research.md D-009) (depende de T013, T018, T032)
-- [ ] T034 [US1] Implementar los cuatro casos de uso en `MAIN/domain/usecase/` hasta hacer pasar T027:
+- [X] T034 [US1] Implementar los cuatro casos de uso en `MAIN/domain/usecase/` hasta hacer pasar T027:
       `ObservePublicationsUseCase.kt`, `ObserveBulletinHeaderUseCase.kt`,
       `RefreshPublicationsUseCase.kt` y `GetBocSectionsUseCase.kt`, cada uno con un único
       `operator fun invoke` (depende de T012, T033)
