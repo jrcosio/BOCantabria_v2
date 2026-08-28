@@ -2,17 +2,27 @@ package com.jrblanco.boccantabria.ui.navigation
 
 import kotlinx.serialization.Serializable
 
-/**
- * Type-safe navigation destinations.
- *
- * Serializable objects rather than route strings: a typo or a wrong argument becomes a
- * compilation error instead of a crash the first time someone taps the button.
- */
 sealed interface Route {
 
     @Serializable
     data object Splash : Route
 
+    /**
+     * The bulletin.
+     *
+     * The selection travels as an argument rather than as shared state because the sections
+     * panel wraps the navigation host and could not otherwise reach the screen's view model. It
+     * also means the selection survives process death without a line of code.
+     */
     @Serializable
-    data object Home : Route
+    data class Home(
+        val sectionCode: String? = null,
+        val subsectionCode: String? = null,
+    ) : Route
+
+    @Serializable
+    data object Search : Route
+
+    @Serializable
+    data object Saved : Route
 }

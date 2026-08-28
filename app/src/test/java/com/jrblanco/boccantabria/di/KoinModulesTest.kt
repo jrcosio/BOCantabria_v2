@@ -2,6 +2,7 @@ package com.jrblanco.boccantabria.di
 
 import android.app.Application
 import android.content.Context
+import androidx.room.Room
 import androidx.test.core.app.ApplicationProvider
 import com.jrblanco.boccantabria.core.di.appModules
 import com.jrblanco.boccantabria.core.telemetry.AnalyticsTracker
@@ -10,18 +11,30 @@ import com.jrblanco.boccantabria.core.telemetry.NoOpAnalyticsTracker
 import com.jrblanco.boccantabria.core.telemetry.NoOpCrashReporter
 import com.jrblanco.boccantabria.core.util.AppVersionProvider
 import com.jrblanco.boccantabria.core.util.DispatcherProvider
-import com.jrblanco.boccantabria.data.source.local.ContentLocalDataSource
+import com.jrblanco.boccantabria.core.util.RandomProvider
+import com.jrblanco.boccantabria.core.util.TimeProvider
+import com.jrblanco.boccantabria.data.source.local.BocDatabase
 import com.jrblanco.boccantabria.data.source.local.ConnectivityDataSource
-import com.jrblanco.boccantabria.data.source.remote.ContentRemoteDataSource
+import com.jrblanco.boccantabria.data.source.local.FeedSyncStateDao
+import com.jrblanco.boccantabria.data.source.local.PublicationDao
+import com.jrblanco.boccantabria.data.source.remote.BocRssParser
+import com.jrblanco.boccantabria.data.source.remote.PublicationNormalizer
+import com.jrblanco.boccantabria.data.source.remote.PublicationRemoteDataSource
 import com.jrblanco.boccantabria.data.source.remote.RemoteConfigDataSource
 import com.jrblanco.boccantabria.data.source.remote.RemoteConfigValues
 import com.jrblanco.boccantabria.domain.repository.AppConfigRepository
+import com.jrblanco.boccantabria.domain.repository.BocSectionRepository
 import com.jrblanco.boccantabria.domain.repository.ConnectivityRepository
-import com.jrblanco.boccantabria.domain.repository.ContentRepository
-import com.jrblanco.boccantabria.domain.usecase.GetContentItemsUseCase
+import com.jrblanco.boccantabria.domain.repository.PublicationRepository
+import com.jrblanco.boccantabria.domain.usecase.GetBocSectionsUseCase
+import com.jrblanco.boccantabria.domain.usecase.ObserveBulletinHeaderUseCase
+import com.jrblanco.boccantabria.domain.usecase.ObservePublicationsUseCase
 import com.jrblanco.boccantabria.domain.usecase.PrepareStartupUseCase
+import com.jrblanco.boccantabria.domain.usecase.RefreshPublicationsUseCase
 import com.jrblanco.boccantabria.ui.home.HomeViewModel
+import com.jrblanco.boccantabria.ui.sections.SectionsViewModel
 import com.jrblanco.boccantabria.ui.splash.SplashViewModel
+import okhttp3.OkHttpClient
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.koin.android.ext.koin.androidContext
@@ -59,45 +72,63 @@ class KoinModulesTest {
 
     @Test
     fun `the whole graph resolves with a real android context`() {
+        val context = ApplicationProvider.getApplicationContext<Application>()
         val koin = koinApplication {
-            androidContext(ApplicationProvider.getApplicationContext())
+            androidContext(context)
             modules(appModules)
         }.koin
-        // Telemetry is the one thing that cannot be built here: the Firebase clients need a
-        // real FirebaseApp, which does not exist outside a device. The bindings themselves are
-        // still checked below; the implementations behind them have their own tests.
+
         koin.loadModules(
             listOf(
                 module {
+                    // Telemetry and remote configuration need a real FirebaseApp, which does not
+                    // exist off-device. The bindings are still checked below; the implementations
+                    // behind them have their own tests.
                     single<AnalyticsTracker> { NoOpAnalyticsTracker() }
                     single<CrashReporter> { NoOpCrashReporter() }
-                    // Remote Config needs a real FirebaseApp too, which does not exist off-device.
                     single<RemoteConfigDataSource> {
                         object : RemoteConfigDataSource {
                             override suspend fun fetchValues() =
                                 RemoteConfigValues(minSupportedVersionCode = 0L, maintenanceMessage = "")
                         }
                     }
+                    // An in-memory database rather than the real file: resolving the graph must
+                    // not leave a boc.db behind in whatever directory the test happens to run in.
+                    single<BocDatabase> {
+                        Room.inMemoryDatabaseBuilder(context, BocDatabase::class.java).build()
+                    }
                 },
             ),
             allowOverride = true,
         )
 
-        // Resolving the view model walks the entire chain: view model, use case, repository and
-        // both data sources. The rest are declarations nothing injects yet, checked one by one
-        // so an unreachable binding still fails here rather than the first time it is needed.
-        koin.get<HomeViewModel>()
+        // Resolving the view models walks the whole chain: screen state, use cases, repositories,
+        // sources, database and HTTP client. The rest are declarations nothing injects yet,
+        // checked one by one so an unreachable binding still fails here rather than in the field.
         koin.get<SplashViewModel>()
         koin.get<PrepareStartupUseCase>()
         koin.get<AppConfigRepository>()
         koin.get<ConnectivityRepository>()
         koin.get<ConnectivityDataSource>()
         koin.get<AppVersionProvider>()
-        koin.get<ContentRepository>()
-        koin.get<GetContentItemsUseCase>()
-        koin.get<ContentRemoteDataSource>()
-        koin.get<ContentLocalDataSource>()
+
+        koin.get<SectionsViewModel>()
+        koin.get<PublicationRepository>()
+        koin.get<BocSectionRepository>()
+        koin.get<ObservePublicationsUseCase>()
+        koin.get<ObserveBulletinHeaderUseCase>()
+        koin.get<RefreshPublicationsUseCase>()
+        koin.get<GetBocSectionsUseCase>()
+        koin.get<PublicationRemoteDataSource>()
+        koin.get<PublicationDao>()
+        koin.get<FeedSyncStateDao>()
+        koin.get<BocRssParser>()
+        koin.get<PublicationNormalizer>()
+        koin.get<OkHttpClient>()
+
         koin.get<DispatcherProvider>()
+        koin.get<TimeProvider>()
+        koin.get<RandomProvider>()
         koin.get<AnalyticsTracker>()
         koin.get<CrashReporter>()
 
@@ -107,17 +138,30 @@ class KoinModulesTest {
     private companion object {
         val CROSS_MODULE_TYPES = listOf(
             Context::class,
-            ContentRepository::class,
-            ContentRemoteDataSource::class,
-            ContentLocalDataSource::class,
+            androidx.lifecycle.SavedStateHandle::class,
+            BocDatabase::class,
+            PublicationDao::class,
+            FeedSyncStateDao::class,
+            OkHttpClient::class,
+            BocRssParser::class,
+            PublicationNormalizer::class,
+            PublicationRemoteDataSource::class,
+            PublicationRepository::class,
+            BocSectionRepository::class,
+            ObservePublicationsUseCase::class,
+            ObserveBulletinHeaderUseCase::class,
+            RefreshPublicationsUseCase::class,
+            GetBocSectionsUseCase::class,
             DispatcherProvider::class,
-            GetContentItemsUseCase::class,
+            TimeProvider::class,
+            RandomProvider::class,
             AnalyticsTracker::class,
             CrashReporter::class,
             AppConfigRepository::class,
             ConnectivityRepository::class,
             AppVersionProvider::class,
             PrepareStartupUseCase::class,
+            HomeViewModel::class,
         )
     }
 }

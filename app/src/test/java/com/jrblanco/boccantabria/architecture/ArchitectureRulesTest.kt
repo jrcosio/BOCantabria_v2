@@ -164,6 +164,6 @@ class ArchitectureRulesTest {
          * tests of whatever consumes them, so demanding a dedicated test file would only add
          * ceremony. Keep this list short: every entry is a hole in SC-002.
          */
-        val DOMAIN_CLASSES_WITHOUT_BEHAVIOUR = setOf("ContentItem", "AppConfig")
+        val DOMAIN_CLASSES_WITHOUT_BEHAVIOUR = setOf("AppConfig")
     }
 }

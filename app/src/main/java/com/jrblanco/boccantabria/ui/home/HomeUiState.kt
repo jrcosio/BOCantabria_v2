@@ -1,23 +1,51 @@
 package com.jrblanco.boccantabria.ui.home
 
-import com.jrblanco.boccantabria.domain.model.ContentItem
+import com.jrblanco.boccantabria.domain.model.BulletinHeaderData
 import com.jrblanco.boccantabria.domain.model.DomainError
+import com.jrblanco.boccantabria.domain.model.HomeSelection
+import com.jrblanco.boccantabria.domain.model.Publication
+import com.jrblanco.boccantabria.domain.model.SectionColorGroup
 
 /**
- * What the home screen must show at a given moment.
+ * Everything the home screen draws.
  *
- * Sealed rather than a data class with flags: the specification requires the four states to be
- * mutually exclusive, and a class with `isLoading` plus `errorMessage` allows impossible
- * combinations that then have to be prevented by convention. Here they are impossible by
- * construction, and tests assert on the type directly.
+ * [isRefreshing] and [isOffline] sit **outside** [content] on purpose. They are independent axes:
+ * a refresh happens with content on screen, and being offline is a way of showing content, not a
+ * way of failing to. Folding them into the sealed hierarchy would multiply its cases and force
+ * the screen to decide which of its errors are really content.
  */
-sealed interface HomeUiState {
+data class HomeUiState(
+    val selection: HomeSelection = HomeSelection.TodaysBulletin,
+    val header: BulletinHeaderData = BulletinHeaderData.EMPTY,
+    val chips: List<SectionChip> = emptyList(),
+    val content: HomeContentState = HomeContentState.Skeleton,
+    val isRefreshing: Boolean = false,
+    val isOffline: Boolean = false,
+)
 
-    data object Loading : HomeUiState
+sealed interface HomeContentState {
 
-    data class Content(val items: List<ContentItem>) : HomeUiState
+    /** First run with nothing stored: placeholders shaped like the content to come. */
+    data object Skeleton : HomeContentState
 
-    data object Empty : HomeUiState
+    data class Publications(val items: List<Publication>) : HomeContentState
 
-    data class Error(val error: DomainError) : HomeUiState
+    /** The selection holds nothing. Not an error: several sections are legitimately quiet. */
+    data object Empty : HomeContentState
+
+    /** Nothing to show and the synchronisation failed. The only case that offers a retry. */
+    data class Error(val error: DomainError) : HomeContentState
 }
+
+/**
+ * One quick filter, for one of the nine sections.
+ *
+ * The chip that returns to the day's bulletin is not here: its label is interface copy, so the
+ * screen adds it. This carries only what the domain knows.
+ */
+data class SectionChip(
+    val code: String,
+    val label: String,
+    val colorGroup: SectionColorGroup,
+    val isSelected: Boolean,
+)

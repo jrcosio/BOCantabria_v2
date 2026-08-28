@@ -6,13 +6,21 @@ import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
-import com.jrblanco.boccantabria.ui.home.HomeScreen
+import com.jrblanco.boccantabria.ui.main.MainShell
 import com.jrblanco.boccantabria.ui.splash.SplashScreen
 
+/**
+ * The outer graph: the cover, and then everything else.
+ *
+ * Two hosts rather than one because the cover shares nothing with the rest — no bottom bar, no
+ * sections panel — and because keeping it here leaves its back-stack behaviour exactly as the
+ * previous feature left it.
+ */
 @Composable
 fun BOCantabriaNavHost(
     modifier: Modifier = Modifier,
     navController: NavHostController = rememberNavController(),
+    mainNavController: NavHostController = rememberNavController(),
 ) {
     NavHost(
         navController = navController,
@@ -22,17 +30,14 @@ fun BOCantabriaNavHost(
         composable<Route.Splash> {
             SplashScreen(
                 onStartupComplete = {
-                    navController.navigate(Route.Home) {
-                        // The cover is dropped from the back stack, so pressing back from Home
-                        // closes the application instead of returning to a screen whose work is
-                        // already done.
+                    navController.navigate(Route.Home()) {
                         popUpTo(Route.Splash) { inclusive = true }
                     }
                 },
             )
         }
         composable<Route.Home> {
-            HomeScreen()
+            MainShell(navController = mainNavController)
         }
     }
 }
