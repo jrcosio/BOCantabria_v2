@@ -225,6 +225,14 @@ tenga su fichero de prueba. Si añades una clase de dominio sin test, la build f
 - El splash del sistema recorta el icono a un círculo: el escudo debe ir inscrito en la zona segura
   (192 dp dentro de un lienzo de 288). Para eso existe `ic_splash_emblem`.
 
+**Intermitencia conocida** — `SplashRestorationTest` falló una vez en cinco ejecuciones con
+`Activity never becomes requested state "[DESTROYED]"`. Es un tiempo de espera agotado dentro de
+`recreate()`, no la aserción de la prueba, y solo ocurrió en una tanda completa de 13 minutos; en
+aislamiento y en una segunda tanda completa pasa. No hay causa raíz identificada: apunta a
+saturación del emulador, agravada porque ahora toda prueba instrumentada atraviesa el mínimo de
+1,2 s del arranque. Queda anotado a propósito en lugar de inventar un arreglo sin diagnóstico. Si
+vuelve a fallar, hay que investigarlo de verdad: un test intermitente incumple el principio V.
+
 ---
 
 ## Git
