@@ -1,6 +1,10 @@
 package com.jrblanco.boccantabria.ui.home
 
+import androidx.compose.ui.test.SemanticsMatcher
 import androidx.compose.ui.test.assertIsDisplayed
+import androidx.compose.ui.test.hasAnyAncestor
+import androidx.compose.ui.test.hasTestTag
+import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onAllNodesWithTag
 import androidx.compose.ui.test.onNodeWithTag
@@ -146,7 +150,9 @@ class HomeContentTest {
 
         composeRule.onNodeWithTag(TAG_HEADER).assertIsDisplayed()
         composeRule.onNodeWithText("Boletín de hoy").assertIsDisplayed()
-        composeRule.onNodeWithText("27 de agosto de 2026").assertIsDisplayed()
+        // Anchored to the header: the date also appears on every card, so plain text matching
+        // would find two nodes and say nothing about which one carries it.
+        composeRule.onNode(inHeader(hasText("27 de agosto de 2026"))).assertIsDisplayed()
         composeRule.onNodeWithTag(TAG_HEADER_COUNT).assertIsDisplayed()
         composeRule.onNodeWithText("48 anuncios").assertIsDisplayed()
     }
@@ -165,9 +171,12 @@ class HomeContentTest {
             ),
         )
 
-        composeRule.onNodeWithText("Cursos, oposiciones y concursos").assertIsDisplayed()
+        composeRule.onNode(inHeader(hasText("Cursos, oposiciones y concursos"))).assertIsDisplayed()
         composeRule.onNodeWithText("1 anuncio").assertIsDisplayed()
     }
+
+    private fun inHeader(matcher: SemanticsMatcher) =
+        matcher and hasAnyAncestor(hasTestTag(TAG_HEADER))
 
     private fun setContent(
         state: HomeUiState,
