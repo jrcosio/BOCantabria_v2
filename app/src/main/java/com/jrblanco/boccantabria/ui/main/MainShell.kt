@@ -2,6 +2,7 @@ package com.jrblanco.boccantabria.ui.main
 
 import android.content.Intent
 import android.widget.Toast
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.DrawerValue
@@ -103,6 +104,10 @@ fun MainShell(
         },
     ) {
         Scaffold(
+            // Sin insets propios: cada destino los resuelve. El Scaffold interior de Inicio ya
+            // aplica el de la barra de estado a su barra superior, y sumarlo aquí lo contaba dos
+            // veces —un hueco en blanco del alto de la barra de estado sobre el escudo—.
+            contentWindowInsets = WindowInsets(0, 0, 0, 0),
             bottomBar = {
                 BocBottomBar(
                     current = backStackEntry.toDestination(),

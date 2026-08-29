@@ -48,6 +48,25 @@ data class Publication(
     /** The most specific classification available: the subsection when there is one. */
     val classificationCode: String get() = subsectionCode ?: sectionCode
 
+    /**
+     * The title with the issuer prefix removed, for when the issuer is already shown beside it.
+     *
+     * The source writes most titles as `ORGANISMO: descripción`, so a card that prints the issuer
+     * on its own line and then the whole title says the same name twice in a row. [title] itself
+     * is never altered — the received value is what gets stored and what a search would index.
+     *
+     * Only strips the prefix when it really is the issuer: a title whose first colon belongs to
+     * the text (`Resolución de 3 de marzo: se convoca…`) keeps every word.
+     */
+    val titleWithoutIssuer: String
+        get() {
+            val prefix = title.substringBefore(':', "").trim()
+            if (prefix.isEmpty() || prefix.length == title.length) return title
+            val matchesIssuer = issuer?.equals(prefix, ignoreCase = true) == true
+            if (!matchesIssuer) return title
+            return title.substringAfter(':').trim().ifEmpty { title }
+        }
+
     private companion object {
         const val HTTPS_PREFIX = "https://"
     }

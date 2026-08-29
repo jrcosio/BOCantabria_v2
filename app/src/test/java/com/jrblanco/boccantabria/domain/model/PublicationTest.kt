@@ -54,6 +54,48 @@ class PublicationTest {
     }
 
     @Test
+    fun `the issuer prefix is dropped when the issuer is shown beside the title`() {
+        val publication = publication(
+            title = "AYUNTAMIENTO DE CIEZA: Aprobación definitiva del expediente 4/2026.",
+            organizationPath = listOf("Ayuntamiento de Cieza"),
+        )
+
+        assertEquals("Aprobación definitiva del expediente 4/2026.", publication.titleWithoutIssuer)
+        // The stored title is never altered: it is what a search would index.
+        assertEquals(
+            "AYUNTAMIENTO DE CIEZA: Aprobación definitiva del expediente 4/2026.",
+            publication.title,
+        )
+    }
+
+    @Test
+    fun `a colon that belongs to the text keeps every word`() {
+        val publication = publication(
+            title = "Resolución de 3 de marzo: se convoca el proceso selectivo.",
+            organizationPath = listOf("Consejería de Salud"),
+        )
+
+        assertEquals(publication.title, publication.titleWithoutIssuer)
+    }
+
+    @Test
+    fun `a title without a prefix is left alone`() {
+        val publication = publication(title = "Anuncio sin organismo delante")
+
+        assertEquals("Anuncio sin organismo delante", publication.titleWithoutIssuer)
+    }
+
+    @Test
+    fun `a title that is only the issuer keeps its text rather than becoming empty`() {
+        val publication = publication(
+            title = "AYUNTAMIENTO DE CIEZA:",
+            organizationPath = listOf("Ayuntamiento de Cieza"),
+        )
+
+        assertEquals("AYUNTAMIENTO DE CIEZA:", publication.titleWithoutIssuer)
+    }
+
+    @Test
     fun `a very long title is kept whole`() {
         val long = "AYUNTAMIENTO DE SANTANDER: " + "Aprobación definitiva de la ordenanza ".repeat(20)
 

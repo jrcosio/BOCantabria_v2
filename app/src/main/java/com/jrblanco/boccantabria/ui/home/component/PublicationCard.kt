@@ -77,7 +77,7 @@ fun PublicationCard(
                 }
 
                 Text(
-                    text = publication.title,
+                    text = publication.titleWithoutIssuer,
                     style = MaterialTheme.typography.titleMedium,
                     color = MaterialTheme.colorScheme.primary,
                     maxLines = MAX_TITLE_LINES,
