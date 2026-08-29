@@ -8,6 +8,10 @@
 especificación los exige en FR-061 … FR-065. Dentro de cada historia, las pruebas se escriben
 **antes** que la implementación y deben fallar antes de hacerlas pasar.
 
+**Estado**: las 76 tareas están completadas y verificadas contra `quickstart.md`. Las cuatro
+puertas de calidad en verde: compilación, **258 pruebas sin dispositivo**, **45 de interfaz** y
+análisis estático.
+
 **Organization**: las tareas se agrupan por historia de usuario, de forma que cada una pueda
 implementarse, probarse y demostrarse por separado.
 
@@ -393,7 +397,7 @@ ninguna deja sin respuesta.
       aviso «Próximamente», el icono de información está presente y no hace nada, guardar en la
       tarjeta muestra el aviso, y compartir lanza la hoja del sistema con el enlace del documento
       (FR-052, FR-053, FR-054, FR-055) (depende de T041, T068)
-- [ ] T070 [US4] Verificar que `ATEST/ui/SplashBackStackTest.kt` sigue en verde con las rutas nuevas
+- [X] T070 [US4] Verificar que `ATEST/ui/SplashBackStackTest.kt` sigue en verde con las rutas nuevas
       y ampliarlo si hace falta para afirmar que el retroceso desde Inicio **con sección
       seleccionada** también deja la pila vacía (FR-057)
 
@@ -421,9 +425,9 @@ ninguna deja sin respuesta.
       `TEST/architecture/ArchitectureRulesTest.kt`: retirar `ContentItem`, que ya no existe, y **no
       añadir** ninguna clase nueva salvo que se justifique por escrito. Cada entrada es un agujero en
       SC-011
-- [ ] T075 Ejecutar las cuatro puertas de calidad en orden y dejarlas en verde:
+- [X] T075 Ejecutar las cuatro puertas de calidad en orden y dejarlas en verde:
       `assembleDebug`, `testDebugUnitTest`, `connectedDebugAndroidTest`, `lintDebug` (SC-012)
-- [ ] T076 Recorrer `quickstart.md` de principio a fin en un dispositivo real y anotar los tiempos
+- [X] T076 Recorrer `quickstart.md` de principio a fin en un dispositivo real y anotar los tiempos
       medidos de SC-001 y SC-002. **Se miden, no se estiman**
 
 ---
