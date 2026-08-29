@@ -124,11 +124,11 @@ cuatro historias necesitan.
       data-model.md §4.2 y su prueba `TEST/data/source/remote/BocFeedCatalogTest.kt`, que verifica:
       hay diecinueve entradas, los identificadores son los publicados, **las direcciones están
       escritas literalmente y no compuestas por cálculo**, y entre todas cubren las nueve secciones y
-      las catorce subsecciones sin solapes (FR-002, FR-003)
+      las catorce subsecciones sin solapes (FR-001, FR-002, FR-003, SC-006)
 - [X] T020 [P] Crear `MAIN/data/repository/BocSectionRepositoryImpl.kt` con el árbol oficial de
       secciones y su prueba `TEST/data/repository/BocSectionRepositoryImplTest.kt`: nueve principales,
       catorce subsecciones, orden oficial, y que las secciones 2, 4, 7 y 8 se declaran sin fuente propia
-      (FR-043, FR-044)
+      (FR-043, FR-044, SC-006)
 - [X] T021 Retirar la cadena de relleno de la feature 001 (research.md D-015): eliminar de `MAIN/`
       `domain/model/ContentItem.kt`, `domain/repository/ContentRepository.kt`,
       `domain/usecase/GetContentItemsUseCase.kt`, `data/repository/ContentRepositoryImpl.kt`,
@@ -172,17 +172,17 @@ organismo, su título y su fecha, y la cabecera con la fecha de la última edici
       `size` no numérico, sin items, nodo desconocido, los cuatro campos, campos en orden distinto,
       título largo, título con caracteres especiales, sin `categorias`, fecha inválida, enlace
       inválido, y **rechazo del cuerpo con declaración de tipo de documento y con entidad externa**
-      (FR-008, FR-010, FR-061)
+      (FR-008, FR-009, FR-010, FR-061)
 - [X] T024 [P] [US1] Escribir `TEST/data/source/remote/PublicationNormalizerTest.kt`: tres, cuatro y
       cinco componentes; `ORD` al final, al principio y en medio; `EXT`; sin tipo de edición;
       sección que no corresponde a la fuente; componentes vacíos; barra final; el desorden real del
       feed 4.3; enlace sin identificador (los tres escalones de la cascada); y que el título se
-      conserva íntegro (FR-011 … FR-018, FR-061)
+      conserva íntegro (FR-011, FR-012, FR-013, FR-014, FR-015, FR-016, FR-017, FR-018, FR-061)
 - [X] T025 [P] [US1] Escribir `TEST/data/source/remote/OkHttpPublicationRemoteDataSourceTest.kt` con
       MockWebServer: respuesta correcta, 404 sin reintento, 500 con tres reintentos y esperas
       inyectadas, tipo de contenido inesperado, cuerpo por encima del tope de 5 MB, agotamiento de
       espera, huella coincidente que devuelve `NotModified`, y que un esquema distinto de `https` se
-      rechaza sin conectar (FR-006, FR-007, FR-008, FR-022)
+      rechaza sin conectar (research.md D-011) (FR-006, FR-007, FR-008, FR-022)
 - [X] T026 [P] [US1] Escribir `TEST/data/repository/PublicationRepositoryImplTest.kt`: primera
       obtención, segunda sin cambios, publicación nueva, publicación actualizada, publicación que
       sale de la ventana de cien y **sigue guardada**, una fuente que falla y las demás siguen, todas
@@ -210,7 +210,8 @@ organismo, su título y su fecha, y la cabecera con la fecha de la última edici
 - [X] T031 [US1] Implementar `MAIN/data/source/remote/PublicationNormalizer.kt` hasta hacer pasar
       T024, siguiendo el algoritmo del apartado 10.2 y las once reglas de
       `contracts/internal-contracts.md` §2.5. La sección la manda la fuente; `categorias` se conserva
-      en crudo (research.md D-006, D-007) (depende de T029)
+      en crudo (research.md D-006, D-007) (FR-012, FR-013, FR-014, FR-015, FR-016, FR-017)
+      (depende de T029)
 - [X] T032 [US1] Implementar la fuente remota hasta hacer pasar T025:
       `MAIN/data/source/remote/PublicationRemoteDataSource.kt` con el sellado `FeedFetchResult`,
       `OkHttpPublicationRemoteDataSource.kt` y `OkHttpFactory.kt` (función factoría, para que
@@ -221,7 +222,8 @@ organismo, su título y su fecha, y la cabecera con la fecha de la última edici
       T026: semáforo de cuatro fuentes simultáneas, **escritura por fuente en cuanto termina** —no al
       final de todas—, inserción-o-actualización por clave externa, huella del cuerpo guardada, y la
       tabla de política de `contracts/internal-contracts.md` §2.1. Ninguna excepción escapa;
-      `CancellationException` se repropaga (research.md D-009) (depende de T013, T018, T032)
+      `CancellationException` se repropaga (research.md D-008, D-009, D-011) (FR-004, FR-005,
+      FR-020, FR-021, FR-022) (depende de T013, T018, T032)
 - [X] T034 [US1] Implementar los cuatro casos de uso en `MAIN/domain/usecase/` hasta hacer pasar T027:
       `ObservePublicationsUseCase.kt`, `ObserveBulletinHeaderUseCase.kt`,
       `RefreshPublicationsUseCase.kt` y `GetBocSectionsUseCase.kt`, cada uno con un único
@@ -240,7 +242,7 @@ organismo, su título y su fecha, y la cabecera con la fecha de la última edici
       según el apartado 12.1 y el contrato visual: línea de sección de 4 dp con el color del grupo,
       organismo en `labelMedium` a dos líneas, título en `titleMedium` a cuatro, fecha con icono, y
       las acciones abajo a la derecha. Sin estado, todo por parámetro. Ni un literal de color, tamaño
-      o espaciado (FR-037, FR-038, FR-039, FR-058)
+      o espaciado (FR-037, FR-038, FR-039, FR-058, FR-059)
 - [X] T039 [P] [US1] Crear `MAIN/ui/home/component/BulletinHeader.kt` según el apartado 14.3: fondo
       `primary`, título en `headlineLarge`, fecha en formato largo español y distintivo perfilado con
       **el recuento de publicaciones, no un número de boletín** (FR-032, FR-033)
@@ -248,7 +250,8 @@ organismo, su título y su fecha, y la cabecera con la fecha de la última edici
       al inicio, escudo de 34 dp y título, lupa e información al final. **Sin campana**
 - [X] T041 [US1] Reescribir `MAIN/ui/home/HomeScreen.kt` componiendo lo anterior sobre `Scaffold`, con
       los cuatro estados del contenido y las etiquetas de prueba de
-      `contracts/internal-contracts.md` §4.3 (depende de T037, T038, T039, T040)
+      `contracts/internal-contracts.md` §4.3. La posición de lectura la conserva el estado recordado
+      del listado (FR-030, FR-042) (depende de T037, T038, T039, T040)
 - [X] T042 [P] [US1] Escribir `ATEST/ui/home/PublicationCardTest.kt` con `createComposeRule()`:
       organismo, título largo a cuatro líneas, fecha, línea de sección y las dos acciones (FR-064)
 - [X] T043 [P] [US1] Escribir `ATEST/ui/home/HomeContentTest.kt` con `createComposeRule()`: esqueletos,
@@ -389,7 +392,7 @@ ninguna deja sin respuesta.
 - [X] T069 [US4] Conectar las acciones aplazadas en `MAIN/ui/home/HomeScreen.kt`: la lupa muestra un
       aviso «Próximamente», el icono de información está presente y no hace nada, guardar en la
       tarjeta muestra el aviso, y compartir lanza la hoja del sistema con el enlace del documento
-      (FR-052 … FR-055) (depende de T041, T068)
+      (FR-052, FR-053, FR-054, FR-055) (depende de T041, T068)
 - [ ] T070 [US4] Verificar que `ATEST/ui/SplashBackStackTest.kt` sigue en verde con las rutas nuevas
       y ampliarlo si hace falta para afirmar que el retroceso desde Inicio **con sección
       seleccionada** también deja la pila vacía (FR-057)
