@@ -139,6 +139,12 @@ Composable → ViewModel → UseCase → Repository (interfaz en domain)
 
 - Los `Dispatchers` se **inyectan** (`DispatcherProvider`), nunca se referencian
   estáticamente. Es lo que hace deterministas los tests.
+- **Una única excepción, documentada en el código**: `BOCantabriaNavHost` fija la navegación desde
+  la portada con `Dispatchers.Main.immediate`. Navegar mueve el ciclo de vida de las entradas de la
+  pila, y eso solo es legal en el hilo principal. En un dispositivo siempre lo es; bajo el entorno
+  de pruebas de Compose la misma continuación puede reanudarse en el hilo que bombea los
+  fotogramas, y entonces lanza. No es lógica de negocio: es un requisito de plataforma de la
+  llamada, e inyectarlo solo movería la constante de sitio.
 
 ### Sistema de diseño
 
@@ -270,14 +276,13 @@ fichero de prueba. Si añades una clase de dominio sin test, la build falla.
   con el trazado tomado de Material Symbols sin modificar. El `android:fillColor` de un vector es
   un marcador de posición que Compose tiñe en el punto de uso; no cuenta como color literal.
 - **`ksp { }` es una extensión de proyecto, no de `android { }`.** Ponerla dentro no compila.
-- **Atravesar el arranque con `createAndroidComposeRule` es intermitente.** La portada navega desde
-  un `LaunchedEffect`, y mientras la prueba bombea fotogramas desde su propio hilo ese efecto puede
-  reanudarse fuera del principal; `navigate` toca `Lifecycle`, que exige el principal, y salta
-  `IllegalStateException: Method setCurrentState must be called on the main thread`. No es un fallo
-  de la aplicación —en un dispositivo el efecto corre siempre en el principal—, sino del entorno de
-  prueba. Si lo que se comprueba no es la portada, monta el componible que interesa con
-  `createComposeRule()`: además ahorra el mínimo de 1,2 s por prueba. La transición desde la portada
-  se cubre donde le corresponde, en `SplashNavigationTest` y `SplashBackStackTest`.
+- **Atravesar el arranque en una prueba era intermitente, y está arreglado en el origen.** La
+  portada navega desde un `LaunchedEffect`; mientras la prueba bombea fotogramas desde su propio
+  hilo ese efecto puede reanudarse fuera del principal, y `navigate` toca `Lifecycle`, que lo
+  exige: `IllegalStateException: Method setCurrentState must be called on the main thread`. La
+  navegación va ahora fijada al hilo principal en `BOCantabriaNavHost`. Aun así, **si lo que se
+  comprueba no es la portada, monta el componible que interesa con `createComposeRule()`**: ahorra
+  el mínimo de 1,2 s por prueba y evita depender de una pantalla que no es la del caso.
 - **Una animación infinita impide que la composición llegue a reposo.** El esqueleto de carga pulsa
   sin fin por diseño, así que `assertIsDisplayed()` —que espera reposo— se **cuelga** en lugar de
   fallar. Se conduce el reloj a mano: `composeRule.mainClock.autoAdvance = false` y
