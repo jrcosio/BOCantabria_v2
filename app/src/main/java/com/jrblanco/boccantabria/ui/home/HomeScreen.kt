@@ -86,13 +86,13 @@ fun HomeContent(
     sections: List<BocSection>,
     onRefresh: () -> Unit,
     onRetry: () -> Unit,
+    modifier: Modifier = Modifier,
     onOpenSections: () -> Unit = {},
     onSelectSection: (String?) -> Unit = {},
     onSearch: () -> Unit = {},
     onInfo: () -> Unit = {},
     onShare: (Publication) -> Unit = {},
     onSave: () -> Unit = {},
-    modifier: Modifier = Modifier,
 ) {
     val sectionsByCode = remember(sections) { sections.associateBy { it.code } }
 
