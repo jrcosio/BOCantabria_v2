@@ -238,6 +238,27 @@ done
 
 ---
 
+## Apéndice — una intermitencia encontrada y atajada
+
+`SplashBackStackTest` falló de forma intermitente durante la verificación con
+`IllegalStateException: Method setCurrentState must be called on the main thread`. Un test
+intermitente incumple el principio V, así que se buscó la causa en lugar de anotarla.
+
+**Causa**: la portada navega desde un `LaunchedEffect`. Navegar mueve el ciclo de vida de las
+entradas de la pila de retroceso, y eso solo es legal en el hilo principal. En un dispositivo
+siempre lo es —los efectos de composición corren en el despachador de interfaz—, pero bajo el
+entorno de pruebas de Compose la misma continuación puede reanudarse en el hilo que bombea los
+fotogramas.
+
+**Arreglo**: la navegación desde la portada queda fijada al hilo principal en
+`BOCantabriaNavHost`. En producción no cambia nada —`Dispatchers.Main.immediate` se ejecuta en
+línea cuando ya se está en el principal— y elimina la carrera.
+
+**Comprobación**: cinco tandas consecutivas de las tres pruebas que atraviesan el arranque, las
+cinco en verde con 3 de 3.
+
+---
+
 ## Resumen de aceptación
 
 | # | Qué demuestra | Requisitos |
