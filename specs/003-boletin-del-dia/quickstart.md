@@ -238,6 +238,33 @@ done
 
 ---
 
+## Apéndice — recorrido en dispositivo (29 de agosto de 2026, emulador Pixel 10, API 37)
+
+Instalación limpia contra el servicio real. La base de datos se extrajo con los tres ficheros
+—`boc.db`, `-wal` y `-shm`—: copiar solo el primero deja fuera lo que aún está en el registro de
+escritura anticipada y da un recuento corto. Es un error de medición, no de la aplicación, y
+conviene no repetirlo.
+
+| Medida | Resultado |
+|---|---|
+| Arranque en frío, instalación limpia | **747 ms** *(SC-002: < 15 s hasta el boletín)* |
+| Arranque con contenido guardado | **682 ms** *(SC-001: < 1 s)* |
+| Fuentes sincronizadas | **19 de 19**, cero fallos |
+| Publicaciones guardadas | **1.709** — las mismas que acepta la comprobación independiente |
+| Fecha más reciente | 2026-08-28, con **33 anuncios** en el boletín del día |
+| Secciones con contenido | 9 de 9 · subsecciones 13 de 14 *(8.1 está vacía en origen)* |
+| Publicaciones con aviso de orden anómalo | **8**, todas del feed 4.3 |
+| `blob_id` repetidos | 0 |
+| Enlaces que no son HTTPS | 0 |
+| Publicaciones sin organismo | 0 |
+
+**Tres defectos que solo aparecieron al ejecutar** y que ninguna prueba había podido ver: el
+organismo salía dos veces en la tarjeta, había un hueco del alto de la barra de estado sobre el
+escudo, y el panel de secciones se veía con un tinte lila. Los tres están corregidos y los dos
+últimos tienen prueba que los impide volver.
+
+---
+
 ## Apéndice — una intermitencia encontrada y atajada
 
 `SplashBackStackTest` falló de forma intermitente durante la verificación con
