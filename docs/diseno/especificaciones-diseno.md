@@ -393,12 +393,16 @@ No utilizar:
 
 ## 10.1. Barra inferior
 
-La navegación principal tendrá cuatro destinos:
+> **Enmienda (29 de agosto de 2026, feature 003).** La barra tiene **tres** destinos, no cuatro.
+> `Avisos` se aplaza junto con el resto del trabajo de notificaciones: un cuarto destino que solo
+> pudiera prometer algo sería peor que tres que llevan a alguna parte. Cuando existan las
+> notificaciones se recuperará como cuarto destino y el resto de este apartado seguirá valiendo.
+
+La navegación principal tendrá tres destinos:
 
 - `Inicio`.
 - `Buscar`.
 - `Guardados`.
-- `Avisos`.
 
 ### Medidas
 
@@ -426,17 +430,23 @@ La navegación principal tendrá cuatro destinos:
 - Borde superior de 1 dp o elevación mínima.
 - No usar una franja roja.
 - No colocar un botón circular central de actualización.
-- No mostrar más de cuatro destinos.
+- No mostrar más de cuatro destinos. Hoy son tres (ver la enmienda del encabezado).
 
 ## 10.2. Barra superior principal
 
+> **Enmienda (29 de agosto de 2026, feature 003).** La barra principal empieza por el control que
+> abre el panel de secciones y termina en Buscar e Información. La campana desaparece mientras no
+> existan las notificaciones: un icono presente que no hace nada es peor que un icono que todavía
+> no está.
+
 Composición:
 
+- Menú, que abre el panel de secciones.
 - Escudo.
 - Texto `BOC Cantabria`.
 - Espaciador flexible.
 - Buscar.
-- Avisos o menú.
+- Información.
 
 Medidas:
 
@@ -683,11 +693,15 @@ José Ramón Blanco Gutiérrez
 
 ## 14.2. Barra superior
 
+- Icono de menú al inicio, que abre el panel de secciones.
 - Escudo de 34 dp.
 - Título `BOC Cantabria` en `TitleLarge`.
 - Icono Buscar.
-- Icono Avisos con punto rojo pequeño opcional.
+- Icono Información.
 - Altura aproximada: 64 dp.
+
+> **Enmienda (29 de agosto de 2026, feature 003).** Sustituye a la composición anterior, que
+> llevaba el icono de Avisos con punto rojo. Ver la enmienda del apartado 10.2.
 
 ## 14.3. Cabecera editorial
 
@@ -695,16 +709,22 @@ José Ramón Blanco Gutiérrez
 - Altura aproximada: 150–170 dp.
 - Padding: 24 dp horizontal y 24 dp vertical.
 - Icono editorial pequeño en `Secondary` claro.
-- Título `Boletín de hoy` en blanco, `HeadlineLarge`.
+- Título `Boletín de hoy` en blanco, `HeadlineLarge`. Al elegir una sección, su nombre.
 - Fecha debajo en `BodyLarge`.
-- Número de boletín en un contenedor outlined alineado a la derecha.
+- **Número de publicaciones** en un contenedor outlined alineado a la derecha.
+
+> **Enmienda (29 de agosto de 2026, feature 003).** El contenedor mostraba el número de boletín.
+> Los feeds oficiales que la aplicación consume **no lo publican** —el apartado 7.4 del documento
+> de consumo de feeds lo dice expresamente— y escribirlo junto al escudo sería presentar un dato
+> inventado como oficial. Se sustituye por el recuento de anuncios, que es un dato real y útil. Si
+> algún día se obtiene el número del PDF, este contenedor es su sitio.
 
 ### Ejemplo de contenido
 
 ```text
 Boletín de hoy
 27 de agosto de 2026
-N.º 165
+48 anuncios
 ```
 
 La cabecera debe sentirse editorial, no promocional. No usar fotografía, degradado ni ilustración de fondo.
@@ -716,12 +736,23 @@ La cabecera debe sentirse editorial, no promocional. No usar fotografía, degrad
 - Separación: 8 dp.
 - Margen superior e inferior: 16 dp.
 
-Etiquetas iniciales:
+Etiquetas: `Todo` y las **nueve secciones** con su nombre corto, en orden oficial:
 
 - `Todo`.
 - `Disposiciones`.
 - `Personal`.
 - `Contratación`.
+- `Economía`.
+- `Expropiación`.
+- `Subvenciones`.
+- `Anuncios`.
+- `Judicial`.
+- `Elecciones`.
+
+> **Enmienda (29 de agosto de 2026, feature 003).** El documento listaba cuatro etiquetas
+> iniciales. Se completan las nueve para que el filtro rápido y el panel lateral ofrezcan lo mismo:
+> si un chip lleva a una sección y otra sección solo es alcanzable por el panel, la persona tiene
+> que aprender dos vocabularios distintos para lo mismo.
 
 ## 14.5. Listado
 
@@ -770,14 +801,25 @@ Hoja inferior de gran altura o pantalla completa en dispositivos compactos.
 
 ---
 
-## 16. Pantalla Secciones
+## 16. Panel de secciones
+
+> **Enmienda (29 de agosto de 2026, feature 003).** Esto era una pantalla propia con barra azul y
+> flecha Atrás; por decisión del propietario es un **panel lateral** (*navigation drawer*) que se
+> abre desde el icono de menú de la barra superior de Inicio. El motivo es de uso: elegir sección
+> es un filtro sobre lo que se está leyendo, no un viaje a otro sitio, y un panel lo deja claro y
+> devuelve a la lista de un toque.
+>
+> No choca con el apartado 33, que elimina el «menú lateral con gran cabecera de autor»: lo que
+> aquel eliminaba era la cabecera de autor, y este panel no la lleva. Empieza directamente por el
+> campo de filtro.
+>
+> Se elimina además la tarjeta inferior de alertas y las campanas de cada fila, junto con el resto
+> del trabajo de notificaciones. El apartado 16.5 queda en suspenso hasta entonces.
 
 ## 16.1. Estructura
 
-1. Barra superior azul con Atrás, escudo y título.
-2. Campo `Buscar una sección`.
-3. Grupos expandibles.
-4. Tarjeta informativa inferior.
+1. Campo `Buscar una sección`.
+2. Grupos expandibles.
 
 ## 16.2. Campo de búsqueda
 
@@ -788,11 +830,12 @@ Hoja inferior de gran altura o pantalla completa en dispositivos compactos.
 ## 16.3. Fila de sección principal
 
 - Altura mínima: 72 dp.
-- Icono lineal de 28 dp.
-- Número y nombre en `TitleMedium`.
-- Icono de campana en zona derecha.
-- Chevron expandir/contraer.
+- Icono lineal de 28 dp, en el color de grupo de la sección.
+- Número y nombre en `TitleMedium`, con la forma `1 · Disposiciones generales`.
+- Chevron expandir/contraer, con rotación al desplegarse.
 - Divisor inferior.
+
+*(La campana de la zona derecha queda suspendida: ver la enmienda del encabezado del apartado 16.)*
 
 ## 16.4. Subsecciones expandidas
 
@@ -801,10 +844,14 @@ Hoja inferior de gran altura o pantalla completa en dispositivos compactos.
 - Margen horizontal de 16 dp.
 - Sangría visual de 24 dp respecto a la sección principal.
 - Punto azul o línea breve antes del texto.
-- Campana a la derecha.
 - Divisores internos con margen.
 
-## 16.5. Tarjeta de alertas
+*(La campana de la derecha queda suspendida: ver la enmienda del encabezado del apartado 16.)*
+
+## 16.5. Tarjeta de alertas — SUSPENDIDA
+
+> **Sin efecto mientras no existan las notificaciones (feature 003).** El contenido se conserva
+> para cuando se retome.
 
 - Fondo `PrimaryContainer`.
 - Icono de campana dentro de círculo `Primary`.
@@ -1341,7 +1388,7 @@ Anchura aproximada de 360–599 dp:
 
 - Composición base del diseño.
 - Margen de 16–20 dp.
-- Barra inferior de cuatro destinos.
+- Barra inferior de tres destinos *(ver la enmienda del apartado 10.1)*.
 - Una columna de tarjetas.
 
 ## 29.3. Tableta
@@ -1418,7 +1465,7 @@ El diseño debe conservar su jerarquía hasta un escalado del 200 %:
 BOC Cantabria
 Boletín de hoy
 27 de agosto de 2026
-N.º 165
+48 anuncios
 Todo
 Disposiciones
 Personal
@@ -1537,19 +1584,18 @@ Icono estándar:         24 dp
 
 ### Inicio
 
-- [ ] Barra superior blanca y compacta.
+- [ ] Barra superior blanca y compacta, con menú al inicio e Información al final.
 - [ ] Cabecera editorial azul.
-- [ ] Fecha y número de edición visibles.
-- [ ] Chips de filtro coherentes.
-- [ ] Tarjetas blancas con indicador de sección.
-- [ ] Navegación inferior de cuatro destinos.
+- [ ] Fecha y recuento de anuncios visibles.
+- [ ] Chips de filtro coherentes con el panel de secciones.
+- [ ] Tarjetas blancas con indicador de sección **acompañado de texto**.
+- [ ] Navegación inferior de tres destinos.
 
-### Secciones
+### Secciones (panel lateral)
 
 - [ ] Campo de búsqueda.
 - [ ] Filas expandibles.
 - [ ] Iconografía uniforme.
-- [ ] Alertas identificadas con campanas.
 - [ ] Subsecciones agrupadas en fondo suave.
 
 ### Buscar
@@ -1600,8 +1646,9 @@ El nuevo diseño se considerará correctamente implementado cuando:
 - Toda la aplicación utiliza la misma paleta y escala tipográfica.
 - No aparecen los antiguos turquesa y rojo como grandes superficies.
 - Las tarjetas presentan una jerarquía clara entre organismo, título y metadatos.
-- La navegación inferior contiene exactamente cuatro destinos.
-- Las secciones se presentan en una pantalla moderna y no en el antiguo panel lateral.
+- La navegación inferior contiene exactamente tres destinos *(ver la enmienda del apartado 10.1)*.
+- Las secciones se presentan en un panel lateral sobrio, sin la cabecera de autor del diseño
+  antiguo *(ver la enmienda del apartado 16)*.
 - El contenido oficial y el contenido de IA se distinguen visualmente.
 - El PDF oficial mantiene la mayor jerarquía de acción en el detalle.
 - Los títulos largos no se recortan en la pantalla de detalle.

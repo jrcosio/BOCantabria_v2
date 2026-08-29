@@ -2,6 +2,7 @@ plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.compose)
     alias(libs.plugins.kotlin.serialization)
+    alias(libs.plugins.ksp)
     alias(libs.plugins.google.services)
     alias(libs.plugins.firebase.crashlytics)
 }
@@ -32,6 +33,9 @@ android {
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_11
         targetCompatibility = JavaVersion.VERSION_11
+        // java.time exige API 26 y minSdk es 24. El azucarado cubre ese hueco sin tocar minSdk,
+        // que la constitución fija (research.md D-004).
+        isCoreLibraryDesugaringEnabled = true
     }
     buildFeatures {
         compose = true
@@ -45,6 +49,12 @@ android {
             isReturnDefaultValues = true
         }
     }
+}
+
+// El esquema de Room se exporta desde la versión 1: es lo que permitirá escribir la prueba de
+// migración cuando llegue la 2, y cuesta una línea hacerlo ahora.
+ksp {
+    arg("room.schemaLocation", "$projectDir/schemas")
 }
 
 dependencies {
@@ -63,6 +73,15 @@ dependencies {
     implementation(libs.androidx.lifecycle.runtime.compose)
     implementation(libs.androidx.lifecycle.viewmodel.compose)
     implementation(libs.androidx.navigation.compose)
+
+    // --- Persistencia (Room) ---
+    implementation(libs.androidx.room.runtime)
+    implementation(libs.androidx.room.ktx)
+    ksp(libs.androidx.room.compiler)
+
+    // --- Red (BOM gobierna las versiones) ---
+    implementation(platform(libs.okhttp.bom))
+    implementation(libs.okhttp)
 
     // --- Corrutinas ---
     implementation(libs.kotlinx.coroutines.android)
@@ -92,6 +111,11 @@ dependencies {
     testImplementation(libs.koin.test)
     testImplementation(libs.koin.test.junit4)
     testImplementation(libs.konsist)
+    testImplementation(libs.androidx.room.testing)
+    testImplementation(platform(libs.okhttp.bom))
+    testImplementation(libs.okhttp.mockwebserver)
+    // El catálogo de fuentes exige https, así que el servidor de pruebas también lo habla.
+    testImplementation(libs.okhttp.tls)
 
     // --- Tests instrumentados y de UI (src/androidTest) ---
     androidTestImplementation(platform(libs.androidx.compose.bom))
@@ -110,4 +134,7 @@ dependencies {
     // --- Solo debug ---
     debugImplementation(libs.androidx.compose.ui.test.manifest)
     debugImplementation(libs.androidx.compose.ui.tooling)
+
+    // --- Azucarado de la biblioteca estándar ---
+    coreLibraryDesugaring(libs.desugar.jdk.libs)
 }

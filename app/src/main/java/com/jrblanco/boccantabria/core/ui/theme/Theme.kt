@@ -80,6 +80,32 @@ private val ColorScheme = lightColorScheme(
     outlineVariant = BocDivider,
     error = BocError,
     onError = BocOnPrimary,
+    errorContainer = BocSurfaceStrong,
+    onErrorContainer = BocError,
+
+    // Every remaining role, filled on purpose. A role left unset does not stay neutral: Material
+    // fills it with its baseline purple, and any component that happens to use it paints the
+    // application in a colour the design document does not contain. It showed up as a lilac tint
+    // on the sections panel, whose sheet uses `surfaceContainerLow`.
+    surfaceContainerLowest = BocSurface,
+    surfaceContainerLow = BocSurface,
+    surfaceContainer = BocSurfaceSoft,
+    surfaceContainerHigh = BocSurfaceSoft,
+    surfaceContainerHighest = BocSurfaceStrong,
+    surfaceBright = BocSurface,
+    surfaceDim = BocSurfaceStrong,
+    surfaceTint = BocPrimary,
+    inverseSurface = BocTextPrimary,
+    inverseOnSurface = BocSurface,
+    inversePrimary = BocOnPrimaryAccent,
+
+    // The palette has no third family. Pointing it at the secondary one keeps a component that
+    // reaches for `tertiary` inside the institutional range — and, just as important, stops it
+    // looking like AI content, which is the one thing that is legitimately violet here.
+    tertiary = BocSecondary,
+    onTertiary = BocOnPrimary,
+    tertiaryContainer = BocSecondaryContainer,
+    onTertiaryContainer = BocOnPrimaryContainer,
 )
 
 private val LocalBocExtendedColors = staticCompositionLocalOf<BocExtendedColors> {

@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8"?>
+<rss version="2.0">
+  <channel>
+    <title>Filtro BOC</title>
+    <link>https://www.cantabria.es/o/BOC/feed/6802087</link>
+    <description>Contenidos del BOC por categorias: 3.Contratacion Administrativa</description>
+    <size>100</size>
+    <item>
+      <title>JUNTA VECINAL DE COSIO: Subasta de aprovechamiento maderable.</title>
+      <link>https://boc.cantabria.es/boces/verAnuncioAction.do?idAnuBlob=400001</link>
+      <pubDate>2026-08-27</pubDate>
+      <categorias>3.Contratación Administrativa|Junta Vecinal de Cosío|ORD</categorias>
+    </item>
+    <item>
+      <title>AYUNTAMIENTO DE SANTANDER: Licitacion del servicio de limpieza viaria.</title>
+      <link>https://boc.cantabria.es/boces/verAnuncioAction.do?idAnuBlob=400002</link>
+      <pubDate>2026-08-26</pubDate>
+      <categorias>3.Contratación Administrativa|Ayuntamiento de Santander|EXT</categorias>
+    </item>
+  </channel>
+</rss>

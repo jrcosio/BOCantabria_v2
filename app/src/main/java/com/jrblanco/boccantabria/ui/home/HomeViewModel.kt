@@ -1,54 +1,150 @@
 package com.jrblanco.boccantabria.ui.home
 
+import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.jrblanco.boccantabria.core.telemetry.AnalyticsTracker
 import com.jrblanco.boccantabria.domain.model.AppResult
-import com.jrblanco.boccantabria.domain.usecase.GetContentItemsUseCase
+import com.jrblanco.boccantabria.domain.model.DomainError
+import com.jrblanco.boccantabria.domain.model.HomeSelection
+import com.jrblanco.boccantabria.domain.model.Publication
+import com.jrblanco.boccantabria.domain.usecase.GetBocSectionsUseCase
+import com.jrblanco.boccantabria.domain.usecase.ObserveBulletinHeaderUseCase
+import com.jrblanco.boccantabria.domain.usecase.ObservePublicationsUseCase
+import com.jrblanco.boccantabria.domain.usecase.RefreshPublicationsUseCase
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 
+/**
+ * The home screen's state.
+ *
+ * The selection arrives as a navigation argument rather than as a shared object: the sections
+ * panel lives above the navigation host and could not reach this view model without inventing a
+ * channel between view models. As a bonus the selection survives process death for free, which
+ * is what the specification asks for.
+ */
+@Suppress("LongParameterList")
 class HomeViewModel(
-    private val getContentItems: GetContentItemsUseCase,
+    savedStateHandle: SavedStateHandle,
+    private val observePublications: ObservePublicationsUseCase,
+    private val observeHeader: ObserveBulletinHeaderUseCase,
+    private val refreshPublications: RefreshPublicationsUseCase,
+    private val getSections: GetBocSectionsUseCase,
     private val analytics: AnalyticsTracker,
 ) : ViewModel() {
 
-    private val _uiState = MutableStateFlow<HomeUiState>(HomeUiState.Loading)
-    val uiState: StateFlow<HomeUiState> = _uiState.asStateFlow()
+    private val selection: HomeSelection = HomeSelection.of(
+        sectionCode = savedStateHandle[ARG_SECTION_CODE],
+        subsectionCode = savedStateHandle[ARG_SUBSECTION_CODE],
+    )
 
-    /**
-     * Guards against concurrent loads. Tapping retry repeatedly is a real user behaviour and
-     * without this each tap would start its own request, with the last one to finish winning.
-     */
-    private var loadJob: Job? = null
+    private val chips: List<SectionChip> = buildChips()
+
+    private val syncState = MutableStateFlow(SyncState())
+
+    /** Guards against a second synchronisation while one is in flight. */
+    private var refreshJob: Job? = null
+
+    val uiState: StateFlow<HomeUiState> = combine(
+        observePublications(selection),
+        observeHeader(selection),
+        syncState,
+    ) { publications, header, sync ->
+        HomeUiState(
+            selection = selection,
+            header = header,
+            chips = chips,
+            content = contentFor(publications, sync),
+            isRefreshing = sync.isRefreshing,
+            isOffline = sync.isOffline,
+        )
+    }.stateIn(
+        scope = viewModelScope,
+        started = SharingStarted.WhileSubscribed(SUBSCRIPTION_TIMEOUT_MILLIS),
+        initialValue = HomeUiState(selection = selection, chips = chips),
+    )
 
     init {
         analytics.trackScreenView(SCREEN_NAME)
-        load()
+        synchronise(force = false)
     }
 
-    fun onRetry() {
-        load()
-    }
+    /** The refresh gesture. Always reaches the network, however fresh the stored copy is. */
+    fun onRefresh() = synchronise(force = true)
 
-    private fun load() {
-        if (loadJob?.isActive == true) return
+    fun onRetry() = synchronise(force = true)
 
-        loadJob = viewModelScope.launch {
-            _uiState.value = HomeUiState.Loading
-            _uiState.value = when (val result = getContentItems()) {
-                is AppResult.Success ->
-                    if (result.data.isEmpty()) HomeUiState.Empty else HomeUiState.Content(result.data)
+    private fun synchronise(force: Boolean) {
+        if (refreshJob?.isActive == true) return
 
-                is AppResult.Failure -> HomeUiState.Error(result.error)
+        refreshJob = viewModelScope.launch {
+            syncState.value = syncState.value.copy(isRefreshing = true)
+            syncState.value = when (val result = refreshPublications(force)) {
+                is AppResult.Success -> syncState.value.copy(
+                    isRefreshing = false,
+                    isOffline = result.data.allFailed,
+                    error = null,
+                    hasSynchronised = true,
+                )
+
+                is AppResult.Failure -> syncState.value.copy(
+                    isRefreshing = false,
+                    isOffline = true,
+                    error = result.error,
+                    hasSynchronised = true,
+                )
             }
         }
     }
 
+    /**
+     * Stored content always wins. The placeholders only hold while the very first
+     * synchronisation is running with nothing to show: showing sources as they land would
+     * reshuffle the list and change the header date two or three times in a row.
+     */
+    private fun contentFor(publications: List<Publication>, sync: SyncState): HomeContentState =
+        when {
+            publications.isNotEmpty() -> HomeContentState.Publications(publications)
+            sync.error != null -> HomeContentState.Error(sync.error)
+            !sync.hasSynchronised -> HomeContentState.Skeleton
+            else -> HomeContentState.Empty
+        }
+
+    /**
+     * Only the nine sections. The "everything" chip is added by the screen, because its label is
+     * interface copy and a view model has no business reaching for string resources.
+     */
+    private fun buildChips(): List<SectionChip> {
+        val selectedCode = (selection as? HomeSelection.Section)?.code
+        return getSections()
+            .filter { it.isTopLevel }
+            .map { section ->
+                SectionChip(
+                    code = section.code,
+                    label = section.shortName,
+                    colorGroup = section.colorGroup,
+                    isSelected = section.code == selectedCode ||
+                        selectedCode?.startsWith("${section.code}.") == true,
+                )
+            }
+    }
+
+    private data class SyncState(
+        val isRefreshing: Boolean = false,
+        val isOffline: Boolean = false,
+        val error: DomainError? = null,
+        val hasSynchronised: Boolean = false,
+    )
+
     companion object {
         const val SCREEN_NAME: String = "home"
+        const val ARG_SECTION_CODE: String = "sectionCode"
+        const val ARG_SUBSECTION_CODE: String = "subsectionCode"
+        private const val SUBSCRIPTION_TIMEOUT_MILLIS = 5_000L
     }
 }

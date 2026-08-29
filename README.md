@@ -39,11 +39,11 @@ tests que fallan si alguien la rompe.**
 | | |
 |---|---|
 | **Versión** | 2.0.0 |
-| **Fase** | Identidad visual implantada y pantalla de arranque funcional |
-| **Pruebas** | 73 en verde — 57 sin dispositivo, 16 de interfaz |
+| **Fase** | El boletín real en pantalla: lectura de los 19 feeds oficiales, almacenamiento local e Inicio con panel de secciones |
+| **Pruebas** | 250 sin dispositivo + las de interfaz |
 | **Arranque** | 648 ms medidos *(objetivo: < 3 s)* |
 | **Orientación** | Solo vertical en teléfonos |
-| **Capa de datos** | Fuentes en memoria. El acceso a red y la persistencia se deciden en la primera feature real |
+| **Capa de datos** | Room como única fuente de verdad, OkHttp para las diecinueve fuentes. Decidido y justificado en `specs/003-boletin-del-dia/research.md` |
 
 ---
 
@@ -185,20 +185,23 @@ com.jrblanco.boccantabria
 │   ├── telemetry     Contratos AnalyticsTracker y CrashReporter
 │   ├── ui/theme      Sistema de diseño: 39 tokens de color, 14 estilos, espaciado, formas
 │   ├── ui/component  Componibles compartidos sin estado
-│   └── util          DispatcherProvider y utilidades transversales
+│   └── util          Dispatchers, tiempo y aleatoriedad, todos inyectados
 ├── data
 │   ├── repository    Implementaciones de los contratos de domain
-│   ├── source/local  Caché local + entidades
-│   ├── source/remote Origen remoto + DTOs
+│   ├── source/local  Room: base de datos, entidades, DAOs y conversores
+│   ├── source/remote OkHttp, catálogo de las 19 fuentes, analizador y normalizador
 │   └── telemetry     Firebase · ÚNICO sitio que toca el SDK
 ├── domain
-│   ├── model         ContentItem · AppResult · DomainError
+│   ├── model         Publication · BocSection · HomeSelection · AppResult · DomainError
 │   ├── repository    Interfaces (contratos)
 │   └── usecase       Casos de uso, una operación por clase
 ├── ui
-│   ├── splash        Arranque: comprueba, prepara y da paso a Home
-│   ├── home          HomeScreen + HomeViewModel + HomeUiState
-│   └── navigation    Rutas tipadas y NavHost
+│   ├── splash        Arranque: comprueba, prepara y da paso a Inicio
+│   ├── main          Armazón: panel de secciones + barra inferior
+│   ├── home          Inicio: cabecera, chips y tarjetas de publicación
+│   ├── sections      Panel lateral con las nueve secciones del BOC
+│   ├── search/saved  Destinos reales, «Próximamente» por ahora
+│   └── navigation    Rutas tipadas, NavHost y barra inferior
 ├── BOCantabriaApp    Application · arranca Koin
 └── MainActivity      Anfitrión de la navegación
 ```
@@ -214,7 +217,10 @@ com.jrblanco.boccantabria
 | **Asincronía** | Corrutinas + `Flow` | Los `Dispatchers` se inyectan, nunca se referencian estáticamente |
 | **Telemetría** | Firebase Analytics + Crashlytics | Siempre tras abstracción propia, sustituible en pruebas |
 | **Configuración** | Firebase Remote Config | Versión mínima soportada y avisos de mantenimiento, sin publicar versión nueva |
-| **Datos** | *Por decidir* | Se elegirá y justificará en el plan de la primera feature que lo necesite |
+| **Persistencia** | [Room](https://developer.android.com/training/data-storage/room) 2.8 | Un corpus de ~1.900 anuncios con inserción-o-actualización, consultas y `Flow`. **Nunca borra** |
+| **Red** | [OkHttp](https://square.github.io/okhttp/) 5, sin Retrofit | Diecinueve GET de XML crudo: no hay API tipada que convertir |
+| **XML** | DOM de `javax.xml.parsers` | Kotlin puro, así sus ~50 pruebas corren sin emulador |
+| **Fechas** | `java.time` con azucarado | El tipo correcto para una fecha sin hora, con `minSdk 24` intacto |
 
 Todas las dependencias se declaran en
 [`gradle/libs.versions.toml`](gradle/libs.versions.toml). Nunca una versión literal dentro de un
