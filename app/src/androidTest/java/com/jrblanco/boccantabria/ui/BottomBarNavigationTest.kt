@@ -2,6 +2,7 @@ package com.jrblanco.boccantabria.ui
 
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.junit4.createComposeRule
+import androidx.compose.ui.test.onAllNodesWithTag
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.performClick
 import androidx.navigation.compose.rememberNavController
@@ -10,6 +11,7 @@ import com.jrblanco.boccantabria.core.ui.theme.BOCantabriaTheme
 import com.jrblanco.boccantabria.fake.FakeBocRemoteDataSource
 import com.jrblanco.boccantabria.fake.KoinOverrideRule
 import com.jrblanco.boccantabria.fake.testGraphOverrides
+import com.jrblanco.boccantabria.ui.home.TAG_PUBLICATIONS
 import com.jrblanco.boccantabria.ui.home.component.TAG_HEADER
 import com.jrblanco.boccantabria.ui.main.MainShell
 import com.jrblanco.boccantabria.ui.navigation.TAG_BOTTOM_BAR
@@ -36,6 +38,12 @@ class BottomBarNavigationTest {
                 MainShell(navController = rememberNavController())
             }
         }
+        // Waits for the first synchronisation to land. It is not politeness: while the loading
+        // placeholders are on screen they pulse for ever, the composition never goes idle, and an
+        // assertion that waits for idleness would hang rather than fail.
+        composeRule.waitUntil(timeoutMillis = TIMEOUT_MILLIS) {
+            composeRule.onAllNodesWithTag(TAG_PUBLICATIONS).fetchSemanticsNodes().isNotEmpty()
+        }
     }
 
     @Test
@@ -57,5 +65,9 @@ class BottomBarNavigationTest {
 
         composeRule.onNodeWithTag(TAG_BOTTOM_HOME).performClick()
         composeRule.onNodeWithTag(TAG_HEADER).assertIsDisplayed()
+    }
+
+    private companion object {
+        const val TIMEOUT_MILLIS = 10_000L
     }
 }
