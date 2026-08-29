@@ -37,6 +37,24 @@ class PublicationCardTest {
     }
 
     @Test
+    fun the_issuer_is_not_said_twice() {
+        // The source writes titles as «ORGANISMO: descripción», and the card already prints the
+        // issuer on its own line above.
+        setContent(
+            publication(
+                title = "AYUNTAMIENTO DE PIÉLAGOS: Aprobación definitiva de la Ordenanza Fiscal.",
+                issuer = "Ayuntamiento de Piélagos",
+            ),
+        )
+
+        composeRule.onNodeWithText("AYUNTAMIENTO DE PIÉLAGOS").assertIsDisplayed()
+        composeRule.onNodeWithText("Aprobación definitiva de la Ordenanza Fiscal.").assertIsDisplayed()
+        composeRule.onNodeWithText(
+            "AYUNTAMIENTO DE PIÉLAGOS: Aprobación definitiva de la Ordenanza Fiscal.",
+        ).assertDoesNotExist()
+    }
+
+    @Test
     fun the_section_travels_as_text_and_not_only_as_colour() {
         // Nine sections share five colours, so the indicator alone would say less than it seems.
         setContent(publication(sectionCode = "1"))

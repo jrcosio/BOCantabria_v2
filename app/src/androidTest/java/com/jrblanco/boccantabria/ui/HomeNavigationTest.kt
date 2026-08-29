@@ -49,18 +49,18 @@ class HomeNavigationTest {
     fun the_bulletin_of_the_day_reaches_the_screen() {
         setContent()
 
-        awaitText(FakeBocRemoteDataSource.DISPOSICIONES_TITLE)
+        awaitText(FakeBocRemoteDataSource.DISPOSICIONES_DISPLAYED)
 
         composeRule.onNodeWithTag(TAG_PUBLICATIONS).assertIsDisplayed()
-        composeRule.onNodeWithText(FakeBocRemoteDataSource.DISPOSICIONES_TITLE).assertIsDisplayed()
+        composeRule.onNodeWithText(FakeBocRemoteDataSource.DISPOSICIONES_DISPLAYED).assertIsDisplayed()
         // The 2.2 announcement is a week older, so it is not part of today's bulletin.
-        composeRule.onNodeWithText(FakeBocRemoteDataSource.OPOSICIONES_TITLE).assertDoesNotExist()
+        composeRule.onNodeWithText(FakeBocRemoteDataSource.OPOSICIONES_DISPLAYED).assertDoesNotExist()
     }
 
     @Test
     fun choosing_a_subsection_in_the_panel_changes_the_list_and_the_header() {
         setContent()
-        awaitText(FakeBocRemoteDataSource.DISPOSICIONES_TITLE)
+        awaitText(FakeBocRemoteDataSource.DISPOSICIONES_DISPLAYED)
 
         composeRule.onNodeWithTag(TAG_MENU).performClick()
         composeRule.onNodeWithTag(TAG_SECTIONS_DRAWER).assertIsDisplayed()
@@ -69,7 +69,7 @@ class HomeNavigationTest {
         composeRule.onNodeWithTag(sectionRowTag("2.2")).performClick()
 
         // A section is not limited to the latest date, so the older announcement shows up.
-        awaitText(FakeBocRemoteDataSource.OPOSICIONES_TITLE)
+        awaitText(FakeBocRemoteDataSource.OPOSICIONES_DISPLAYED)
         // Anchored to the header: the subsection name also appears on every card, so plain text
         // matching would find two nodes and say nothing about which one changed.
         composeRule.onNode(
@@ -80,16 +80,16 @@ class HomeNavigationTest {
     @Test
     fun the_filter_chip_returns_to_the_bulletin_of_the_day() {
         setContent()
-        awaitText(FakeBocRemoteDataSource.DISPOSICIONES_TITLE)
+        awaitText(FakeBocRemoteDataSource.DISPOSICIONES_DISPLAYED)
 
         composeRule.onNodeWithTag(TAG_MENU).performClick()
         composeRule.onNodeWithTag(sectionToggleTag("2")).performClick()
         composeRule.onNodeWithTag(sectionRowTag("2.2")).performClick()
-        awaitText(FakeBocRemoteDataSource.OPOSICIONES_TITLE)
+        awaitText(FakeBocRemoteDataSource.OPOSICIONES_DISPLAYED)
 
         composeRule.onNodeWithTag(com.jrblanco.boccantabria.ui.home.component.TAG_CHIP_ALL).performClick()
 
-        awaitText(FakeBocRemoteDataSource.DISPOSICIONES_TITLE)
+        awaitText(FakeBocRemoteDataSource.DISPOSICIONES_DISPLAYED)
         composeRule.onNodeWithText("Boletín de hoy").assertIsDisplayed()
     }
 

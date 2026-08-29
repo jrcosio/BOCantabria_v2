@@ -35,10 +35,16 @@ class FakeBocRemoteDataSource(
     }
 
     companion object {
+        // What the source publishes: it prefixes most titles with the issuing body.
         const val DISPOSICIONES_TITLE =
             "AYUNTAMIENTO DE PIÉLAGOS: Aprobación definitiva de la Ordenanza Fiscal."
         const val OPOSICIONES_TITLE =
             "AYUNTAMIENTO DE SANTOÑA: Bases de la convocatoria para cubrir una plaza."
+
+        // What a card shows: the issuer already has its own line above, so repeating it in the
+        // title would say the same name twice in a row.
+        const val DISPOSICIONES_DISPLAYED = "Aprobación definitiva de la Ordenanza Fiscal."
+        const val OPOSICIONES_DISPLAYED = "Bases de la convocatoria para cubrir una plaza."
 
         val DEFAULT_ITEMS: Map<String, List<RssItemDto>> = mapOf(
             "6802081" to listOf(
