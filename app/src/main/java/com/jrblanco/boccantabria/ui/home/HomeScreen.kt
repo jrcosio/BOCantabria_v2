@@ -4,6 +4,7 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -109,8 +110,10 @@ fun HomeContent(
             BulletinHeader(header = state.header)
 
             // A thin line under the header, so an update never makes the content disappear.
+            // fillMaxWidth, never fillMaxSize: the indicator would stretch over the whole screen
+            // and hide the very content this is here to keep visible.
             if (state.isRefreshing) {
-                LinearProgressIndicator(modifier = Modifier.fillMaxSize(REFRESH_LINE_FRACTION))
+                LinearProgressIndicator(modifier = Modifier.fillMaxWidth())
             }
 
             Column(
@@ -210,5 +213,3 @@ private fun DomainError.messageRes(): Int = when (this) {
 
 private val SPANISH_LONG_DATE: DateTimeFormatter =
     DateTimeFormatter.ofPattern("d 'de' MMMM 'de' yyyy", Locale.forLanguageTag("es-ES"))
-
-private const val REFRESH_LINE_FRACTION = 1f

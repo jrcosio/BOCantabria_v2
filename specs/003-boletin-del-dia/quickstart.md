@@ -206,6 +206,38 @@ Informes: `app/build/reports/tests/testDebugUnitTest/index.html` y
 
 ---
 
+## Apéndice — comprobación contra el servicio real (29 de agosto de 2026)
+
+Las pruebas usan muestras conservadas para ser deterministas, así que **por separado** se contrastó
+la implementación contra las diecinueve fuentes en vivo, aplicando las mismas reglas que el
+normalizador. Resultado:
+
+| | |
+|---|---|
+| Fuentes que respondieron | 19 de 19, todas con `text/xml;charset=UTF-8` |
+| Publicaciones recibidas | 1.709 |
+| **Aceptadas** | **1.709** — ninguna rechazada por título, enlace o fecha |
+| Sin identificador en el enlace | 0 |
+| Clasificación que no corresponde a su fuente | 0 |
+| **Con orden anómalo de componentes** | **8**, las ocho en el feed 4.3 |
+| Identificadores repetidos entre fuentes | 0 (1.709 únicos) |
+| Fuente vacía | 8.1 Subastas, `size` 0 y cero items, respuesta válida |
+
+Las ocho anomalías son exactamente las que documenta el fichero de consumo de feeds. La aplicación
+las marca con `CATEGORY_ORDER_UNRELIABLE` y **no descarta ninguna**, que es lo que exige FR-015.
+
+Reproducible con:
+
+```bash
+for f in 6802081 6802084 6802085 6802086 6802087 6802089 6802090 6802091 6802092 \
+         6802094 6802095 6802097 6802098 6802099 6802100 6802301 7479572 6802303 7293890; do
+  curl -s -o "/tmp/boc/$f.xml" -w "$f %{http_code} %{content_type} %{size_download}\n" \
+    "https://www.cantabria.es/o/BOC/feed/$f"
+done
+```
+
+---
+
 ## Resumen de aceptación
 
 | # | Qué demuestra | Requisitos |

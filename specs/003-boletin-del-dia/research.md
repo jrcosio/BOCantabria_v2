@@ -144,10 +144,15 @@ Konsist.
 
 ## D-005: Iconos como vectores propios, no `material-icons-extended`
 
-**Decisión**: se usan los iconos del conjunto básico que ya trae Material 3 (menú, lupa, información,
-inicio, compartir, calendario, chevron, limpiar) y se añaden como recursos vectoriales propios los
-que faltan: marcador, sin conexión y los nueve de sección. Los trazados se toman de las fuentes
-oficiales de Material Symbols en el momento de implementar; **no se inventan**.
+**Decisión**: **todos** los iconos son recursos vectoriales propios, con los trazados tomados de las
+fuentes oficiales de Material Symbols Outlined y **sin modificarlos**. Son diecinueve: menú, lupa,
+información, inicio, compartir, calendario, chevron, marcador, sin conexión y los nueve de sección.
+
+> **Corregido al implementar.** Esta decisión decía que el conjunto básico de iconos vendría con
+> Material 3 y solo habría que dibujar once. No es así con este BOM: `androidx.compose.material.icons`
+> **no está en el classpath**, ni siquiera el conjunto básico. La alternativa era añadir
+> `material-icons-core`; se descartó por coherencia —un solo mecanismo para todos los iconos— y para
+> no añadir una dependencia cuando ya existía la tubería de conversión.
 
 **Rationale**: `material-icons-extended` mete varios miles de iconos en el binario y el proyecto tiene
 hoy `optimization { enable = false }` en `release`, así que **no se recorta nada**. Añadir megabytes
@@ -401,6 +406,16 @@ Comprobadas contra los repositorios en la fecha de este documento:
 | Room | `2.8.4` | `room-runtime`, `room-ktx`, `room-compiler` (KSP) y `room-testing` |
 | OkHttp | BOM `5.5.0` | `okhttp` y `mockwebserver3-junit4` sin versión, gobernados por el BOM |
 | `desugar_jdk_libs` | `2.1.5` | Requiere `isCoreLibraryDesugaringEnabled = true` |
+
+**Hallazgo al configurar**: AGP 9 prohíbe que un plugin añada fuentes por `kotlin.sourceSets`, y KSP
+registra ahí sus directorios generados, así que la build falla con
+*«Using kotlin.sourceSets DSL to add Kotlin sources is not allowed with built-in Kotlin»*. La vía que
+el propio AGP documenta es `android.disallowKotlinSourceSets=false` en `gradle.properties`. Queda
+puesta con el motivo escrito al lado; cuando KSP migre a `android.sourceSets`, sobra.
+
+**Otro hallazgo**: `javax.xml.XMLConstants` en Android **no declara** `ACCESS_EXTERNAL_DTD` ni
+`ACCESS_EXTERNAL_SCHEMA` —son de JAXP 1.5—, así que referenciarlas no compila. Los valores se
+escriben literales; una propiedad desconocida la traga el `runCatching` de D-003.
 
 `settings.gradle.kts` resuelve los plugins desde `google()`, `mavenCentral()` y `gradlePluginPortal()`.
 KSP se publica en Maven Central y en el portal, así que el filtro por expresión regular de `google()`

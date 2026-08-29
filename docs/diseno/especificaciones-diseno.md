@@ -1388,7 +1388,7 @@ Anchura aproximada de 360–599 dp:
 
 - Composición base del diseño.
 - Margen de 16–20 dp.
-- Barra inferior de cuatro destinos.
+- Barra inferior de tres destinos *(ver la enmienda del apartado 10.1)*.
 - Una columna de tarjetas.
 
 ## 29.3. Tableta
@@ -1646,8 +1646,9 @@ El nuevo diseño se considerará correctamente implementado cuando:
 - Toda la aplicación utiliza la misma paleta y escala tipográfica.
 - No aparecen los antiguos turquesa y rojo como grandes superficies.
 - Las tarjetas presentan una jerarquía clara entre organismo, título y metadatos.
-- La navegación inferior contiene exactamente cuatro destinos.
-- Las secciones se presentan en una pantalla moderna y no en el antiguo panel lateral.
+- La navegación inferior contiene exactamente tres destinos *(ver la enmienda del apartado 10.1)*.
+- Las secciones se presentan en un panel lateral sobrio, sin la cabecera de autor del diseño
+  antiguo *(ver la enmienda del apartado 16)*.
 - El contenido oficial y el contenido de IA se distinguen visualmente.
 - El PDF oficial mantiene la mayor jerarquía de acción en el detalle.
 - Los títulos largos no se recortan en la pantalla de detalle.

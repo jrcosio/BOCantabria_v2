@@ -192,7 +192,7 @@ organismo, su título y su fecha, y la cabecera con la fecha de la última edici
       `ObservePublicationsUseCaseTest.kt`, `ObserveBulletinHeaderUseCaseTest.kt`,
       `RefreshPublicationsUseCaseTest.kt` (incluido `force = false` con caché fresca, que no toca la
       red) y `GetBocSectionsUseCaseTest.kt` (FR-023, FR-063)
-- [ ] T028 [P] [US1] Escribir `TEST/ui/home/HomeViewModelTest.kt` con `runTest` y Turbine: arranque en
+- [X] T028 [P] [US1] Escribir `TEST/ui/home/HomeViewModelTest.kt` con `runTest` y Turbine: arranque en
       frío con base vacía que mantiene los esqueletos, arranque con caché que pinta al instante,
       resultado vacío que es `Empty` y no `Error`, fallo sin caché que es `Error`, y que reintentar
       con una carga en curso no lanza una segunda (FR-039, FR-040, FR-063)

@@ -40,7 +40,12 @@ class HomeContentTest {
 
     @Test
     fun skeletons_are_shown_while_the_first_synchronisation_runs() {
+        // The placeholders pulse forever by design, and an assertion that waits for the
+        // composition to go idle would wait for ever with it. Driving the clock by hand is the
+        // supported way out; without this the test hangs rather than fails, which is worse.
+        composeRule.mainClock.autoAdvance = false
         setContent(HomeUiState(content = HomeContentState.Skeleton))
+        composeRule.mainClock.advanceTimeByFrame()
 
         composeRule.onAllNodesWithTag(TAG_PUBLICATION_SKELETON)[0].assertIsDisplayed()
     }

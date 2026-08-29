@@ -27,6 +27,7 @@ import com.jrblanco.boccantabria.R
 import com.jrblanco.boccantabria.domain.model.BocSection
 import com.jrblanco.boccantabria.domain.model.HomeSelection
 import com.jrblanco.boccantabria.domain.model.Publication
+import com.jrblanco.boccantabria.domain.usecase.GetBocSectionsUseCase
 import com.jrblanco.boccantabria.ui.home.HomeScreen
 import com.jrblanco.boccantabria.ui.navigation.BocBottomBar
 import com.jrblanco.boccantabria.ui.navigation.BottomDestination
@@ -37,6 +38,7 @@ import com.jrblanco.boccantabria.ui.sections.SectionsDrawerContent
 import com.jrblanco.boccantabria.ui.sections.SectionsViewModel
 import kotlinx.coroutines.launch
 import org.koin.androidx.compose.koinViewModel
+import org.koin.compose.koinInject
 
 /**
  * The frame the three destinations share: the sections panel and the bottom bar, wrapped around
@@ -51,6 +53,7 @@ fun MainShell(
     navController: NavHostController,
     modifier: Modifier = Modifier,
     sectionsViewModel: SectionsViewModel = koinViewModel(),
+    getSections: GetBocSectionsUseCase = koinInject(),
 ) {
     val drawerState = rememberDrawerState(DrawerValue.Closed)
     val scope = rememberCoroutineScope()
@@ -58,9 +61,10 @@ fun MainShell(
     val sectionsState by sectionsViewModel.uiState.collectAsStateWithLifecycle()
     val backStackEntry by navController.currentBackStackEntryAsState()
 
-    val sections = remember(sectionsState.rows) {
-        sectionsState.rows.flatMap { listOf(it.section) + it.children }
-    }
+    // The whole tree, not `sectionsState.rows`: those are filtered by whatever is typed in the
+    // panel, so using them would empty the chips and strip the section label off every card the
+    // moment someone searched.
+    val sections = remember(getSections) { getSections() }
     val comingSoon = stringResource(R.string.coming_soon)
 
     fun showComingSoon() {

@@ -1,6 +1,9 @@
 package com.jrblanco.boccantabria.ui
 
 import androidx.compose.ui.test.assertIsDisplayed
+import androidx.compose.ui.test.hasAnyAncestor
+import androidx.compose.ui.test.hasTestTag
+import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithTag
@@ -10,6 +13,7 @@ import com.jrblanco.boccantabria.MainActivity
 import com.jrblanco.boccantabria.fake.FakeBocRemoteDataSource
 import com.jrblanco.boccantabria.fake.KoinOverrideRule
 import com.jrblanco.boccantabria.fake.testGraphOverrides
+import com.jrblanco.boccantabria.ui.home.component.TAG_HEADER
 import com.jrblanco.boccantabria.ui.home.component.TAG_MENU
 import com.jrblanco.boccantabria.ui.sections.TAG_SECTIONS_DRAWER
 import com.jrblanco.boccantabria.ui.sections.sectionRowTag
@@ -56,7 +60,11 @@ class HomeNavigationTest {
 
         // A section is not limited to the latest date, so the older announcement shows up.
         awaitText(FakeBocRemoteDataSource.OPOSICIONES_TITLE)
-        composeRule.onNodeWithText("Cursos, oposiciones y concursos").assertIsDisplayed()
+        // Anchored to the header: the subsection name also appears on each card, so plain text
+        // matching would find two nodes and say nothing about which one changed.
+        composeRule.onNode(
+            hasText("Cursos, oposiciones y concursos") and hasAnyAncestor(hasTestTag(TAG_HEADER)),
+        ).assertIsDisplayed()
     }
 
     private fun awaitText(text: String) {
