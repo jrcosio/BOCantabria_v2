@@ -124,7 +124,7 @@ dentro de la aplicación.
 - [X] T016 [P] [US1] Escribir `TEST/data/repository/DocumentRepositoryImplTest.kt`: descarga cuando
       falta, reutiliza cuando está, refresca la marca de uso, **dos peticiones concurrentes producen
       una sola descarga**, y ninguna excepción escapa (FR-021, FR-022)
-- [ ] T017 [P] [US1] Escribir las pruebas de los tres casos de uso en `TEST/domain/usecase/`:
+- [X] T017 [P] [US1] Escribir las pruebas de los tres casos de uso en `TEST/domain/usecase/`:
       `ObservePublicationUseCaseTest.kt` (incluido el caso de publicación retirada),
       `ObserveOfficialDocumentUseCaseTest.kt` y `OpenOfficialDocumentUseCaseTest.kt`
       (FR-004, FR-046)
@@ -146,7 +146,7 @@ dentro de la aplicación.
       agrupa las peticiones concurrentes tras un mismo trabajo en curso, escribe a temporal y
       renombra, borra el temporal ante cualquier fallo, y traduce el rechazo a `DomainError`
       (research.md D-012, D-015) (FR-019, FR-020, FR-021, FR-022) (depende de T014, T020)
-- [ ] T022 [US1] Crear los tres casos de uso en `MAIN/domain/usecase/` hasta hacer pasar T017, cada
+- [X] T022 [US1] Crear los tres casos de uso en `MAIN/domain/usecase/` hasta hacer pasar T017, cada
       uno con un único `operator fun invoke` (depende de T011, T021)
 - [ ] T023 [US1] Registrar en `MAIN/core/di/` el descargador, la caché, el repositorio de documentos,
       los casos de uso y los dos modelos de pantalla; y ampliar `TEST/di/KoinModulesTest.kt` con los
@@ -259,7 +259,7 @@ avión.
 
 ### Tests for User Story 3 ⚠️
 
-- [ ] T048 [P] [US3] Escribir `TEST/domain/usecase/ShareOfficialDocumentUseCaseTest.kt`: documento en
+- [X] T048 [P] [US3] Escribir `TEST/domain/usecase/ShareOfficialDocumentUseCaseTest.kt`: documento en
       caché devuelve `Document`; ausente con conexión lo descarga y devuelve `Document`; ausente sin
       conexión devuelve `Link` **con su motivo**; y un fallo distinto de la falta de conexión no se
       disfraza de enlace (FR-031, FR-033, SC-007)
@@ -268,7 +268,7 @@ avión.
 
 ### Implementation for User Story 3
 
-- [ ] T050 [US3] Crear `MAIN/domain/usecase/ShareOfficialDocumentUseCase.kt` hasta hacer pasar T048.
+- [X] T050 [US3] Crear `MAIN/domain/usecase/ShareOfficialDocumentUseCase.kt` hasta hacer pasar T048.
       Es el **único** sitio donde vive la regla de degradación: la pantalla pregunta y obedece
       (depende de T022)
 - [ ] T051 [US3] Conectar compartir en `PublicationDetailScreen` y `PdfViewerScreen`: el fichero se
