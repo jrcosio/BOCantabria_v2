@@ -121,7 +121,7 @@ dentro de la aplicación.
       exige `https`—: descarga correcta con su suma de verificación; 404 sin reintento; agotamiento
       de espera; y que el fichero temporal queda escrito solo si todo pasa, con su SHA-256 (FR-016, FR-020,
       FR-044)
-- [ ] T016 [P] [US1] Escribir `TEST/data/repository/DocumentRepositoryImplTest.kt`: descarga cuando
+- [X] T016 [P] [US1] Escribir `TEST/data/repository/DocumentRepositoryImplTest.kt`: descarga cuando
       falta, reutiliza cuando está, refresca la marca de uso, **dos peticiones concurrentes producen
       una sola descarga**, y ninguna excepción escapa (FR-021, FR-022)
 - [ ] T017 [P] [US1] Escribir las pruebas de los tres casos de uso en `TEST/domain/usecase/`:
@@ -142,7 +142,7 @@ dentro de la aplicación.
       **deriva** del existente con `newBuilder()` para darle 10/60/180 s: un documento tarda más que
       un feed (research.md D-004). Validación en el orden de `contracts/internal-contracts.md` §2.3,
       cortando en cuanto se sabe (FR-016, FR-018)
-- [ ] T021 [US1] Crear `MAIN/data/repository/DocumentRepositoryImpl.kt` hasta hacer pasar T016:
+- [X] T021 [US1] Crear `MAIN/data/repository/DocumentRepositoryImpl.kt` hasta hacer pasar T016:
       agrupa las peticiones concurrentes tras un mismo trabajo en curso, escribe a temporal y
       renombra, borra el temporal ante cualquier fallo, y traduce el rechazo a `DomainError`
       (research.md D-012, D-015) (FR-019, FR-020, FR-021, FR-022) (depende de T014, T020)
@@ -233,7 +233,7 @@ se rechaza con mensaje y sin dejar fichero.
 - [X] T043 [US2] Completar la validación de `OkHttpDocumentDownloader` hasta hacer pasar T040:
       esquema y host **antes de conectar**, tipo declarado con las cabeceras, bytes mágicos sobre el
       principio del cuerpo, y corte por tamaño durante la lectura (research.md D-002) (FR-016, FR-017, FR-018)
-- [ ] T044 [US2] Asegurar en `DocumentRepositoryImpl` el borrado del temporal en todos los caminos de
+- [X] T044 [US2] Asegurar en `DocumentRepositoryImpl` el borrado del temporal en todos los caminos de
       salida —rechazo, error y cancelación— hasta hacer pasar T041. `CancellationException` se
       repropaga (FR-019, FR-023)
 - [ ] T045 [US2] Mostrar el fallo en `DocumentTab` y en `PdfViewerScreen` reutilizando `ErrorMessage`
@@ -242,7 +242,7 @@ se rechaza con mensaje y sin dejar fichero.
 - [ ] T046 [P] [US2] Ampliar `ATEST/ui/detail/PublicationDetailContentTest.kt` y
       `ATEST/ui/pdf/PdfViewerContentTest.kt` con el estado de error y su acción de reintentar
       (FR-047)
-- [ ] T047 [P] [US2] Emitir `document_opened` desde `DocumentRepositoryImpl` con la bandera de si
+- [X] T047 [P] [US2] Emitir `document_opened` desde `DocumentRepositoryImpl` con la bandera de si
       venía de la caché. **Ningún dato personal**: ni título, ni URL, ni clave (FR-029 de la 003,
       principio VI)
 
