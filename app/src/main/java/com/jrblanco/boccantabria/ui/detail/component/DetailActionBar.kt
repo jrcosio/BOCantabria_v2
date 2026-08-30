@@ -3,9 +3,14 @@ package com.jrblanco.boccantabria.ui.detail.component
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.WindowInsetsSides
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.only
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.systemBars
+import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.material3.Button
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
@@ -45,25 +50,41 @@ fun DetailActionBar(
     }
     val stacked = widthDp < STACK_BELOW_WIDTH
 
-
     Surface(modifier = modifier.fillMaxWidth(), color = MaterialTheme.colorScheme.surface) {
         Column {
             HorizontalDivider(color = BocTheme.colors.divider)
-            if (stacked) {
-                Column(
-                    modifier = Modifier.barPadding(),
-                    verticalArrangement = Arrangement.spacedBy(BocTheme.spacing.space2),
-                ) {
-                    OpenButton(onOpen, Modifier.fillMaxWidth())
-                    AskButton(onAsk, Modifier.fillMaxWidth())
-                }
-            } else {
-                Row(
-                    modifier = Modifier.barPadding(),
-                    horizontalArrangement = Arrangement.spacedBy(BocTheme.spacing.space3),
-                ) {
-                    OpenButton(onOpen, Modifier.weight(OPEN_WEIGHT))
-                    AskButton(onAsk, Modifier.weight(1f))
+
+            // The inset goes **inside** the surface and below the divider, exactly as Material's
+            // own `NavigationBar` applies it: the surface colour then paints behind the system bar
+            // instead of letting the background show through, the rule still spans the full width,
+            // and the Scaffold measures the bar's whole height so the content padding follows.
+            //
+            // It has to live here and nowhere else. As soon as a Scaffold is given a `bottomBar`
+            // it discards its own bottom inset and pins the bar to the raw window edge, so the bar
+            // is the only thing that can keep itself clear of the navigation buttons.
+            Column(
+                modifier = Modifier.windowInsetsPadding(
+                    WindowInsets.systemBars.only(
+                        WindowInsetsSides.Horizontal + WindowInsetsSides.Bottom,
+                    ),
+                ),
+            ) {
+                if (stacked) {
+                    Column(
+                        modifier = Modifier.barPadding(),
+                        verticalArrangement = Arrangement.spacedBy(BocTheme.spacing.space2),
+                    ) {
+                        OpenButton(onOpen, Modifier.fillMaxWidth())
+                        AskButton(onAsk, Modifier.fillMaxWidth())
+                    }
+                } else {
+                    Row(
+                        modifier = Modifier.barPadding(),
+                        horizontalArrangement = Arrangement.spacedBy(BocTheme.spacing.space3),
+                    ) {
+                        OpenButton(onOpen, Modifier.weight(OPEN_WEIGHT))
+                        AskButton(onAsk, Modifier.weight(1f))
+                    }
                 }
             }
         }
