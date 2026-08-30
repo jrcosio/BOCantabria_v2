@@ -4,16 +4,21 @@ import com.jrblanco.boccantabria.core.telemetry.AnalyticsTracker
 import com.jrblanco.boccantabria.core.telemetry.CrashReporter
 import com.jrblanco.boccantabria.data.repository.AppConfigRepositoryImpl
 import com.jrblanco.boccantabria.data.repository.BocSectionRepositoryImpl
+import com.jrblanco.boccantabria.data.repository.DocumentRepositoryImpl
 import com.jrblanco.boccantabria.data.repository.ConnectivityRepositoryImpl
 import com.jrblanco.boccantabria.data.repository.PublicationRepositoryImpl
 import com.jrblanco.boccantabria.data.source.local.AndroidConnectivityDataSource
 import com.jrblanco.boccantabria.data.source.local.BocDatabase
 import com.jrblanco.boccantabria.data.source.local.ConnectivityDataSource
+import com.jrblanco.boccantabria.data.source.local.DocumentCache
+import com.jrblanco.boccantabria.data.source.local.FileDocumentCache
 import com.jrblanco.boccantabria.data.source.local.FeedSyncStateDao
 import com.jrblanco.boccantabria.data.source.local.PublicationDao
 import com.jrblanco.boccantabria.data.source.local.bocDatabase
 import com.jrblanco.boccantabria.data.source.remote.BocFeedCatalog
 import com.jrblanco.boccantabria.data.source.remote.BocRssParser
+import com.jrblanco.boccantabria.data.source.remote.DocumentDownloader
+import com.jrblanco.boccantabria.data.source.remote.OkHttpDocumentDownloader
 import com.jrblanco.boccantabria.data.source.remote.OkHttpPublicationRemoteDataSource
 import com.jrblanco.boccantabria.data.source.remote.PublicationNormalizer
 import com.jrblanco.boccantabria.data.source.remote.PublicationRemoteDataSource
@@ -25,6 +30,7 @@ import com.jrblanco.boccantabria.data.telemetry.firebaseCrashReporter
 import com.jrblanco.boccantabria.domain.repository.AppConfigRepository
 import com.jrblanco.boccantabria.domain.repository.BocSectionRepository
 import com.jrblanco.boccantabria.domain.repository.ConnectivityRepository
+import com.jrblanco.boccantabria.domain.repository.DocumentRepository
 import com.jrblanco.boccantabria.domain.repository.PublicationRepository
 import okhttp3.OkHttpClient
 import org.koin.android.ext.koin.androidContext
@@ -55,6 +61,23 @@ val dataModule = module {
             parser = get(),
             dispatchers = get(),
             random = get(),
+        )
+    }
+
+    // --- El documento oficial ---
+    single<DocumentDownloader> {
+        OkHttpDocumentDownloader(client = get(), dispatchers = get())
+    }
+    single<DocumentCache> {
+        FileDocumentCache(root = androidContext().cacheDir, time = get())
+    }
+    single<DocumentRepository> {
+        DocumentRepositoryImpl(
+            downloader = get(),
+            cache = get(),
+            dispatchers = get(),
+            analytics = get(),
+            crashReporter = get(),
         )
     }
 

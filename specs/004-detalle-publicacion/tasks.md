@@ -128,11 +128,11 @@ dentro de la aplicación.
       `ObservePublicationUseCaseTest.kt` (incluido el caso de publicación retirada),
       `ObserveOfficialDocumentUseCaseTest.kt` y `OpenOfficialDocumentUseCaseTest.kt`
       (FR-004, FR-046)
-- [ ] T018 [P] [US1] Escribir `TEST/ui/detail/PublicationDetailViewModelTest.kt` con `runTest` y
+- [X] T018 [P] [US1] Escribir `TEST/ui/detail/PublicationDetailViewModelTest.kt` con `runTest` y
       Turbine: lee la clave del `SavedStateHandle`; publicación encontrada y retirada; la pestaña
       seleccionada sobrevive; **no se descarga al abrir el detalle, sí al mostrar la pestaña
       Documento**; y reintentar tras un fallo llega al documento (FR-004, FR-015, FR-046)
-- [ ] T019 [P] [US1] Escribir `TEST/ui/pdf/PdfViewerViewModelTest.kt`: carga, documento listo, error
+- [X] T019 [P] [US1] Escribir `TEST/ui/pdf/PdfViewerViewModelTest.kt`: carga, documento listo, error
       con reintento, y que el documento se cierra al limpiarse el modelo (research.md D-009)
 
 ### Implementation for User Story 1
@@ -148,11 +148,11 @@ dentro de la aplicación.
       (research.md D-012, D-015) (FR-019, FR-020, FR-021, FR-022) (depende de T014, T020)
 - [X] T022 [US1] Crear los tres casos de uso en `MAIN/domain/usecase/` hasta hacer pasar T017, cada
       uno con un único `operator fun invoke` (depende de T011, T021)
-- [ ] T023 [US1] Registrar en `MAIN/core/di/` el descargador, la caché, el repositorio de documentos,
+- [X] T023 [US1] Registrar en `MAIN/core/di/` el descargador, la caché, el repositorio de documentos,
       los casos de uso y los dos modelos de pantalla; y ampliar `TEST/di/KoinModulesTest.kt` con los
       tipos nuevos y sus `koin.get<…>()`. El cargador de PDF se construye con **función factoría**,
       porque `core.di` no puede importar el SDK (depende de T022)
-- [ ] T024 [US1] Añadir `Route.Detail(externalKey)` y `Route.PdfViewer(externalKey)` a
+- [X] T024 [US1] Añadir `Route.Detail(externalKey)` y `Route.PdfViewer(externalKey)` a
       `MAIN/ui/navigation/Routes.kt` y registrarlas en `BOCantabriaNavHost.kt`, en el `NavHost`
       **exterior**: no llevan barra inferior, y la publicación viaja por clave y no por objeto
       (research.md D-005, D-006) (FR-006)
@@ -160,9 +160,9 @@ dentro de la aplicación.
       `onClick` y `MAIN/ui/main/MainShell.kt` lo enlaza a `Route.Detail`. **Cambiar
       `ATEST/ui/home/PublicationCardTest.kt`**, cuya prueba afirma hoy que la tarjeta no navega:
       justo eso es lo que esta feature añade (FR-001) (depende de T024)
-- [ ] T026 [US1] Crear `MAIN/ui/detail/PublicationDetailUiState.kt` según data-model.md §5.1, con
+- [X] T026 [US1] Crear `MAIN/ui/detail/PublicationDetailUiState.kt` según data-model.md §5.1, con
       `document` y `share` **fuera** de un sellado único porque son ejes independientes
-- [ ] T027 [US1] Crear `MAIN/ui/detail/PublicationDetailViewModel.kt` hasta hacer pasar T018
+- [X] T027 [US1] Crear `MAIN/ui/detail/PublicationDetailViewModel.kt` hasta hacer pasar T018
       (depende de T022, T026)
 - [ ] T028 [P] [US1] Crear `MAIN/ui/detail/component/DocumentHeader.kt` con los cinco elementos del
       apartado 18.2 en el orden del 18.3, el título en `headlineLarge` **sin recortar** y el
@@ -225,7 +225,7 @@ se rechaza con mensaje y sin dejar fichero.
 - [ ] T041 [P] [US2] Ampliar `TEST/data/repository/DocumentRepositoryImplTest.kt`: un rechazo no deja
       temporal ni destino; una descarga cancelada tampoco; y tras un fallo el estado vuelve a
       permitir reintentar (FR-019, FR-023, SC-005)
-- [ ] T042 [P] [US2] Ampliar `TEST/ui/detail/PublicationDetailViewModelTest.kt` y
+- [X] T042 [P] [US2] Ampliar `TEST/ui/detail/PublicationDetailViewModelTest.kt` y
       `TEST/ui/pdf/PdfViewerViewModelTest.kt` con el fallo de descarga y su reintento (FR-025)
 
 ### Implementation for User Story 2
@@ -263,7 +263,7 @@ avión.
       caché devuelve `Document`; ausente con conexión lo descarga y devuelve `Document`; ausente sin
       conexión devuelve `Link` **con su motivo**; y un fallo distinto de la falta de conexión no se
       disfraza de enlace (FR-031, FR-033, SC-007)
-- [ ] T049 [P] [US3] Ampliar `TEST/ui/detail/PublicationDetailViewModelTest.kt` con `ShareState`:
+- [X] T049 [P] [US3] Ampliar `TEST/ui/detail/PublicationDetailViewModelTest.kt` con `ShareState`:
       pasa por `Preparing`, llega a `Ready`, y **se consume una sola vez** (FR-032)
 
 ### Implementation for User Story 3
