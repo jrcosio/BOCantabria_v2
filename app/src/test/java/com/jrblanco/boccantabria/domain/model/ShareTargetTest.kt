@@ -10,21 +10,21 @@ class ShareTargetTest {
     fun `the link case carries its reason, so the screen can explain it`() {
         val target = ShareTarget.Link(
             url = "https://boc.cantabria.es/boces/verAnuncioAction.do?idAnuBlob=439765",
-            reason = LinkReason.NO_CONNECTION,
+            reason = ShareTarget.LinkReason.NO_CONNECTION,
         )
 
-        assertEquals(LinkReason.NO_CONNECTION, target.reason)
+        assertEquals(ShareTarget.LinkReason.NO_CONNECTION, target.reason)
     }
 
     @Test
     fun `a link that is not https is rejected`() {
         assertThrows(IllegalArgumentException::class.java) {
-            ShareTarget.Link("http://boc.cantabria.es/a", LinkReason.NO_CONNECTION)
+            ShareTarget.Link("http://boc.cantabria.es/a", ShareTarget.LinkReason.NO_CONNECTION)
         }
     }
 
     @Test
     fun `only one reason exists today, and it is the one the specification names`() {
-        assertEquals(listOf(LinkReason.NO_CONNECTION), LinkReason.entries)
+        assertEquals(listOf(ShareTarget.LinkReason.NO_CONNECTION), ShareTarget.LinkReason.entries)
     }
 }

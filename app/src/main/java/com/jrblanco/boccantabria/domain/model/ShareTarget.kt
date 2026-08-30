@@ -16,9 +16,15 @@ sealed interface ShareTarget {
             require(url.startsWith("https://")) { "url must be https, was: $url" }
         }
     }
-}
 
-enum class LinkReason {
-    /** The document was not stored and there was no way to fetch it. */
-    NO_CONNECTION,
+    /**
+     * Why the link was offered instead of the document.
+     *
+     * Nested inside [ShareTarget] because it has no meaning apart from it — a reason with nothing
+     * to give a reason for is not a concept.
+     */
+    enum class LinkReason {
+        /** The document was not stored and there was no way to fetch it. */
+        NO_CONNECTION,
+    }
 }
