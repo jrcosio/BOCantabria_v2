@@ -11,7 +11,9 @@ import com.jrblanco.boccantabria.domain.model.Publication
 import com.jrblanco.boccantabria.domain.usecase.GetBocSectionsUseCase
 import com.jrblanco.boccantabria.domain.usecase.ObserveOfficialDocumentUseCase
 import com.jrblanco.boccantabria.domain.usecase.ObservePublicationUseCase
+import com.jrblanco.boccantabria.domain.usecase.ObserveSavedKeysUseCase
 import com.jrblanco.boccantabria.domain.usecase.OpenOfficialDocumentUseCase
+import com.jrblanco.boccantabria.domain.usecase.SetPublicationSavedUseCase
 import com.jrblanco.boccantabria.domain.usecase.ShareOfficialDocumentUseCase
 import com.jrblanco.boccantabria.ui.share.ShareState
 import kotlinx.coroutines.Job
@@ -40,6 +42,8 @@ class PublicationDetailViewModel(
     private val observeDocument: ObserveOfficialDocumentUseCase,
     private val openDocument: OpenOfficialDocumentUseCase,
     private val shareDocument: ShareOfficialDocumentUseCase,
+    private val observeSavedKeys: ObserveSavedKeysUseCase,
+    private val setPublicationSaved: SetPublicationSavedUseCase,
     getSections: GetBocSectionsUseCase,
     private val analytics: AnalyticsTracker,
 ) : ViewModel() {
@@ -51,16 +55,21 @@ class PublicationDetailViewModel(
     private val sections = getSections()
     private val selectedTab = MutableStateFlow(restoredTab(savedStateHandle))
     private val shareState = MutableStateFlow<ShareState>(ShareState.Idle)
+    private val saveFailed = MutableStateFlow(false)
 
     private var openJob: Job? = null
     private var shareJob: Job? = null
+    private var saveJob: Job? = null
 
     val uiState: StateFlow<PublicationDetailUiState> = combine(
         observePublication(externalKey),
         observeDocument(externalKey),
         selectedTab,
         shareState,
-    ) { publication, document, tab, share ->
+        // `isSaved` se **deriva** del conjunto de claves: un flujo propio para un booleano sería un
+        // método de repositorio, un caso de uso y una prueba más para lo mismo (research.md D-004).
+        observeSavedKeys().combine(saveFailed) { keys, failed -> (externalKey in keys) to failed },
+    ) { publication, document, tab, share, saved ->
         PublicationDetailUiState(
             publication = publication,
             section = publication?.let { sectionOf(it) },
@@ -68,6 +77,8 @@ class PublicationDetailViewModel(
             selectedTab = tab,
             document = document,
             share = share,
+            isSaved = saved.first,
+            saveFailed = saved.second,
         )
     }.stateIn(
         scope = viewModelScope,
@@ -139,6 +150,28 @@ class PublicationDetailViewModel(
     /** The screen calls back once it has handed the target to the system. */
     fun onShareConsumed() {
         shareState.value = ShareState.Idle
+    }
+
+    /**
+     * Saves the publication, or takes it off the list if it was already on it.
+     *
+     * Does nothing when there is no publication: an announcement that is no longer stored cannot be
+     * saved, and the screen does not offer the action then either (FR-008).
+     */
+    fun onToggleSaved() {
+        val publication = uiState.value.publication ?: return
+        if (saveJob?.isActive == true) return
+
+        val saved = !uiState.value.isSaved
+        saveJob = viewModelScope.launch {
+            val result = setPublicationSaved(publication.externalKey, saved)
+            if (result is AppResult.Failure) saveFailed.value = true
+        }
+    }
+
+    /** The screen has said the write failed. Cleared so a rotation does not repeat it. */
+    fun onSaveFailureConsumed() {
+        saveFailed.value = false
     }
 
     private fun sectionOf(publication: Publication) =

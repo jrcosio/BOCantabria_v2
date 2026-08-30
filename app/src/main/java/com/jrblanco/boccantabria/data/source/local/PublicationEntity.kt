@@ -20,6 +20,11 @@ import java.time.LocalDate
  * [firstSeenAt] is written once and never touched again; [lastSeenAt] moves on every sighting.
  * Together they are the only record of how long the application has known about an announcement,
  * which the source itself does not provide.
+ *
+ * [savedAt] belongs to the person, not to the source, and it is the one column a synchronisation
+ * must never touch. That is not a convention anybody has to remember: it is absent from
+ * `PublicationDao.updateColumns`, whose statement is a deliberate allow-list, and the insert ignores
+ * conflicts. Same mechanism that already protects [firstSeenAt].
  */
 @Entity(
     tableName = "publications",
@@ -29,6 +34,7 @@ import java.time.LocalDate
         Index(value = ["section_code"]),
         Index(value = ["subsection_code"]),
         Index(value = ["edition_type"]),
+        Index(value = ["saved_at"]),
         Index(value = ["feed_id", "publication_date"]),
     ],
 )
@@ -50,6 +56,8 @@ data class PublicationEntity(
     @ColumnInfo(name = "warnings") val warnings: Set<ParserWarning>,
     @ColumnInfo(name = "first_seen_at") val firstSeenAt: Long,
     @ColumnInfo(name = "last_seen_at") val lastSeenAt: Long,
+    /** When the person saved it. `null` means not saved: there is no third state. */
+    @ColumnInfo(name = "saved_at") val savedAt: Long? = null,
 )
 
 internal fun PublicationEntity.toDomain(): Publication = Publication(
@@ -69,6 +77,12 @@ internal fun PublicationEntity.toDomain(): Publication = Publication(
     warnings = warnings,
 )
 
+/**
+ * The publication as the source describes it, ready to be stored.
+ *
+ * `savedAt` is deliberately left at its default: what the source publishes cannot invent a mark, and
+ * an existing row's mark is out of reach anyway because the update statement does not name it.
+ */
 internal fun Publication.toEntity(seenAt: Long): PublicationEntity = PublicationEntity(
     externalKey = externalKey,
     blobId = blobId,

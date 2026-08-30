@@ -83,11 +83,26 @@ fun PublicationDetailContent(
                     }
                 },
                 actions = {
-                    IconButton(onClick = onSave, modifier = Modifier.testTag(TAG_DETAIL_SAVE)) {
-                        Icon(
-                            painter = painterResource(R.drawable.ic_bookmark),
-                            contentDescription = stringResource(R.string.detail_save),
-                        )
+                    // No se dibuja cuando no hay publicación que guardar: una acción que no puede
+                    // hacer nada es un callejón, y FR-008 lo prohíbe. El caso llega cuando el
+                    // anuncio ya no está almacenado.
+                    if (state.publication != null) {
+                        IconButton(onClick = onSave, modifier = Modifier.testTag(TAG_DETAIL_SAVE)) {
+                            Icon(
+                                painter = painterResource(
+                                    if (state.isSaved) {
+                                        R.drawable.ic_bookmark_filled
+                                    } else {
+                                        R.drawable.ic_bookmark
+                                    },
+                                ),
+                                // El relleno solo no basta: sobre la barra azul el icono ya es
+                                // blanco, y quien usa un lector de pantalla no ve trazados.
+                                contentDescription = stringResource(
+                                    if (state.isSaved) R.string.detail_unsave else R.string.detail_save,
+                                ),
+                            )
+                        }
                     }
                     IconButton(onClick = onShare, modifier = Modifier.testTag(TAG_DETAIL_SHARE)) {
                         Icon(

@@ -12,11 +12,14 @@ import com.jrblanco.boccantabria.domain.repository.ConnectivityRepository
 import com.jrblanco.boccantabria.domain.usecase.GetBocSectionsUseCase
 import com.jrblanco.boccantabria.domain.usecase.ObserveOfficialDocumentUseCase
 import com.jrblanco.boccantabria.domain.usecase.ObservePublicationUseCase
+import com.jrblanco.boccantabria.domain.usecase.ObserveSavedKeysUseCase
 import com.jrblanco.boccantabria.domain.usecase.OpenOfficialDocumentUseCase
+import com.jrblanco.boccantabria.domain.usecase.SetPublicationSavedUseCase
 import com.jrblanco.boccantabria.domain.usecase.ShareOfficialDocumentUseCase
 import com.jrblanco.boccantabria.fake.FakeDocumentRepository
 import com.jrblanco.boccantabria.ui.share.ShareState
 import com.jrblanco.boccantabria.fake.FakePublicationRepository
+import com.jrblanco.boccantabria.fake.FakeSavedPublicationRepository
 import com.jrblanco.boccantabria.fake.RecordingAnalyticsTracker
 import com.jrblanco.boccantabria.fake.officialDocument
 import com.jrblanco.boccantabria.fake.publication
@@ -42,6 +45,7 @@ class PublicationDetailViewModelTest {
     private val analytics = RecordingAnalyticsTracker()
     private val documents = FakeDocumentRepository()
     private var online = true
+    private val savedRepository = FakeSavedPublicationRepository()
 
     @Before
     fun setUp() = Dispatchers.setMain(dispatcher)
@@ -292,6 +296,84 @@ class PublicationDetailViewModelTest {
         }
     }
 
+    // ---------- Lo guardado (feature 005) ----------
+
+    @Test
+    fun `the mark is read from what is stored, not held in the screen`() = runTest(dispatcher) {
+        savedRepository.emit(listOf(publication("boc:439765")))
+        val viewModel = viewModel()
+
+        viewModel.uiState.test {
+            advanceUntilIdle()
+            assertTrue(expectMostRecentItem().isSaved)
+            cancelAndIgnoreRemainingEvents()
+        }
+    }
+
+    @Test
+    fun `a publication nobody saved is not shown as saved`() = runTest(dispatcher) {
+        val viewModel = viewModel()
+
+        viewModel.uiState.test {
+            advanceUntilIdle()
+            assertFalse(expectMostRecentItem().isSaved)
+            cancelAndIgnoreRemainingEvents()
+        }
+    }
+
+    @Test
+    fun `toggling asks for the opposite of what the screen is showing`() = runTest(dispatcher) {
+        val viewModel = viewModel()
+
+        viewModel.uiState.test {
+            advanceUntilIdle()
+            viewModel.onToggleSaved()
+            advanceUntilIdle()
+            assertEquals(listOf("boc:439765" to true), savedRepository.writes)
+
+            viewModel.onToggleSaved()
+            advanceUntilIdle()
+            assertEquals("boc:439765" to false, savedRepository.writes.last())
+            cancelAndIgnoreRemainingEvents()
+        }
+    }
+
+    @Test
+    fun `a publication that is no longer stored cannot be saved`() = runTest(dispatcher) {
+        // FR-008: sin publicación no hay nada que guardar, y el gesto no puede inventarse una clave.
+        val viewModel = viewModel(stored = emptyList())
+
+        viewModel.uiState.test {
+            advanceUntilIdle()
+            viewModel.onToggleSaved()
+            advanceUntilIdle()
+            cancelAndIgnoreRemainingEvents()
+        }
+
+        assertTrue(savedRepository.writes.isEmpty())
+    }
+
+    @Test
+    fun `a failed write is reported and the publication is never shown as saved`() = runTest(dispatcher) {
+        savedRepository.failWrites = true
+        val viewModel = viewModel()
+
+        viewModel.uiState.test {
+            advanceUntilIdle()
+            viewModel.onToggleSaved()
+            advanceUntilIdle()
+            val state = expectMostRecentItem()
+            assertTrue(state.saveFailed)
+            // La otra mitad de FR-009 no necesita código: el icono viene de lo almacenado.
+            assertFalse(state.isSaved)
+
+            viewModel.onSaveFailureConsumed()
+            advanceUntilIdle()
+            assertFalse(expectMostRecentItem().saveFailed)
+            cancelAndIgnoreRemainingEvents()
+        }
+    }
+
     private fun viewModel(
         stored: List<com.jrblanco.boccantabria.domain.model.Publication> = listOf(publication("boc:439765")),
         key: String = "boc:439765",
@@ -312,6 +394,8 @@ class PublicationDetailViewModelTest {
             observeDocument = ObserveOfficialDocumentUseCase(documents),
             openDocument = OpenOfficialDocumentUseCase(documents),
             shareDocument = ShareOfficialDocumentUseCase(documents, connectivity),
+            observeSavedKeys = ObserveSavedKeysUseCase(savedRepository),
+            setPublicationSaved = SetPublicationSavedUseCase(savedRepository),
             getSections = GetBocSectionsUseCase(BocSectionRepositoryImpl()),
             analytics = analytics,
         )

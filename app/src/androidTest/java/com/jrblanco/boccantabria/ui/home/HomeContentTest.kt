@@ -7,6 +7,7 @@ import androidx.compose.ui.test.hasTestTag
 import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onAllNodesWithTag
+import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
@@ -177,6 +178,23 @@ class HomeContentTest {
 
     private fun inHeader(matcher: SemanticsMatcher) =
         matcher and hasAnyAncestor(hasTestTag(TAG_HEADER))
+
+    @Test
+    fun a_publication_whose_key_is_saved_is_drawn_marked() {
+        // El estado de guardado atraviesa todos los estados de contenido, y por eso vive fuera del
+        // sellado: la tarjeta lo lee del conjunto de claves.
+        setContent(
+            HomeUiState(
+                content = HomeContentState.Publications(
+                    listOf(publication("boc:1"), publication("boc:2")),
+                ),
+                savedKeys = setOf("boc:1"),
+            ),
+        )
+
+        composeRule.onNodeWithContentDescription("Quitar de guardados").assertIsDisplayed()
+        composeRule.onNodeWithContentDescription("Guardar").assertIsDisplayed()
+    }
 
     private fun setContent(
         state: HomeUiState,

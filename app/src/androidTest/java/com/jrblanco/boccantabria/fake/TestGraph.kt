@@ -8,9 +8,11 @@ import com.jrblanco.boccantabria.core.telemetry.NoOpAnalyticsTracker
 import com.jrblanco.boccantabria.core.telemetry.NoOpCrashReporter
 import com.jrblanco.boccantabria.data.repository.BocSectionRepositoryImpl
 import com.jrblanco.boccantabria.data.repository.PublicationRepositoryImpl
+import com.jrblanco.boccantabria.data.repository.SavedPublicationRepositoryImpl
 import com.jrblanco.boccantabria.data.source.local.BocDatabase
 import com.jrblanco.boccantabria.data.source.local.FeedSyncStateDao
 import com.jrblanco.boccantabria.data.source.local.PublicationDao
+import com.jrblanco.boccantabria.data.source.local.SavedPublicationDao
 import com.jrblanco.boccantabria.data.source.remote.BocFeedCatalog
 import com.jrblanco.boccantabria.data.source.remote.PublicationNormalizer
 import com.jrblanco.boccantabria.data.source.remote.PublicationRemoteDataSource
@@ -21,6 +23,7 @@ import com.jrblanco.boccantabria.domain.model.OfficialDocument
 import com.jrblanco.boccantabria.domain.model.Publication
 import com.jrblanco.boccantabria.domain.repository.DocumentRepository
 import com.jrblanco.boccantabria.domain.repository.PublicationRepository
+import com.jrblanco.boccantabria.domain.repository.SavedPublicationRepository
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flowOf
 import org.koin.core.module.Module
@@ -54,12 +57,24 @@ fun testGraphOverrides(
         }
         single<PublicationDao> { get<BocDatabase>().publicationDao() }
         single<FeedSyncStateDao> { get<BocDatabase>().feedSyncStateDao() }
+        single<SavedPublicationDao> { get<BocDatabase>().savedPublicationDao() }
         single<PublicationRemoteDataSource> { remote }
         single<AnalyticsTracker> { NoOpAnalyticsTracker() }
         single<CrashReporter> { NoOpCrashReporter() }
         // Nothing in a content test should reach the bulletin's document service. A test that
         // needs a real document says so by passing its own.
         single<DocumentRepository> { documents }
+        // Lo guardado va en la misma reconstrucción y por el mismo motivo: es un `single` y, sin
+        // esto, la marca que deja una prueba aparecería en la siguiente.
+        single<SavedPublicationRepository> {
+            SavedPublicationRepositoryImpl(
+                savedPublicationDao = get(),
+                time = get(),
+                dispatchers = get(),
+                analytics = get(),
+                crashReporter = get(),
+            )
+        }
         single<PublicationRepository> {
             PublicationRepositoryImpl(
                 remoteDataSource = get(),

@@ -17,6 +17,7 @@ import com.jrblanco.boccantabria.data.source.local.BocDatabase
 import com.jrblanco.boccantabria.data.source.local.ConnectivityDataSource
 import com.jrblanco.boccantabria.data.source.local.FeedSyncStateDao
 import com.jrblanco.boccantabria.data.source.local.PublicationDao
+import com.jrblanco.boccantabria.data.source.local.SavedPublicationDao
 import com.jrblanco.boccantabria.data.source.remote.BocRssParser
 import com.jrblanco.boccantabria.data.source.remote.PublicationNormalizer
 import com.jrblanco.boccantabria.data.source.remote.PublicationRemoteDataSource
@@ -27,18 +28,23 @@ import com.jrblanco.boccantabria.domain.repository.BocSectionRepository
 import com.jrblanco.boccantabria.domain.repository.ConnectivityRepository
 import com.jrblanco.boccantabria.domain.repository.DocumentRepository
 import com.jrblanco.boccantabria.domain.repository.PublicationRepository
+import com.jrblanco.boccantabria.domain.repository.SavedPublicationRepository
 import com.jrblanco.boccantabria.domain.usecase.GetBocSectionsUseCase
 import com.jrblanco.boccantabria.domain.usecase.ObserveBulletinHeaderUseCase
 import com.jrblanco.boccantabria.domain.usecase.ObserveOfficialDocumentUseCase
 import com.jrblanco.boccantabria.domain.usecase.ObservePublicationUseCase
 import com.jrblanco.boccantabria.domain.usecase.ObservePublicationsUseCase
+import com.jrblanco.boccantabria.domain.usecase.ObserveSavedKeysUseCase
+import com.jrblanco.boccantabria.domain.usecase.ObserveSavedPublicationsUseCase
 import com.jrblanco.boccantabria.domain.usecase.OpenOfficialDocumentUseCase
 import com.jrblanco.boccantabria.domain.usecase.PrepareStartupUseCase
 import com.jrblanco.boccantabria.domain.usecase.RefreshPublicationsUseCase
 import com.jrblanco.boccantabria.domain.usecase.ReleaseUnusedDocumentsUseCase
+import com.jrblanco.boccantabria.domain.usecase.SetPublicationSavedUseCase
 import com.jrblanco.boccantabria.domain.usecase.ShareOfficialDocumentUseCase
 import com.jrblanco.boccantabria.ui.detail.PublicationDetailViewModel
 import com.jrblanco.boccantabria.ui.home.HomeViewModel
+import com.jrblanco.boccantabria.ui.saved.SavedViewModel
 import com.jrblanco.boccantabria.ui.pdf.PdfDocumentLoader
 import com.jrblanco.boccantabria.ui.pdf.PdfViewerViewModel
 import com.jrblanco.boccantabria.ui.sections.SectionsViewModel
@@ -147,6 +153,15 @@ class KoinModulesTest {
         koin.get<ReleaseUnusedDocumentsUseCase>()
         koin.get<PdfDocumentLoader>()
 
+        // Lo guardado (feature 005). Guardados sí se resuelve entero: su modelo no necesita
+        // argumentos de navegación, así que resolverlo recorre la cadena completa hasta el DAO.
+        koin.get<SavedViewModel>()
+        koin.get<SavedPublicationRepository>()
+        koin.get<SavedPublicationDao>()
+        koin.get<ObserveSavedPublicationsUseCase>()
+        koin.get<ObserveSavedKeysUseCase>()
+        koin.get<SetPublicationSavedUseCase>()
+
         koin.get<DispatcherProvider>()
         koin.get<TimeProvider>()
         koin.get<RandomProvider>()
@@ -192,6 +207,12 @@ class KoinModulesTest {
             PublicationDetailViewModel::class,
             PdfViewerViewModel::class,
             PdfDocumentLoader::class,
+            SavedPublicationDao::class,
+            SavedPublicationRepository::class,
+            ObserveSavedPublicationsUseCase::class,
+            ObserveSavedKeysUseCase::class,
+            SetPublicationSavedUseCase::class,
+            SavedViewModel::class,
         )
     }
 }

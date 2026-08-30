@@ -1,4 +1,4 @@
-package com.jrblanco.boccantabria.ui.home.component
+package com.jrblanco.boccantabria.core.ui.component
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
@@ -44,8 +44,19 @@ const val TAG_PUBLICATION_SHARE: String = "publication_share"
  * section's colour, and the section name travels with it as text: colour groups, text
  * identifies. Nine sections share five colours, so without the text the indicator would say
  * less than it appears to.
+ *
+ * Lives in `core/ui/component` because from the saved-publications feature onwards two screens draw
+ * it, and that is where shared stateless composables belong. Leaving it in the bulletin's package
+ * would have made one screen's package a library for another's.
+ *
+ * @param isSaved whether the publication is on the person's list. Drives the bookmark's outline or
+ *   fill **and** what the action announces: telling the two apart by fill alone would leave out
+ *   anybody using a screen reader.
+ * @param onSave deliberately takes no argument. Whoever places the card closes over the publication,
+ *   exactly as it already does for [onShare].
  */
 @Composable
+@Suppress("LongParameterList")
 fun PublicationCard(
     publication: Publication,
     section: BocSection?,
@@ -54,6 +65,7 @@ fun PublicationCard(
     onShare: () -> Unit,
     onSave: () -> Unit,
     modifier: Modifier = Modifier,
+    isSaved: Boolean = false,
 ) {
     Card(
         onClick = onClick,
@@ -118,8 +130,12 @@ fun PublicationCard(
 
                     IconButton(onClick = onSave, modifier = Modifier.testTag(TAG_PUBLICATION_SAVE)) {
                         Icon(
-                            painter = painterResource(R.drawable.ic_bookmark),
-                            contentDescription = stringResource(R.string.publication_save),
+                            painter = painterResource(
+                                if (isSaved) R.drawable.ic_bookmark_filled else R.drawable.ic_bookmark,
+                            ),
+                            contentDescription = stringResource(
+                                if (isSaved) R.string.publication_unsave else R.string.publication_save,
+                            ),
                             tint = MaterialTheme.colorScheme.primary,
                             modifier = Modifier.size(ACTION_ICON_SIZE),
                         )

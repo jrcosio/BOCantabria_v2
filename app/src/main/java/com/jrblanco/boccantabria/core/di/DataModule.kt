@@ -7,6 +7,7 @@ import com.jrblanco.boccantabria.data.repository.BocSectionRepositoryImpl
 import com.jrblanco.boccantabria.data.repository.DocumentRepositoryImpl
 import com.jrblanco.boccantabria.data.repository.ConnectivityRepositoryImpl
 import com.jrblanco.boccantabria.data.repository.PublicationRepositoryImpl
+import com.jrblanco.boccantabria.data.repository.SavedPublicationRepositoryImpl
 import com.jrblanco.boccantabria.data.source.local.AndroidConnectivityDataSource
 import com.jrblanco.boccantabria.data.source.local.BocDatabase
 import com.jrblanco.boccantabria.data.source.local.ConnectivityDataSource
@@ -14,6 +15,7 @@ import com.jrblanco.boccantabria.data.source.local.DocumentCache
 import com.jrblanco.boccantabria.data.source.local.FileDocumentCache
 import com.jrblanco.boccantabria.data.source.local.FeedSyncStateDao
 import com.jrblanco.boccantabria.data.source.local.PublicationDao
+import com.jrblanco.boccantabria.data.source.local.SavedPublicationDao
 import com.jrblanco.boccantabria.data.source.local.bocDatabase
 import com.jrblanco.boccantabria.data.source.remote.BocFeedCatalog
 import com.jrblanco.boccantabria.data.source.remote.BocRssParser
@@ -32,6 +34,7 @@ import com.jrblanco.boccantabria.domain.repository.BocSectionRepository
 import com.jrblanco.boccantabria.domain.repository.ConnectivityRepository
 import com.jrblanco.boccantabria.domain.repository.DocumentRepository
 import com.jrblanco.boccantabria.domain.repository.PublicationRepository
+import com.jrblanco.boccantabria.domain.repository.SavedPublicationRepository
 import okhttp3.OkHttpClient
 import org.koin.android.ext.koin.androidContext
 import org.koin.dsl.module
@@ -50,6 +53,7 @@ val dataModule = module {
     single<BocDatabase> { bocDatabase(androidContext()) }
     single<PublicationDao> { get<BocDatabase>().publicationDao() }
     single<FeedSyncStateDao> { get<BocDatabase>().feedSyncStateDao() }
+    single<SavedPublicationDao> { get<BocDatabase>().savedPublicationDao() }
 
     // --- Red ---
     single<OkHttpClient> { bocHttpClient() }
@@ -91,6 +95,17 @@ val dataModule = module {
             normalizer = get(),
             sectionRepository = get(),
             feeds = BocFeedCatalog.definitions,
+            time = get(),
+            dispatchers = get(),
+            analytics = get(),
+            crashReporter = get(),
+        )
+    }
+
+    // --- Lo guardado (feature 005) ---
+    single<SavedPublicationRepository> {
+        SavedPublicationRepositoryImpl(
+            savedPublicationDao = get(),
             time = get(),
             dispatchers = get(),
             analytics = get(),

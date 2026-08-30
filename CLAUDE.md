@@ -74,7 +74,8 @@ core/
               y appModules, único punto de entrada del grafo
   telemetry/  Contratos AnalyticsTracker y CrashReporter + AnalyticsEvent
   ui/theme/       Sistema de diseño: Color, Type, Spacing, Shape, Elevation, Theme
-  ui/component/   Componibles compartidos sin estado
+  ui/component/   Componibles compartidos sin estado, incluida PublicationCard —la usan Inicio y
+                  Guardados— e IllustratedMessage, del que ComingSoonMessage es un caso
   util/       DispatcherProvider, AppVersionProvider y utilidades transversales
 data/
   repository/     Implementaciones de las interfaces de domain
@@ -96,7 +97,7 @@ ui/
   share/          ShareState y el envío por FileProvider, común a las tres pantallas
   ask/            Preguntar sobre el documento. Marcador de posición «Próximamente»
   search/         Marcador de posición «Próximamente»
-  saved/          Marcador de posición «Próximamente»
+  saved/          Guardados: la lista de lo que la persona ha marcado
   navigation/     Rutas tipadas, NavHost exterior y barra inferior
 BOCantabriaApp    Application: arranca Koin
 MainActivity      Anfitrión de la navegación Compose
@@ -189,9 +190,20 @@ Composable → ViewModel → UseCase → Repository (interfaz en domain)
   analizador sea Kotlin puro y sus pruebas corran sin emulador. Va endurecido en dos capas: una
   guarda de texto contra `<!DOCTYPE` y `<!ENTITY` —portátil— y el endurecimiento de la fábrica,
   cada bandera dentro de un `runCatching`, porque la JVM y Android no aceptan las mismas.
-- **Nunca se borra una publicación.** El DAO no declara ninguna sentencia de borrado, y eso es
-  deliberado: una fuente solo publica sus últimos cien anuncios. Si aparece un `@Query` de borrado
-  en una revisión, hay que rechazarlo.
+- **Nunca se borra una publicación.** Ningún DAO del proyecto declara una sentencia de borrado, y eso
+  es deliberado: una fuente solo publica sus últimos cien anuncios. Si aparece un `@Query` de borrado
+  en una revisión, hay que rechazarlo. **Desmarcar tampoco borra**: es un `UPDATE ... SET saved_at =
+  NULL`, así que la regla se cumple literalmente y no reinterpretada.
+- **La marca de guardado es una columna `saved_at` nullable de la tabla `publications`**, y una
+  sincronización **no puede pisarla**. No porque nadie la llame: porque `PublicationDao.updateColumns`
+  es una lista blanca de columnas y `saved_at` no está en ella, igual que `first_seen_at`. Si alguien
+  la añade a ese `UPDATE`, la prueba de regresión de `SavedPublicationDaoTest` se pone roja, que es
+  exactamente para lo que está. La escriben solo `SavedPublicationDao` y su repositorio.
+- **La base de datos está en la versión 2**, con `AutoMigration(1, 2)` contra el esquema exportado.
+  `bocDatabase()` es un `.build()` limpio a propósito: las migraciones automáticas no necesitan
+  `addMigrations`, y `fallbackToDestructiveMigration()` no entra aquí ni como último recurso —pasaría
+  la puerta de compilación y vaciaría el boletín de quien ya tiene la aplicación instalada—. Los
+  esquemas de `app/schemas/` **se versionan**: son el material de la migración siguiente.
 - **La sección la manda la fuente**, no el campo `categorias`, que se guarda en crudo y solo sirve
   para enriquecer y verificar. Razón: el feed 4.3 trae entradas con los componentes permutados.
 - `java.time` es **nativo**: desde la enmienda 1.1.0 de la constitución `minSdk` es 28. El azucarado
@@ -221,8 +233,15 @@ Composable → ViewModel → UseCase → Repository (interfaz en domain)
   vivo ese proceso reteniendo un fichero que la caché quiere poder liberar.
 - `pdf-compose` arrastra `pdf-document-service` solo en ámbito de ejecución: hay que declararlo
   **explícitamente** en el catálogo, o `SandboxedPdfLoader` no resuelve.
-- El PDF se guarda en `cacheDir/documents/`, con **caché y no almacén**: guardar para leer sin
-  conexión será la funcionalidad de Guardados. La purga corre al terminar una sincronización.
+- El PDF se guarda en `cacheDir/documents/`, con **caché y no almacén**. La purga corre al terminar
+  una sincronización.
+- **Guardados existe desde la feature 005, pero solo marca: no conserva el documento.** Esta guía
+  prometía que guardar para leer sin conexión sería la funcionalidad de Guardados, y esa mitad queda
+  **aplazada** por decisión del propietario, no olvidada: el requisito FR-024 de
+  `specs/005-publicaciones-guardadas/spec.md` lo dice en voz alta. Consecuencia aceptada: el documento
+  de una publicación guardada puede retirarse de la caché y volver a descargarse al abrirla. Cuando
+  llegue la feature de lectura sin conexión, el asiento ya está hecho: `DocumentCache.evict` recibe un
+  conjunto `inUse`, y el de claves guardadas es lo que hay que pasarle.
 - Compartir un fichero exige una `content://`: hay un `FileProvider` con autoridad
   `${applicationId}.documents`, acotado en `res/xml/file_paths.xml` a `cache-path documents/`.
   Nunca amplíes ese ámbito para resolver un caso concreto.

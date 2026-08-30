@@ -45,6 +45,7 @@
 
     <!-- Tarjeta de publicación -->
     <string name="publication_save">Guardar</string>
+    <string name="publication_unsave">Quitar de guardados</string>
     <string name="publication_share">Compartir</string>
     <string name="publication_share_chooser">Compartir publicación</string>
     <string name="publication_section">Sección %1$s</string>
@@ -63,13 +64,13 @@
     <!-- Funcionalidades aplazadas -->
     <string name="coming_soon">Próximamente</string>
     <string name="coming_soon_search">La búsqueda llegará en una próxima versión.</string>
-    <string name="coming_soon_saved">Aquí podrás consultar lo que guardes.</string>
     <!-- ===== Feature 004: detalle de publicación y visor del PDF ===== -->
 
     <!-- Barra superior del detalle -->
     <string name="detail_title">Detalle de publicación</string>
     <string name="detail_back">Volver</string>
     <string name="detail_save">Guardar</string>
+    <string name="detail_unsave">Quitar de guardados</string>
     <string name="detail_share">Compartir</string>
 
     <!-- Cabecera -->
@@ -122,4 +123,15 @@
     <!-- Compartir -->
     <string name="share_preparing">Preparando el documento…</string>
     <string name="share_link_fallback">Sin conexión para traer el documento. Se comparte el enlace al original.</string>
+
+    <!-- ===== Feature 005: publicaciones guardadas ===== -->
+
+    <!-- Pantalla Guardados -->
+    <string name="saved_title">Guardados</string>
+    <string name="saved_empty_title">Aún no has guardado publicaciones</string>
+    <string name="saved_empty_body">Toca el marcador de una publicación y la encontrarás aquí.</string>
+    <string name="saved_empty_action">Explorar el BOC</string>
+
+    <!-- Fallo al escribir la marca -->
+    <string name="save_failed">No hemos podido guardar el cambio. Inténtalo de nuevo.</string>
 </resources>

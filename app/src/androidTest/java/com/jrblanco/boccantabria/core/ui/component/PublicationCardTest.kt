@@ -1,7 +1,8 @@
-package com.jrblanco.boccantabria.ui.home
+package com.jrblanco.boccantabria.core.ui.component
 
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.junit4.createComposeRule
+import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
@@ -10,10 +11,6 @@ import com.jrblanco.boccantabria.data.repository.BocSectionRepositoryImpl
 import com.jrblanco.boccantabria.domain.model.BocSection
 import com.jrblanco.boccantabria.domain.model.Publication
 import com.jrblanco.boccantabria.fake.publication
-import com.jrblanco.boccantabria.ui.home.component.PublicationCard
-import com.jrblanco.boccantabria.ui.home.component.TAG_PUBLICATION_CARD
-import com.jrblanco.boccantabria.ui.home.component.TAG_PUBLICATION_SAVE
-import com.jrblanco.boccantabria.ui.home.component.TAG_PUBLICATION_SHARE
 import org.junit.Assert.assertEquals
 import org.junit.Rule
 import org.junit.Test
@@ -86,6 +83,38 @@ class PublicationCardTest {
     }
 
     @Test
+    fun the_bookmark_says_whether_the_publication_is_saved() {
+        // FR-003 y FR-004: el estado viaja en el trazado del icono **y** en palabras. Distinguirlo
+        // solo por el relleno dejaría fuera a quien usa un lector de pantalla.
+        setContent(publication(), isSaved = false)
+
+        composeRule.onNodeWithContentDescription("Guardar").assertIsDisplayed()
+        composeRule.onNodeWithContentDescription("Quitar de guardados").assertDoesNotExist()
+    }
+
+    @Test
+    fun a_saved_publication_offers_taking_it_off_instead() {
+        setContent(publication(), isSaved = true)
+
+        composeRule.onNodeWithContentDescription("Quitar de guardados").assertIsDisplayed()
+        composeRule.onNodeWithContentDescription("Guardar").assertDoesNotExist()
+    }
+
+    @Test
+    fun saving_from_the_card_does_not_also_open_the_publication() {
+        // Mismo motivo que compartir: guardar es un gesto de un toque y no puede llevar a nadie a
+        // una pantalla que no ha pedido (FR-007).
+        var opened = 0
+        var saves = 0
+        setContent(publication(), onClick = { opened++ }, onSave = { saves++ })
+
+        composeRule.onNodeWithTag(TAG_PUBLICATION_SAVE).performClick()
+
+        assertEquals(1, saves)
+        assertEquals(0, opened)
+    }
+
+    @Test
     fun both_actions_are_offered_and_emit_their_events() {
         var shares = 0
         var saves = 0
@@ -126,6 +155,7 @@ class PublicationCardTest {
 
     private fun setContent(
         publication: Publication,
+        isSaved: Boolean = false,
         onClick: () -> Unit = {},
         onShare: () -> Unit = {},
         onSave: () -> Unit = {},
@@ -137,6 +167,7 @@ class PublicationCardTest {
                     publication = publication,
                     section = section,
                     formattedDate = "27 de agosto de 2026",
+                    isSaved = isSaved,
                     onClick = onClick,
                     onShare = onShare,
                     onSave = onSave,

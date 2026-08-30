@@ -11,8 +11,10 @@ import com.jrblanco.boccantabria.domain.model.Publication
 import com.jrblanco.boccantabria.domain.usecase.GetBocSectionsUseCase
 import com.jrblanco.boccantabria.domain.usecase.ObserveBulletinHeaderUseCase
 import com.jrblanco.boccantabria.domain.usecase.ObservePublicationsUseCase
+import com.jrblanco.boccantabria.domain.usecase.ObserveSavedKeysUseCase
 import com.jrblanco.boccantabria.domain.usecase.RefreshPublicationsUseCase
 import com.jrblanco.boccantabria.domain.usecase.ReleaseUnusedDocumentsUseCase
+import com.jrblanco.boccantabria.domain.usecase.SetPublicationSavedUseCase
 import com.jrblanco.boccantabria.domain.usecase.ShareOfficialDocumentUseCase
 import com.jrblanco.boccantabria.ui.share.ShareState
 import kotlinx.coroutines.Job
@@ -38,6 +40,8 @@ class HomeViewModel(
     private val observeHeader: ObserveBulletinHeaderUseCase,
     private val refreshPublications: RefreshPublicationsUseCase,
     private val getSections: GetBocSectionsUseCase,
+    private val observeSavedKeys: ObserveSavedKeysUseCase,
+    private val setPublicationSaved: SetPublicationSavedUseCase,
     private val shareDocument: ShareOfficialDocumentUseCase,
     private val releaseUnusedDocuments: ReleaseUnusedDocumentsUseCase,
     private val analytics: AnalyticsTracker,
@@ -54,18 +58,26 @@ class HomeViewModel(
 
     private val shareState = MutableStateFlow<ShareState>(ShareState.Idle)
 
+    private val saveFailed = MutableStateFlow(false)
+
     /** Guards against a second share while one is being prepared. */
     private var shareJob: Job? = null
 
     /** Guards against a second synchronisation while one is in flight. */
     private var refreshJob: Job? = null
 
+    /** Guards against a second write while one is in flight. */
+    private var saveJob: Job? = null
+
     val uiState: StateFlow<HomeUiState> = combine(
         observePublications(selection),
         observeHeader(selection),
         syncState,
         shareState,
-    ) { publications, header, sync, share ->
+        // Un quinto flujo: hay sobrecarga de `combine` para cinco. Si algún día hace falta un sexto,
+        // habrá que pasar a la forma de lista, y eso cambia el tipo del bloque.
+        observeSavedKeys().combine(saveFailed) { keys, failed -> keys to failed },
+    ) { publications, header, sync, share, saved ->
         HomeUiState(
             selection = selection,
             header = header,
@@ -74,6 +86,8 @@ class HomeViewModel(
             isRefreshing = sync.isRefreshing,
             isOffline = sync.isOffline,
             share = share,
+            savedKeys = saved.first,
+            saveFailed = saved.second,
         )
     }.stateIn(
         scope = viewModelScope,
@@ -109,6 +123,28 @@ class HomeViewModel(
     /** The screen has handed the share to the system. Cleared so a rotation does not repeat it. */
     fun onShareConsumed() {
         shareState.value = ShareState.Idle
+    }
+
+    /**
+     * Saves the publication, or takes it off the list if it was already on it.
+     *
+     * The value is worked out from what the state is showing rather than read back from the store: a
+     * read before the write would add a round trip and a race to serve a case the interface never
+     * produces, because the icon always shows the current state.
+     */
+    fun onToggleSaved(publication: Publication) {
+        if (saveJob?.isActive == true) return
+
+        val saved = publication.externalKey !in uiState.value.savedKeys
+        saveJob = viewModelScope.launch {
+            val result = setPublicationSaved(publication.externalKey, saved)
+            if (result is AppResult.Failure) saveFailed.value = true
+        }
+    }
+
+    /** The screen has said the write failed. Cleared so a rotation does not repeat it. */
+    fun onSaveFailureConsumed() {
+        saveFailed.value = false
     }
 
     /** The refresh gesture. Always reaches the network, however fresh the stored copy is. */

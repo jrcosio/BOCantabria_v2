@@ -9,6 +9,7 @@ import com.jrblanco.boccantabria.core.telemetry.NoOpCrashReporter
 import com.jrblanco.boccantabria.core.util.TimeProvider
 import com.jrblanco.boccantabria.data.repository.BocSectionRepositoryImpl
 import com.jrblanco.boccantabria.data.repository.PublicationRepositoryImpl
+import com.jrblanco.boccantabria.data.repository.SavedPublicationRepositoryImpl
 import com.jrblanco.boccantabria.data.source.local.BocDatabase
 import com.jrblanco.boccantabria.data.source.remote.BocFeedCatalog
 import com.jrblanco.boccantabria.data.source.remote.BocFeedDefinition
@@ -21,9 +22,11 @@ import com.jrblanco.boccantabria.domain.repository.PublicationRepository
 import com.jrblanco.boccantabria.domain.usecase.GetBocSectionsUseCase
 import com.jrblanco.boccantabria.domain.usecase.ObserveBulletinHeaderUseCase
 import com.jrblanco.boccantabria.domain.usecase.ObservePublicationsUseCase
+import com.jrblanco.boccantabria.domain.usecase.ObserveSavedKeysUseCase
 import com.jrblanco.boccantabria.domain.usecase.RefreshPublicationsUseCase
 import com.jrblanco.boccantabria.domain.repository.ConnectivityRepository
 import com.jrblanco.boccantabria.domain.usecase.ReleaseUnusedDocumentsUseCase
+import com.jrblanco.boccantabria.domain.usecase.SetPublicationSavedUseCase
 import com.jrblanco.boccantabria.domain.usecase.ShareOfficialDocumentUseCase
 import com.jrblanco.boccantabria.fake.FakeDocumentRepository
 import com.jrblanco.boccantabria.fake.RecordingAnalyticsTracker
@@ -156,6 +159,19 @@ class BulletinFlowIntegrationTest {
 
     // ---------- Wiring ----------
 
+    /** Real, over the same in-memory database: the chain under test is the production one. */
+    private val savedRepository by lazy {
+        SavedPublicationRepositoryImpl(
+            savedPublicationDao = database.savedPublicationDao(),
+            time = object : TimeProvider {
+                override fun nowMillis(): Long = 1_000_000
+            },
+            dispatchers = TestDispatcherProvider(dispatcher),
+            analytics = analytics,
+            crashReporter = NoOpCrashReporter(),
+        )
+    }
+
     private fun repository(remote: PublicationRemoteDataSource): PublicationRepository =
         PublicationRepositoryImpl(
             remoteDataSource = remote,
@@ -187,6 +203,10 @@ class BulletinFlowIntegrationTest {
         observeHeader = ObserveBulletinHeaderUseCase(repository),
         refreshPublications = RefreshPublicationsUseCase(repository),
         getSections = GetBocSectionsUseCase(BocSectionRepositoryImpl()),
+        // Lo guardado tiene su propia prueba de integración: aquí solo tiene que existir para que
+        // el boletín se pueda construir.
+        observeSavedKeys = ObserveSavedKeysUseCase(savedRepository),
+        setPublicationSaved = SetPublicationSavedUseCase(savedRepository),
         shareDocument = ShareOfficialDocumentUseCase(
             // Sharing is exercised in its own tests; here it only has to exist so the
             // bulletin can be built.

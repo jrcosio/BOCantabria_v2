@@ -4,6 +4,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.assertIsNotDisplayed
+import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.hasTestTag
@@ -165,17 +166,60 @@ class PublicationDetailContentTest {
         )
     }
 
+    // ---------- Lo guardado (feature 005) ----------
+
+    @Test
+    fun the_bar_offers_saving_when_the_publication_is_not_on_the_list() {
+        setContent(PublicationDetailUiState(publication = publication("boc:1"), isSaved = false))
+
+        composeRule.onNodeWithTag(TAG_DETAIL_SAVE).assertIsDisplayed()
+        composeRule.onNodeWithContentDescription("Guardar").assertIsDisplayed()
+        composeRule.onNodeWithContentDescription("Quitar de guardados").assertDoesNotExist()
+    }
+
+    @Test
+    fun the_bar_offers_taking_it_off_when_it_is_on_the_list() {
+        // Sobre la barra azul el icono ya es blanco, así que el estado tiene que viajar en el
+        // trazado **y** en palabras: un cambio de tinte no distinguiría nada.
+        setContent(PublicationDetailUiState(publication = publication("boc:1"), isSaved = true))
+
+        composeRule.onNodeWithContentDescription("Quitar de guardados").assertIsDisplayed()
+        composeRule.onNodeWithContentDescription("Guardar").assertDoesNotExist()
+    }
+
+    @Test
+    fun saving_is_not_offered_for_a_publication_that_is_no_longer_stored() {
+        // FR-008: una acción que no puede hacer nada es un callejón.
+        setContent(PublicationDetailUiState(publication = null, isMissing = true))
+
+        composeRule.onNodeWithTag(TAG_DETAIL_SAVE).assertDoesNotExist()
+    }
+
+    @Test
+    fun the_save_action_emits_its_event() {
+        var saves = 0
+        setContent(
+            PublicationDetailUiState(publication = publication("boc:1")),
+            onSave = { saves++ },
+        )
+
+        composeRule.onNodeWithTag(TAG_DETAIL_SAVE).performClick()
+
+        assertEquals(1, saves)
+    }
+
     private fun setContent(
         state: PublicationDetailUiState,
         onTabSelected: (DetailTab) -> Unit = {},
         onRetry: () -> Unit = {},
+        onSave: () -> Unit = {},
     ) {
         composeRule.setContent {
             BOCantabriaTheme {
                 PublicationDetailContent(
                     state = state,
                     onBack = {},
-                    onSave = {},
+                    onSave = onSave,
                     onShare = {},
                     onTabSelected = onTabSelected,
                     onOpenDocument = {},

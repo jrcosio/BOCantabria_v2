@@ -14,6 +14,9 @@ import com.jrblanco.boccantabria.ui.share.ShareState
  * a refresh happens with content on screen, and being offline is a way of showing content, not a
  * way of failing to. Folding them into the sealed hierarchy would multiply its cases and force
  * the screen to decide which of its errors are really content.
+ *
+ * [savedKeys] and [saveFailed] are there for the same reason: which publications are saved cuts
+ * across every content state, and a failed write is not a kind of content.
  */
 data class HomeUiState(
     val selection: HomeSelection = HomeSelection.TodaysBulletin,
@@ -23,6 +26,10 @@ data class HomeUiState(
     val isRefreshing: Boolean = false,
     val isOffline: Boolean = false,
     val share: ShareState = ShareState.Idle,
+    /** The keys of everything saved. A card asks whether its own is in here. */
+    val savedKeys: Set<String> = emptySet(),
+    /** One-shot: the screen says so and clears it (FR-009). */
+    val saveFailed: Boolean = false,
 )
 
 sealed interface HomeContentState {
