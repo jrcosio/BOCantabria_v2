@@ -40,7 +40,7 @@ tests que fallan si alguien la rompe.**
 |---|---|
 | **Versión** | 2.0.0 |
 | **Fase** | La publicación se abre y se lee: detalle del anuncio y visor del PDF oficial dentro de la aplicación |
-| **Pruebas** | 355 sin dispositivo + 64 de interfaz |
+| **Pruebas** | 356 sin dispositivo + 68 de interfaz |
 | **Arranque** | 648 ms medidos *(objetivo: < 3 s)* |
 | **Orientación** | Solo vertical en teléfonos |
 | **Capa de datos** | Room como única fuente de verdad, OkHttp para las diecinueve fuentes. Decidido y justificado en `specs/003-boletin-del-dia/research.md` |
@@ -201,6 +201,7 @@ com.jrblanco.boccantabria
 │   ├── main          Armazón: panel de secciones + barra inferior
 │   ├── detail        Detalle de la publicación: cabecera, pestañas y ficha
 │   ├── pdf           Visor del documento · ÚNICO sitio que toca androidx.pdf
+│   ├── ask           Preguntar sobre el documento · «Próximamente»
 │   ├── share         Envío del PDF por FileProvider, común a las tres pantallas
 │   ├── home          Inicio: cabecera, chips y tarjetas de publicación
 │   ├── sections      Panel lateral con las nueve secciones del BOC
@@ -246,8 +247,8 @@ ignorar o comentar una prueba para que pase la build.
 | **Interfaz** | `app/src/androidTest` | Compose UI Test | Los cuatro estados de pantalla, el reintento y el giro del dispositivo |
 
 ```bash
-./gradlew :app:testDebugUnitTest         # 355 pruebas · ~8 s · sin emulador
-./gradlew :app:connectedDebugAndroidTest # 64 pruebas · requiere emulador
+./gradlew :app:testDebugUnitTest         # 356 pruebas · ~8 s · sin emulador
+./gradlew :app:connectedDebugAndroidTest # 68 pruebas · requiere emulador (en tres botones)
 ```
 
 La integración continua ejecuta compilación, pruebas sin dispositivo y análisis estático en cada

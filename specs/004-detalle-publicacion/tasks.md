@@ -455,7 +455,10 @@ entrar con deuda.
 - [X] T071 Enmendar la documentación: `spec.md` (FR-012, FR-014, FR-036, FR-047 y los dos requisitos
       nuevos), `data-model.md`, `contracts/internal-contracts.md`, `quickstart.md` (paso 8 y paso 8
       bis), el documento de diseño (§18.2, §18.4, §18.5, §21) y `CLAUDE.md`
-- [ ] T072 Volver a pasar las cuatro puertas, con el emulador en **navegación de tres botones**
+- [X] T072 Volver a pasar las cuatro puertas, con el emulador en **navegación de tres botones**
+      → En verde el 30 de agosto de 2026: 356 unitarias y **68** instrumentadas, lint sin errores.
+      `DetailActionBarInsetTest` se comprobó fallando sin el arreglo: 42 px de hueco frente a los
+      63 que ocupa la barra del sistema.
 
 ---
 
