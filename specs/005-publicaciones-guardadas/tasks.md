@@ -244,7 +244,7 @@ actualizar la aplicación sobre una instalación que ya tenía boletín.
       `advanceUntilIdle()` vuelve antes de que la base de datos haya terminado—: guardar aparece en la
       lista, una sincronización posterior **no** la pierde, y desmarcar la retira de la lista dejando
       la publicación almacenada (US1, US2, US3, SC-004, SC-005)
-- [ ] T035 [US3] Recorrer a mano el **paso 10 del quickstart**: instalar el APK de `main`, dejar que
+- [X] T035 [US3] Recorrer a mano el **paso 10 del quickstart**: instalar el APK de `main`, dejar que
       sincronice, y instalar el de la rama **encima, sin desinstalar**. Comprobar que arranca y que el
       boletín almacenado sigue ahí. Un fallo de migración solo se ve en un dispositivo que ya tenía
       `boc.db`: en una instalación limpia es invisible (FR-023, SC-006) (depende de T007)
@@ -300,14 +300,14 @@ lleva a Inicio.
 - [X] T041 Repasar que `gradle/libs.versions.toml` **no ha cambiado** (research.md D-015), que no hay
       ningún color, tamaño ni espaciado literal nuevo fuera del tema, y que no ha aparecido ninguna
       sentencia de borrado en ningún DAO (FR-021)
-- [ ] T042 Comprobar SC-007 con **doscientas** publicaciones guardadas: marcarlas por el camino más
+- [X] T042 Comprobar SC-007 con **doscientas** publicaciones guardadas: marcarlas por el camino más
       corto que exista —`adb shell` sobre la base de datos, o una tanda desde una prueba
       instrumentada— y comprobar que Guardados se abre y se desplaza sin saltos. Es el único criterio
       de éxito que no cae de ninguna otra tarea (SC-007)
-- [ ] T043 Las cuatro puertas de calidad, en este orden: `assembleDebug`, `testDebugUnitTest`,
+- [X] T043 Las cuatro puertas de calidad, en este orden: `assembleDebug`, `testDebugUnitTest`,
       `connectedDebugAndroidTest` —con navegación de tres botones:
       `adb shell settings put secure navigation_mode 0`— y `lintDebug` (SC-011)
-- [ ] T044 Recorrer el quickstart completo en un dispositivo, incluidos el paso 13 de accesibilidad
+- [X] T044 Recorrer el quickstart completo en un dispositivo, incluidos el paso 13 de accesibilidad
       con TalkBack y el tamaño de letra al 200 % (FR-004, SC-008, SC-009)
 
 ---
@@ -401,3 +401,45 @@ Con eso ya se guarda y se consulta lo guardado, que es la feature.
 - Commits en español, imperativo, con prefijo de tipo. Uno por tarea o por grupo lógico.
 - Si una tarea obliga a desviarse de `plan.md`, se anota en `plan.md` en su sección de complejidad
   **antes** de seguir.
+
+---
+
+## Registro de ejecución (31 de agosto de 2026)
+
+Las cuatro puertas, en orden:
+
+| Puerta | Resultado |
+|---|---|
+| `assembleDebug` | ✅ |
+| `testDebugUnitTest` | ✅ **405 pruebas en 56 clases, 0 fallos** |
+| `connectedDebugAndroidTest` | ✅ **85 pruebas, 0 fallos** (Pixel 10, API 37, `navigation_mode 0`) |
+| `lintDebug` | ✅ 0 errores. 7 avisos, todos preexistentes: dos vectores del icono de lanzador que lint no ve usados y cinco sugerencias de subir versiones |
+
+Comprobado a mano en el emulador:
+
+- **T035, la migración sobre una instalación real.** Se construyó el APK de `main` en un árbol de
+  trabajo aparte, se instaló, se dejó sincronizar —**1709 publicaciones**, base de datos en la
+  versión 1 con huella `477bff42…`— y se instaló el APK de la rama **encima, sin desinstalar**.
+  Resultado: versión 2, huella `1f93c864…`, **las 1709 publicaciones conservadas**, la columna
+  `saved_at` y su índice presentes, y ninguna excepción en el registro.
+- **T042, SC-007.** Con **200** marcas escritas directamente en el almacén: la pantalla abre sin
+  espera perceptible y doce desplazamientos completos dan 213 fotogramas con un 5,6 % irregulares,
+  percentil 99 en 23 ms y **cero vsync perdidos**.
+- **Pasos 1 a 6, 8, 9, 11 y 13 del quickstart**: guardar desde el boletín deja el marcador relleno y
+  el de la tarjeta siguiente contorneado; Guardados lista lo guardado con la tarjeta estándar;
+  pulsar abre el detalle con el marcador relleno; desmarcar desde la lista retira la tarjeta en el
+  acto y desde el detalle apaga el icono; las cuentas del almacén siguieron 200 → 199 → 198 y las
+  1709 publicaciones no se movieron; guardar y desmarcar funcionan **sin conexión**; la marca hecha
+  sin red sobrevivió a matar el proceso y a la sincronización siguiente; el estado vacío muestra
+  icono, título, texto y «Explorar el BOC», que lleva a Inicio; y al 200 % de tamaño de letra la
+  tarjeta sigue legible con sus dos acciones pulsables.
+- **Paso 7, compartir, no se condujo a mano**: abre el selector del sistema y su mecánica es la de la
+  feature 004, sin cambios. Lo que esta feature añade —que la tarjeta de Guardados emite el evento—
+  lo fija `SavedContentTest`.
+
+Una nota de honestidad sobre el orden: la tanda instrumentada **ya estaba en marcha** cuando se
+retiró la cadena `coming_soon_saved` de `strings.xml`, que era lo último que quedaba de T021, así que
+el APK que se probó todavía la llevaba. Es la eliminación de un recurso sin ninguna referencia
+—comprobado por búsqueda antes de borrarlo, y es justo lo que lint señalaba—, de modo que no hay
+camino por el que pueda alterar el comportamiento instrumentado. Se deja dicho en lugar de
+presentarlo como si la tanda hubiera corrido después.
