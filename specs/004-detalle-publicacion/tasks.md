@@ -116,7 +116,7 @@ dentro de la aplicación.
 
 > Se escriben **antes** que la implementación y deben fallar antes de hacerlas pasar.
 
-- [ ] T015 [P] [US1] Escribir `TEST/data/source/remote/OkHttpDocumentDownloaderTest.kt` con
+- [X] T015 [P] [US1] Escribir `TEST/data/source/remote/OkHttpDocumentDownloaderTest.kt` con
       MockWebServer sobre TLS —como el de la feature 003, con `okhttp-tls`, porque la validación
       exige `https`—: descarga correcta con su suma de verificación; 404 sin reintento; agotamiento
       de espera; y que el fichero temporal queda escrito solo si todo pasa, con su SHA-256 (FR-016, FR-020,
@@ -137,7 +137,7 @@ dentro de la aplicación.
 
 ### Implementation for User Story 1
 
-- [ ] T020 [US1] Crear `MAIN/data/source/remote/DocumentDownloader.kt` con `DownloadResult` y
+- [X] T020 [US1] Crear `MAIN/data/source/remote/DocumentDownloader.kt` con `DownloadResult` y
       `RejectionReason`, y `OkHttpDocumentDownloader.kt` hasta hacer pasar T015. El cliente se
       **deriva** del existente con `newBuilder()` para darle 10/60/180 s: un documento tarda más que
       un feed (research.md D-004). Validación en el orden de `contracts/internal-contracts.md` §2.3,
@@ -217,7 +217,7 @@ se rechaza con mensaje y sin dejar fichero.
 
 ### Tests for User Story 2 ⚠️
 
-- [ ] T040 [P] [US2] Ampliar `TEST/data/source/remote/OkHttpDocumentDownloaderTest.kt` con los casos
+- [X] T040 [P] [US2] Ampliar `TEST/data/source/remote/OkHttpDocumentDownloaderTest.kt` con los casos
       que dan sentido a la historia: **respuesta con código 200 y cuerpo HTML**; `Content-Type`
       inesperado; primeros bytes que no son `%PDF`; cuerpo por encima del tope; enlace que no usa
       `https`; y host que no es el del boletín. Los seis rechazados y **sin dejar fichero**
@@ -230,7 +230,7 @@ se rechaza con mensaje y sin dejar fichero.
 
 ### Implementation for User Story 2
 
-- [ ] T043 [US2] Completar la validación de `OkHttpDocumentDownloader` hasta hacer pasar T040:
+- [X] T043 [US2] Completar la validación de `OkHttpDocumentDownloader` hasta hacer pasar T040:
       esquema y host **antes de conectar**, tipo declarado con las cabeceras, bytes mágicos sobre el
       principio del cuerpo, y corte por tamaño durante la lectura (research.md D-002) (FR-016, FR-017, FR-018)
 - [ ] T044 [US2] Asegurar en `DocumentRepositoryImpl` el borrado del temporal en todos los caminos de
