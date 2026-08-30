@@ -187,18 +187,18 @@ dentro de la aplicación.
       la barra superior del apartado 24.1 y la zona de documento del 24.2. La primera página visible
       se guarda con `rememberSaveable` y se restaura con `scrollToPage()`, porque el estado del visor
       **no** es saveable (research.md D-010) (FR-026 … FR-029) (depende de T033)
-- [ ] T035 [P] [US1] Escribir `ATEST/ui/detail/DocumentHeaderTest.kt` con `createComposeRule()`: los
+- [X] T035 [P] [US1] Escribir `ATEST/ui/detail/DocumentHeaderTest.kt` con `createComposeRule()`: los
       cinco elementos en su orden, el título largo **completo**, y la composición sin organismo
       (FR-008, FR-047)
-- [ ] T036 [P] [US1] Escribir `ATEST/ui/detail/PublicationDetailContentTest.kt`: las tres pestañas, la
+- [X] T036 [P] [US1] Escribir `ATEST/ui/detail/PublicationDetailContentTest.kt`: las tres pestañas, la
       barra de acciones, el estado de publicación retirada y el cambio de pestaña (FR-047)
-- [ ] T037 [P] [US1] Escribir `ATEST/ui/pdf/PdfViewerContentTest.kt`: cargando, documento listo y
+- [X] T037 [P] [US1] Escribir `ATEST/ui/pdf/PdfViewerContentTest.kt`: cargando, documento listo y
       error con reintento, sobre el componible sin estado (FR-030, FR-047)
-- [ ] T038 [US1] Escribir `ATEST/ui/DetailNavigationTest.kt`: desde el boletín, tocar una tarjeta
+- [X] T038 [US1] Escribir `ATEST/ui/DetailNavigationTest.kt`: desde el boletín, tocar una tarjeta
       abre el detalle; el retroceso vuelve **en la misma posición**; y `Abrir PDF oficial` lleva al
       visor. Montar el armazón con `createComposeRule()` en lugar de atravesar el arranque, como
       documenta `CLAUDE.md` (FR-001, FR-005, FR-047, SC-001)
-- [ ] T039 [US1] Escribir `TEST/integration/DocumentFlowIntegrationTest.kt`: la cadena real desde el
+- [X] T039 [US1] Escribir `TEST/integration/DocumentFlowIntegrationTest.kt`: la cadena real desde el
       modelo de pantalla hasta el fichero, con un PDF de muestra servido por un doble, comprobando
       que lo que llega al visor es lo que se descargó
 
@@ -239,7 +239,7 @@ se rechaza con mensaje y sin dejar fichero.
 - [X] T045 [US2] Mostrar el fallo en `DocumentTab` y en `PdfViewerScreen` reutilizando `ErrorMessage`
       de `core/ui/component`, para que el error no tenga un estilo propio por pantalla (apartado 34
       del documento de diseño) (FR-025, FR-030)
-- [ ] T046 [P] [US2] Ampliar `ATEST/ui/detail/PublicationDetailContentTest.kt` y
+- [X] T046 [P] [US2] Ampliar `ATEST/ui/detail/PublicationDetailContentTest.kt` y
       `ATEST/ui/pdf/PdfViewerContentTest.kt` con el estado de error y su acción de reintentar
       (FR-047)
 - [X] T047 [P] [US2] Emitir `document_opened` desde `DocumentRepositoryImpl` con la bandera de si
@@ -277,7 +277,7 @@ avión.
       003 puso en la tarjeta (FR-031, FR-034) (depende de T006, T050)
 - [X] T052 [P] [US3] Emitir `document_share` con el destino (`document` o `link`). Sin datos
       personales
-- [ ] T053 [P] [US3] Ampliar `ATEST/ui/detail/PublicationDetailContentTest.kt` con el estado de
+- [X] T053 [P] [US3] Ampliar `ATEST/ui/detail/PublicationDetailContentTest.kt` con el estado de
       preparación al compartir (FR-032)
 
 **Checkpoint**: las tres primeras historias funcionan por separado.
@@ -292,17 +292,17 @@ avión.
 
 ### Tests for User Story 4 ⚠️
 
-- [ ] T054 [P] [US4] Escribir `ATEST/ui/detail/ComingSoonTabTest.kt`: las pestañas de resumen y de
+- [X] T054 [P] [US4] Escribir `ATEST/ui/detail/ComingSoonTabTest.kt`: las pestañas de resumen y de
       preguntar dicen que llegarán próximamente **conservando el icono y la etiqueta de IA**, no solo
       el color (FR-014, FR-042)
 
 ### Implementation for User Story 4
 
-- [ ] T055 [US4] Crear `MAIN/ui/detail/component/ComingSoonTab.kt` con la identidad visual del
+- [X] T055 [US4] Crear `MAIN/ui/detail/component/ComingSoonTab.kt` con la identidad visual del
       apartado 20.1 —icono de IA sobre `aiContainer`, etiqueta en `aiAccent`— y el texto de
       «Próximamente». Es la primera vez que el proyecto usa esos dos tokens (FR-014, FR-042)
       (depende de T054)
-- [ ] T056 [US4] Conectar las acciones aplazadas en `PublicationDetailScreen`: guardar de la barra
+- [X] T056 [US4] Conectar las acciones aplazadas en `PublicationDetailScreen`: guardar de la barra
       superior y `Preguntar` de la barra de acciones avisan de que llegarán próximamente, y
       `Abrir PDF oficial` sigue siendo la acción más destacada (FR-035, FR-036, FR-037, FR-038,
       SC-009)
@@ -317,7 +317,7 @@ avión.
 **Purpose**: dejar la caché acotada, la documentación sin contradecir al código y las cuatro puertas
 en verde.
 
-- [ ] T057 Enlazar `releaseUnused()` a un momento razonable —al terminar una sincronización, o al
+- [X] T057 Enlazar `releaseUnused()` a un momento razonable —al terminar una sincronización, o al
       abrir un documento nuevo— para que la caché no crezca sin límite, y probarlo (FR-024)
 - [ ] T058 Actualizar `docs/diseno/especificaciones-diseno.md` con las dos desviaciones de esta
       feature, cada una con su motivo, como se hizo en la 003: **§19** la pestaña Documento muestra

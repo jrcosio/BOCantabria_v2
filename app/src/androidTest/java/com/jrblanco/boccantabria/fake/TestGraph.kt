@@ -14,7 +14,15 @@ import com.jrblanco.boccantabria.data.source.local.PublicationDao
 import com.jrblanco.boccantabria.data.source.remote.BocFeedCatalog
 import com.jrblanco.boccantabria.data.source.remote.PublicationNormalizer
 import com.jrblanco.boccantabria.data.source.remote.PublicationRemoteDataSource
+import com.jrblanco.boccantabria.domain.model.AppResult
+import com.jrblanco.boccantabria.domain.model.DocumentStatus
+import com.jrblanco.boccantabria.domain.model.DomainError
+import com.jrblanco.boccantabria.domain.model.OfficialDocument
+import com.jrblanco.boccantabria.domain.model.Publication
+import com.jrblanco.boccantabria.domain.repository.DocumentRepository
 import com.jrblanco.boccantabria.domain.repository.PublicationRepository
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.flowOf
 import org.koin.core.module.Module
 import org.koin.dsl.module
 
@@ -33,7 +41,10 @@ import org.koin.dsl.module
  *
  * Rebuilding the lot is what makes each test independent of execution order.
  */
-fun testGraphOverrides(remote: PublicationRemoteDataSource): List<Module> = listOf(
+fun testGraphOverrides(
+    remote: PublicationRemoteDataSource,
+    documents: DocumentRepository = NeverFetchingDocumentRepository(),
+): List<Module> = listOf(
     module {
         single<BocDatabase> {
             Room.inMemoryDatabaseBuilder(
@@ -46,6 +57,9 @@ fun testGraphOverrides(remote: PublicationRemoteDataSource): List<Module> = list
         single<PublicationRemoteDataSource> { remote }
         single<AnalyticsTracker> { NoOpAnalyticsTracker() }
         single<CrashReporter> { NoOpCrashReporter() }
+        // Nothing in a content test should reach the bulletin's document service. A test that
+        // needs a real document says so by passing its own.
+        single<DocumentRepository> { documents }
         single<PublicationRepository> {
             PublicationRepositoryImpl(
                 remoteDataSource = get(),
@@ -68,3 +82,20 @@ fun testGraphOverrides(remote: PublicationRemoteDataSource): List<Module> = list
     connectivity = FakeConnectivityDataSource(online = true),
     remoteConfig = FakeRemoteConfigDataSource(),
 )
+
+/**
+ * A document repository that never fetches anything.
+ *
+ * The default for content tests: they are about what the screens draw, and letting one of them
+ * reach the real service would make it depend on the network and on a public body's uptime.
+ */
+class NeverFetchingDocumentRepository : DocumentRepository {
+
+    override fun observeDocument(externalKey: String): Flow<DocumentStatus> =
+        flowOf(DocumentStatus.Absent)
+
+    override suspend fun ensureLocalCopy(publication: Publication): AppResult<OfficialDocument> =
+        AppResult.Failure(DomainError.Network)
+
+    override suspend fun releaseUnused() = Unit
+}

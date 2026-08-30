@@ -8,6 +8,7 @@ import com.jrblanco.boccantabria.domain.usecase.OpenOfficialDocumentUseCase
 import com.jrblanco.boccantabria.domain.usecase.ObservePublicationsUseCase
 import com.jrblanco.boccantabria.domain.usecase.PrepareStartupUseCase
 import com.jrblanco.boccantabria.domain.usecase.RefreshPublicationsUseCase
+import com.jrblanco.boccantabria.domain.usecase.ReleaseUnusedDocumentsUseCase
 import com.jrblanco.boccantabria.domain.usecase.ShareOfficialDocumentUseCase
 import org.koin.dsl.module
 
@@ -20,5 +21,6 @@ val domainModule = module {
     factory { ObserveOfficialDocumentUseCase(repository = get()) }
     factory { OpenOfficialDocumentUseCase(repository = get()) }
     factory { ShareOfficialDocumentUseCase(documents = get(), connectivity = get()) }
+    factory { ReleaseUnusedDocumentsUseCase(documents = get()) }
     factory { PrepareStartupUseCase(connectivity = get(), appConfig = get(), appVersion = get()) }
 }

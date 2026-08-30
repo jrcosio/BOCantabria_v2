@@ -12,6 +12,7 @@ import com.jrblanco.boccantabria.domain.usecase.GetBocSectionsUseCase
 import com.jrblanco.boccantabria.domain.usecase.ObserveBulletinHeaderUseCase
 import com.jrblanco.boccantabria.domain.usecase.ObservePublicationsUseCase
 import com.jrblanco.boccantabria.domain.usecase.RefreshPublicationsUseCase
+import com.jrblanco.boccantabria.domain.usecase.ReleaseUnusedDocumentsUseCase
 import com.jrblanco.boccantabria.domain.usecase.ShareOfficialDocumentUseCase
 import com.jrblanco.boccantabria.ui.share.ShareState
 import kotlinx.coroutines.Job
@@ -38,6 +39,7 @@ class HomeViewModel(
     private val refreshPublications: RefreshPublicationsUseCase,
     private val getSections: GetBocSectionsUseCase,
     private val shareDocument: ShareOfficialDocumentUseCase,
+    private val releaseUnusedDocuments: ReleaseUnusedDocumentsUseCase,
     private val analytics: AnalyticsTracker,
 ) : ViewModel() {
 
@@ -134,6 +136,10 @@ class HomeViewModel(
                     hasSynchronised = true,
                 )
             }
+            // The bulletin has just changed, so yesterday's documents are the ones nobody is about
+            // to open. Done here rather than while one is being read, when deleting the file
+            // underneath the reader would be the obvious risk.
+            releaseUnusedDocuments()
         }
     }
 

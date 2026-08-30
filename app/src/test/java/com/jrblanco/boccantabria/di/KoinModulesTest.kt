@@ -35,6 +35,7 @@ import com.jrblanco.boccantabria.domain.usecase.ObservePublicationsUseCase
 import com.jrblanco.boccantabria.domain.usecase.OpenOfficialDocumentUseCase
 import com.jrblanco.boccantabria.domain.usecase.PrepareStartupUseCase
 import com.jrblanco.boccantabria.domain.usecase.RefreshPublicationsUseCase
+import com.jrblanco.boccantabria.domain.usecase.ReleaseUnusedDocumentsUseCase
 import com.jrblanco.boccantabria.domain.usecase.ShareOfficialDocumentUseCase
 import com.jrblanco.boccantabria.ui.detail.PublicationDetailViewModel
 import com.jrblanco.boccantabria.ui.home.HomeViewModel
@@ -143,6 +144,7 @@ class KoinModulesTest {
         koin.get<ObserveOfficialDocumentUseCase>()
         koin.get<OpenOfficialDocumentUseCase>()
         koin.get<ShareOfficialDocumentUseCase>()
+        koin.get<ReleaseUnusedDocumentsUseCase>()
         koin.get<PdfDocumentLoader>()
 
         koin.get<DispatcherProvider>()
@@ -186,6 +188,7 @@ class KoinModulesTest {
             ObserveOfficialDocumentUseCase::class,
             OpenOfficialDocumentUseCase::class,
             ShareOfficialDocumentUseCase::class,
+            ReleaseUnusedDocumentsUseCase::class,
             PublicationDetailViewModel::class,
             PdfViewerViewModel::class,
             PdfDocumentLoader::class,

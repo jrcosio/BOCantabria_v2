@@ -12,6 +12,7 @@ import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
@@ -26,13 +27,14 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.jrblanco.boccantabria.R
-import com.jrblanco.boccantabria.core.ui.component.ComingSoonMessage
 import com.jrblanco.boccantabria.core.ui.theme.BocTheme
 import com.jrblanco.boccantabria.domain.model.DetailTab
+import com.jrblanco.boccantabria.ui.detail.component.ComingSoonTab
 import com.jrblanco.boccantabria.ui.detail.component.DetailActionBar
 import com.jrblanco.boccantabria.ui.detail.component.DetailTabs
 import com.jrblanco.boccantabria.ui.detail.component.DocumentHeader
 import com.jrblanco.boccantabria.ui.detail.component.DocumentTab
+import com.jrblanco.boccantabria.ui.share.ShareState
 import java.time.format.DateTimeFormatter
 import java.util.Locale
 
@@ -115,6 +117,12 @@ fun PublicationDetailContent(
                 .fillMaxSize()
                 .padding(innerPadding),
         ) {
+            // FR-032: fetching the document takes seconds, and a share sheet that simply does not
+            // appear reads as the application having ignored the tap.
+            if (state.share == ShareState.Preparing) {
+                PreparingShare()
+            }
+
             when {
                 publication != null -> {
                     DocumentHeader(
@@ -133,13 +141,15 @@ fun PublicationDetailContent(
                                 onRetry = onRetry,
                             )
 
-                            DetailTab.AI_SUMMARY -> ComingSoonMessage(
+                            DetailTab.AI_SUMMARY -> ComingSoonTab(
                                 iconRes = R.drawable.ic_ai,
+                                label = stringResource(R.string.detail_summary_label),
                                 description = stringResource(R.string.detail_summary_coming),
                             )
 
-                            DetailTab.ASK -> ComingSoonMessage(
+                            DetailTab.ASK -> ComingSoonTab(
                                 iconRes = R.drawable.ic_ask,
+                                label = stringResource(R.string.detail_ask_label),
                                 description = stringResource(R.string.detail_ask_coming),
                             )
                         }
@@ -189,6 +199,24 @@ private fun Missing(onBack: () -> Unit) {
         androidx.compose.material3.Button(onClick = onBack) {
             Text(text = stringResource(R.string.detail_missing_action))
         }
+    }
+}
+
+const val TAG_DETAIL_SHARE_PREPARING: String = "detail_share_preparing"
+
+@Composable
+private fun PreparingShare() {
+    Column(modifier = Modifier.fillMaxWidth().testTag(TAG_DETAIL_SHARE_PREPARING)) {
+        LinearProgressIndicator(modifier = Modifier.fillMaxWidth())
+        Text(
+            text = stringResource(R.string.share_preparing),
+            style = MaterialTheme.typography.bodySmall,
+            color = BocTheme.colors.textSecondary,
+            modifier = Modifier.padding(
+                horizontal = BocTheme.spacing.space4,
+                vertical = BocTheme.spacing.space2,
+            ),
+        )
     }
 }
 

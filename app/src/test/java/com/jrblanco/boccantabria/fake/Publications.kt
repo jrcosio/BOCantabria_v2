@@ -15,6 +15,8 @@ fun publication(
     subsectionCode: String? = null,
     date: LocalDate = LocalDate.of(2026, 8, 27),
     editionType: EditionType = EditionType.ORDINARY,
+    documentUrl: String = "https://boc.cantabria.es/boces/verAnuncioAction.do?idAnuBlob=" +
+        key.substringAfter(':'),
 ): Publication = Publication(
     externalKey = key,
     blobId = key.substringAfter(':'),
@@ -27,6 +29,6 @@ fun publication(
     organizationPath = listOfNotNull(issuer),
     editionType = editionType,
     publicationDate = date,
-    documentUrl = "https://boc.cantabria.es/boces/verAnuncioAction.do?idAnuBlob=${key.substringAfter(':')}",
+    documentUrl = documentUrl,
     rawCategories = "1.Disposiciones Generales|Ayuntamiento de Piélagos|ORD",
 )
