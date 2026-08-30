@@ -6,8 +6,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.verticalScroll
+import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
@@ -42,6 +41,7 @@ const val TAG_DETAIL_BACK: String = "detail_back"
 const val TAG_DETAIL_SAVE: String = "detail_save"
 const val TAG_DETAIL_SHARE: String = "detail_share"
 const val TAG_DETAIL_MISSING: String = "detail_missing"
+const val TAG_DETAIL_LIST: String = "detail_list"
 
 /**
  * The detail screen, sections 18 and 19 of the design document.
@@ -124,14 +124,28 @@ fun PublicationDetailContent(
             }
 
             when {
-                publication != null -> {
-                    DocumentHeader(
-                        publication = publication,
-                        section = state.section,
-                        formattedDate = publication.publicationDate.format(SPANISH_LONG_DATE),
-                    )
-                    DetailTabs(selected = state.selectedTab, onSelect = onTabSelected)
-                    Column(modifier = Modifier.verticalScroll(rememberScrollState())) {
+                // A lazy list rather than a fixed header over a scrolling body: the header scrolls
+                // away and the tabs stay pinned under the blue bar, so however long the title is
+                // the content ends up with the whole screen. A long title is the normal case in
+                // this bulletin, not the exception.
+                publication != null -> LazyColumn(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .testTag(TAG_DETAIL_LIST),
+                ) {
+                    item {
+                        DocumentHeader(
+                            publication = publication,
+                            section = state.section,
+                            formattedDate = publication.publicationDate.format(SPANISH_LONG_DATE),
+                        )
+                    }
+
+                    stickyHeader {
+                        DetailTabs(selected = state.selectedTab, onSelect = onTabSelected)
+                    }
+
+                    item {
                         when (state.selectedTab) {
                             DetailTab.DOCUMENT -> DocumentTab(
                                 publication = publication,
@@ -145,12 +159,6 @@ fun PublicationDetailContent(
                                 iconRes = R.drawable.ic_ai,
                                 label = stringResource(R.string.detail_summary_label),
                                 description = stringResource(R.string.detail_summary_coming),
-                            )
-
-                            DetailTab.ASK -> ComingSoonTab(
-                                iconRes = R.drawable.ic_ask,
-                                label = stringResource(R.string.detail_ask_label),
-                                description = stringResource(R.string.detail_ask_coming),
                             )
                         }
                     }

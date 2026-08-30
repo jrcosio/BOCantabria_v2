@@ -69,7 +69,11 @@ fun DocumentHeader(
 
             Text(
                 text = publication.titleWithoutIssuer,
-                style = MaterialTheme.typography.headlineLarge,
+                // HeadlineSmall and not the HeadlineLarge the design document fixed: at 30 sp a
+                // real BOC title —they run to a hundred and thirty characters— filled six lines and
+                // left the metadata card a narrow strip at the bottom of the screen. Still the
+                // headline of the screen, still shown whole.
+                style = MaterialTheme.typography.headlineSmall,
                 color = BocTheme.colors.textPrimary,
                 modifier = Modifier.testTag(TAG_DETAIL_TITLE),
             )

@@ -6,7 +6,8 @@ import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.assertIsNotDisplayed
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.performClick
-import androidx.compose.ui.test.performScrollTo
+import androidx.compose.ui.test.hasTestTag
+import androidx.compose.ui.test.performScrollToNode
 import com.jrblanco.boccantabria.core.ui.component.TAG_COMING_SOON
 import com.jrblanco.boccantabria.core.ui.component.TAG_ERROR
 import com.jrblanco.boccantabria.core.ui.component.TAG_RETRY
@@ -19,10 +20,11 @@ import com.jrblanco.boccantabria.fake.publication
 import com.jrblanco.boccantabria.ui.detail.component.TAG_ACTION_ASK
 import com.jrblanco.boccantabria.ui.detail.component.TAG_ACTION_OPEN
 import com.jrblanco.boccantabria.ui.detail.component.TAG_DETAIL_METADATA
+import com.jrblanco.boccantabria.ui.detail.component.TAG_DETAIL_PREVIEW
 import com.jrblanco.boccantabria.ui.detail.component.TAG_DETAIL_PREVIEW_ERROR
 import com.jrblanco.boccantabria.ui.detail.component.TAG_DETAIL_PREVIEW_LOADING
 import com.jrblanco.boccantabria.ui.detail.component.TAG_DETAIL_TABS
-import com.jrblanco.boccantabria.ui.detail.component.TAG_TAB_ASK
+import com.jrblanco.boccantabria.ui.detail.component.TAG_DETAIL_TITLE
 import com.jrblanco.boccantabria.ui.detail.component.TAG_TAB_SUMMARY
 import com.jrblanco.boccantabria.ui.share.ShareState
 import org.junit.Assert.assertEquals
@@ -43,13 +45,14 @@ class PublicationDetailContentTest {
     val composeRule = createComposeRule()
 
     @Test
-    fun the_three_tabs_and_the_action_bar_are_present() {
+    fun the_two_tabs_and_the_action_bar_are_present() {
         setContent(state())
 
         composeRule.onNodeWithTag(TAG_DETAIL_TABS).assertIsDisplayed()
         composeRule.onNodeWithTag(TAG_ACTION_OPEN).assertIsDisplayed()
         composeRule.onNodeWithTag(TAG_ACTION_ASK).assertIsDisplayed()
-        composeRule.onNodeWithTag(TAG_DETAIL_METADATA).performScrollTo().assertIsDisplayed()
+        composeRule.scrollTo(TAG_DETAIL_METADATA)
+        composeRule.onNodeWithTag(TAG_DETAIL_METADATA).assertIsDisplayed()
     }
 
     @Test
@@ -63,11 +66,12 @@ class PublicationDetailContentTest {
     }
 
     @Test
-    fun the_two_ai_tabs_say_what_is_coming_instead_of_looking_broken() {
+    fun the_summary_tab_says_what_is_coming_instead_of_looking_broken() {
         setContent(state(tab = DetailTab.AI_SUMMARY))
-        composeRule.onNodeWithTag(TAG_COMING_SOON).assertIsDisplayed()
 
-        composeRule.onNodeWithTag(TAG_TAB_ASK).performClick()
+        composeRule.onNodeWithTag(TAG_COMING_SOON).assertIsDisplayed()
+        // Asking is no longer a tab, but it is still an action: the button stays.
+        composeRule.onNodeWithTag(TAG_ACTION_ASK).assertIsDisplayed()
     }
 
     @Test
@@ -105,10 +109,12 @@ class PublicationDetailContentTest {
         // Scrolled to first: the metadata card legitimately fills the top of the tab, so on a
         // phone the preview starts below the fold. Asserting it is on screen without scrolling
         // would be asserting a layout the design never promised.
-        composeRule.onNodeWithTag(TAG_DETAIL_PREVIEW_LOADING).performScrollTo().assertIsDisplayed()
+        composeRule.scrollTo(TAG_DETAIL_PREVIEW_LOADING)
+        composeRule.onNodeWithTag(TAG_DETAIL_PREVIEW_LOADING).assertIsDisplayed()
 
         document.value = DocumentStatus.Failed(DomainError.Network)
-        composeRule.onNodeWithTag(TAG_DETAIL_PREVIEW_ERROR).performScrollTo().assertIsDisplayed()
+        composeRule.scrollTo(TAG_DETAIL_PREVIEW_ERROR)
+        composeRule.onNodeWithTag(TAG_DETAIL_PREVIEW_ERROR).assertIsDisplayed()
         composeRule.onNodeWithTag(TAG_ERROR).assertIsDisplayed()
         composeRule.onNodeWithTag(TAG_RETRY).performClick()
 
@@ -122,6 +128,25 @@ class PublicationDetailContentTest {
         setContent(state(share = ShareState.Preparing))
 
         composeRule.onNodeWithTag(TAG_DETAIL_SHARE_PREPARING).assertIsDisplayed()
+    }
+
+    @Test
+    fun the_header_scrolls_away_and_the_tabs_stay_put() {
+        // The reason this screen uses a lazy list at all: a BOC title runs to a hundred and thirty
+        // characters, and a fixed header left the metadata card a narrow strip at the bottom.
+        setContent(state())
+
+        composeRule.onNodeWithTag(TAG_DETAIL_TITLE).assertIsDisplayed()
+
+        composeRule.scrollTo(TAG_DETAIL_PREVIEW)
+
+        composeRule.onNodeWithTag(TAG_DETAIL_TABS).assertIsDisplayed()
+        composeRule.onNodeWithTag(TAG_DETAIL_TITLE).assertIsNotDisplayed()
+    }
+
+    /** Lazy lists compose what they show, so a node has to be scrolled to before it exists. */
+    private fun androidx.compose.ui.test.junit4.ComposeContentTestRule.scrollTo(tag: String) {
+        onNodeWithTag(TAG_DETAIL_LIST).performScrollToNode(hasTestTag(tag))
     }
 
     private fun state(
