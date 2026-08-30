@@ -1,6 +1,40 @@
 <!--
 Sync Impact Report
 ==================
+
+--- Enmienda 1.1.0 (2026-08-30) ---
+Version change: 1.0.0 → 1.1.0
+Motivo del bump: MINOR. Cambia materialmente una restricción vinculante de la sección
+«Restricciones Tecnológicas» sin eliminar ni redefinir ningún principio.
+
+Principios modificados: ninguno.
+Secciones añadidas: ninguna.
+Secciones eliminadas: ninguna.
+
+Cambio único, en «Restricciones Tecnológicas» → Plataforma:
+- `minSdk 24` → `minSdk 28`. `compileSdk`/`targetSdk` siguen en 37.
+
+Motivo: la feature 004 abre el PDF oficial dentro de la aplicación. El visor que mejor funciona
+en el marco de interfaz que esta constitución impone —Jetpack Compose, y con Fragments y XML de
+layouts prohibidos— es `androidx.pdf:pdf-compose`, que exige `minSdk 28`. Las alternativas eran
+escribir el visor sobre `PdfRenderer` de la plataforma, con peor resultado en la parte más
+delicada de la aplicación, o depender de una biblioteca de un solo mantenedor en el camino
+crítico de leer un documento oficial.
+
+Coste aceptado: deja fuera Android 7 y 8, en torno al 2 % de los dispositivos en 2026.
+
+Consecuencia que hay que ejecutar, no arrastrar: con `minSdk 28`, `java.time` es nativo y el
+azucarado de la biblioteca estándar deja de ser necesario para las fechas. Se retira. Queda
+recogido en el requisito FR-040 de `specs/004-detalle-publicacion/spec.md`.
+
+Requisitos de la enmienda, los tres cumplidos en este mismo cambio:
+(a) aprobación explícita del propietario — dada antes de redactar la especificación;
+(b) `CLAUDE.md` actualizado para que la guía operativa no contradiga a la norma;
+(c) este registro.
+
+Follow-up TODOs: ninguno.
+
+--- Ratificación inicial 1.0.0 (2026-08-28) ---
 Version change: (ninguna) → 1.0.0
 Motivo del bump: ratificación inicial de la constitución del proyecto.
 
@@ -143,7 +177,10 @@ cambiar de proveedor de telemetría sin tocar la lógica de la aplicación.
 
 Estas decisiones son vinculantes; cambiarlas requiere una enmienda de esta constitución.
 
-- **Plataforma**: Android nativo, Kotlin. `minSdk 24`, `compileSdk`/`targetSdk` 37.
+- **Plataforma**: Android nativo, Kotlin. `minSdk 28`, `compileSdk`/`targetSdk` 37.
+  `minSdk 28` desde la enmienda 1.1.0: es lo que exige el visor de PDF oficial de Jetpack para
+  Compose, y sin él no hay forma de leer el documento dentro de la aplicación sin recurrir a
+  Fragments —prohibidos aquí— o a un visor propio peor. Ver el Sync Impact Report.
 - **UI**: Jetpack Compose con Material 3 y Navigation Compose. PROHIBIDO introducir XML de
   layouts o Fragments.
 - **DI**: Koin (BOM). PROHIBIDOS Hilt/Dagger y cualquier otro contenedor.
@@ -196,4 +233,4 @@ puntual. En caso de conflicto entre `CLAUDE.md` y este documento, manda este doc
 - **Guía operativa**: `CLAUDE.md` en la raíz del repositorio traduce estos principios a
   comandos y convenciones del día a día.
 
-**Version**: 1.0.0 | **Ratified**: 2026-08-28 | **Last Amended**: 2026-08-28
+**Version**: 1.1.0 | **Ratified**: 2026-08-28 | **Last Amended**: 2026-08-30

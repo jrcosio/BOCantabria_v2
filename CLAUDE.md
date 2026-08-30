@@ -190,7 +190,9 @@ Composable → ViewModel → UseCase → Repository (interfaz en domain)
   en una revisión, hay que rechazarlo.
 - **La sección la manda la fuente**, no el campo `categorias`, que se guarda en crudo y solo sirve
   para enriquecer y verificar. Razón: el feed 4.3 trae entradas con los componentes permutados.
-- `java.time` funciona con `minSdk 24` gracias al **azucarado** (`desugar_jdk_libs`).
+- `java.time` es **nativo**: desde la enmienda 1.1.0 de la constitución `minSdk` es 28. El azucarado
+  de la biblioteca estándar que lo cubría con `minSdk 24` se retiró en la feature 004 porque dejó de
+  hacer falta; si algún día vuelve a necesitarse, hay que decir para qué.
 
 ### Dependencias Gradle
 
@@ -333,6 +335,11 @@ Antes de dar una feature por terminada, en este orden:
 
 ## Notas del proyecto
 
+- **Versión mínima soportada**: `minSdk 28` desde la enmienda 1.1.0 de la constitución
+  (30 de agosto de 2026). Subió de 24 porque el visor de PDF oficial de Jetpack para Compose
+  —`androidx.pdf:pdf-compose`, el que permite leer el documento dentro de la aplicación sin
+  Fragments— lo exige. Deja fuera Android 7 y 8. El motivo completo y las alternativas descartadas
+  están en el Sync Impact Report de `.specify/memory/constitution.md`.
 - **Orientación**: la aplicación está **bloqueada en vertical** por decisión de producto. En
   pantallas de 600 dp o más Android ignora la restricción desde la API 36 y no se intentará
   sortearlo. Los dos avisos de lint correspondientes están suprimidos a conciencia en el manifest.

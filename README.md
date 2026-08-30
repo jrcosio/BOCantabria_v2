@@ -7,7 +7,7 @@
 [![Android CI](https://github.com/jrcosio/BOCantabria_v2/actions/workflows/android.yml/badge.svg)](https://github.com/jrcosio/BOCantabria_v2/actions/workflows/android.yml)
 [![Kotlin](https://img.shields.io/badge/Kotlin-2.2.10-7F52FF?logo=kotlin&logoColor=white)](https://kotlinlang.org)
 [![Compose](https://img.shields.io/badge/Jetpack%20Compose-Material%203-4285F4?logo=jetpackcompose&logoColor=white)](https://developer.android.com/compose)
-[![minSdk](https://img.shields.io/badge/minSdk-24-3DDC84?logo=android&logoColor=white)](https://developer.android.com)
+[![minSdk](https://img.shields.io/badge/minSdk-28-3DDC84?logo=android&logoColor=white)](https://developer.android.com)
 [![Licencia](https://img.shields.io/badge/licencia-MIT-black)](LICENSE)
 
 *Arquitectura limpia · MVVM · Koin · Firebase · Spec-Driven Development*
@@ -220,7 +220,7 @@ com.jrblanco.boccantabria
 | **Persistencia** | [Room](https://developer.android.com/training/data-storage/room) 2.8 | Un corpus de ~1.900 anuncios con inserción-o-actualización, consultas y `Flow`. **Nunca borra** |
 | **Red** | [OkHttp](https://square.github.io/okhttp/) 5, sin Retrofit | Diecinueve GET de XML crudo: no hay API tipada que convertir |
 | **XML** | DOM de `javax.xml.parsers` | Kotlin puro, así sus ~50 pruebas corren sin emulador |
-| **Fechas** | `java.time` con azucarado | El tipo correcto para una fecha sin hora, con `minSdk 24` intacto |
+| **Fechas** | `java.time` nativo | El tipo correcto para una fecha sin hora. Con `minSdk 28` no hace falta azucarado |
 
 Todas las dependencias se declaran en
 [`gradle/libs.versions.toml`](gradle/libs.versions.toml). Nunca una versión literal dentro de un
