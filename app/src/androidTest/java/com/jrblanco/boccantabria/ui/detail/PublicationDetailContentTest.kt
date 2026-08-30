@@ -6,6 +6,7 @@ import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.assertIsNotDisplayed
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.performScrollTo
 import com.jrblanco.boccantabria.core.ui.component.TAG_COMING_SOON
 import com.jrblanco.boccantabria.core.ui.component.TAG_ERROR
 import com.jrblanco.boccantabria.core.ui.component.TAG_RETRY
@@ -48,7 +49,7 @@ class PublicationDetailContentTest {
         composeRule.onNodeWithTag(TAG_DETAIL_TABS).assertIsDisplayed()
         composeRule.onNodeWithTag(TAG_ACTION_OPEN).assertIsDisplayed()
         composeRule.onNodeWithTag(TAG_ACTION_ASK).assertIsDisplayed()
-        composeRule.onNodeWithTag(TAG_DETAIL_METADATA).assertIsDisplayed()
+        composeRule.onNodeWithTag(TAG_DETAIL_METADATA).performScrollTo().assertIsDisplayed()
     }
 
     @Test
@@ -101,10 +102,13 @@ class PublicationDetailContentTest {
             }
         }
 
-        composeRule.onNodeWithTag(TAG_DETAIL_PREVIEW_LOADING).assertIsDisplayed()
+        // Scrolled to first: the metadata card legitimately fills the top of the tab, so on a
+        // phone the preview starts below the fold. Asserting it is on screen without scrolling
+        // would be asserting a layout the design never promised.
+        composeRule.onNodeWithTag(TAG_DETAIL_PREVIEW_LOADING).performScrollTo().assertIsDisplayed()
 
         document.value = DocumentStatus.Failed(DomainError.Network)
-        composeRule.onNodeWithTag(TAG_DETAIL_PREVIEW_ERROR).assertIsDisplayed()
+        composeRule.onNodeWithTag(TAG_DETAIL_PREVIEW_ERROR).performScrollTo().assertIsDisplayed()
         composeRule.onNodeWithTag(TAG_ERROR).assertIsDisplayed()
         composeRule.onNodeWithTag(TAG_RETRY).performClick()
 
