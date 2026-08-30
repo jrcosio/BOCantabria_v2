@@ -4,7 +4,7 @@ import com.jrblanco.boccantabria.domain.model.BocSection
 import com.jrblanco.boccantabria.domain.model.DetailTab
 import com.jrblanco.boccantabria.domain.model.DocumentStatus
 import com.jrblanco.boccantabria.domain.model.Publication
-import com.jrblanco.boccantabria.domain.model.ShareTarget
+import com.jrblanco.boccantabria.ui.share.ShareState
 
 /**
  * Everything the detail screen draws.
@@ -23,18 +23,4 @@ data class PublicationDetailUiState(
 ) {
     /** Still reading the stored copy: neither found nor known to be gone. */
     val isLoading: Boolean get() = publication == null && !isMissing
-}
-
-sealed interface ShareState {
-
-    data object Idle : ShareState
-
-    /** Fetching the document so it can be shared. The screen says so (FR-032). */
-    data object Preparing : ShareState
-
-    /**
-     * A one-shot event: the screen hands it to the system and calls back to clear it. Left in
-     * place, a configuration change would open the share sheet again.
-     */
-    data class Ready(val target: ShareTarget) : ShareState
 }

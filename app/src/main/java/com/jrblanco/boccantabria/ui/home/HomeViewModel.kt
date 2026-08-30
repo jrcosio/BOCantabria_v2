@@ -12,6 +12,8 @@ import com.jrblanco.boccantabria.domain.usecase.GetBocSectionsUseCase
 import com.jrblanco.boccantabria.domain.usecase.ObserveBulletinHeaderUseCase
 import com.jrblanco.boccantabria.domain.usecase.ObservePublicationsUseCase
 import com.jrblanco.boccantabria.domain.usecase.RefreshPublicationsUseCase
+import com.jrblanco.boccantabria.domain.usecase.ShareOfficialDocumentUseCase
+import com.jrblanco.boccantabria.ui.share.ShareState
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -35,6 +37,7 @@ class HomeViewModel(
     private val observeHeader: ObserveBulletinHeaderUseCase,
     private val refreshPublications: RefreshPublicationsUseCase,
     private val getSections: GetBocSectionsUseCase,
+    private val shareDocument: ShareOfficialDocumentUseCase,
     private val analytics: AnalyticsTracker,
 ) : ViewModel() {
 
@@ -47,6 +50,11 @@ class HomeViewModel(
 
     private val syncState = MutableStateFlow(SyncState())
 
+    private val shareState = MutableStateFlow<ShareState>(ShareState.Idle)
+
+    /** Guards against a second share while one is being prepared. */
+    private var shareJob: Job? = null
+
     /** Guards against a second synchronisation while one is in flight. */
     private var refreshJob: Job? = null
 
@@ -54,7 +62,8 @@ class HomeViewModel(
         observePublications(selection),
         observeHeader(selection),
         syncState,
-    ) { publications, header, sync ->
+        shareState,
+    ) { publications, header, sync, share ->
         HomeUiState(
             selection = selection,
             header = header,
@@ -62,6 +71,7 @@ class HomeViewModel(
             content = contentFor(publications, sync),
             isRefreshing = sync.isRefreshing,
             isOffline = sync.isOffline,
+            share = share,
         )
     }.stateIn(
         scope = viewModelScope,
@@ -72,6 +82,31 @@ class HomeViewModel(
     init {
         analytics.trackScreenView(SCREEN_NAME)
         synchronise(force = false)
+    }
+
+    /**
+     * Sharing from a card sends the official document, exactly as the detail screen does.
+     *
+     * The rule of what to send lives in the use case, not here: a second place deciding it would
+     * be a second place to keep in step, and this one would drift the first time either changed.
+     */
+    fun onShare(publication: Publication) {
+        if (shareJob?.isActive == true) return
+
+        shareJob = viewModelScope.launch {
+            shareState.value = ShareState.Preparing
+            shareState.value = when (val result = shareDocument(publication)) {
+                is AppResult.Success -> ShareState.Ready(result.data, publication.title)
+                // Nothing to say here beyond what the document tab already says when it fails:
+                // the screen goes back to rest rather than growing an error of its own.
+                is AppResult.Failure -> ShareState.Idle
+            }
+        }
+    }
+
+    /** The screen has handed the share to the system. Cleared so a rotation does not repeat it. */
+    fun onShareConsumed() {
+        shareState.value = ShareState.Idle
     }
 
     /** The refresh gesture. Always reaches the network, however fresh the stored copy is. */

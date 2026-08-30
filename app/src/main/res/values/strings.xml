@@ -96,6 +96,7 @@
     <!-- Previsualización y descarga -->
     <string name="detail_preview_title">Primera página</string>
     <string name="detail_preview_loading">Preparando el documento…</string>
+    <string name="detail_preview_unavailable">No hemos podido dibujar la primera página. El documento se abre igualmente.</string>
     <string name="document_error_network">No hemos podido traer el documento. Comprueba tu conexión.</string>
     <string name="document_error_invalid">Lo que ha devuelto el servicio no es el documento oficial.</string>
 

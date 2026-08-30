@@ -1,6 +1,9 @@
 package com.jrblanco.boccantabria.ui.pdf
 
 import android.content.Context
+import android.util.Size
+import androidx.compose.ui.graphics.ImageBitmap
+import androidx.compose.ui.graphics.asImageBitmap
 import androidx.core.net.toUri
 import com.jrblanco.boccantabria.core.util.DispatcherProvider
 import androidx.pdf.PdfDocument
@@ -22,6 +25,15 @@ interface PdfDocumentLoader {
 
     /** @throws java.io.IOException when the file is missing, unreadable or not a document. */
     suspend fun open(localPath: String): PdfDocument
+
+    /**
+     * The first page, drawn at [targetWidthPx] and closed again.
+     *
+     * Returns a Compose bitmap rather than the library's own types so the preview component stays
+     * ignorant of `androidx.pdf`, and the same renderer serves both the preview and the viewer
+     * (research.md D-011).
+     */
+    suspend fun renderFirstPage(localPath: String, targetWidthPx: Int): ImageBitmap
 }
 
 class SandboxedPdfDocumentLoader(
@@ -33,6 +45,23 @@ class SandboxedPdfDocumentLoader(
 
     override suspend fun open(localPath: String): PdfDocument =
         loader.openDocument(File(localPath).toUri())
+
+    override suspend fun renderFirstPage(localPath: String, targetWidthPx: Int): ImageBitmap {
+        val document = open(localPath)
+        // Closed whatever happens: the pages are rendered in another process, and leaking the
+        // handle would keep that process alive holding a file the cache may want to evict.
+        return document.use { open ->
+            val page = open.getPageInfo(FIRST_PAGE)
+            val height = (targetWidthPx.toFloat() * page.height / page.width).toInt()
+            open.getPageBitmapSource(FIRST_PAGE).use { source ->
+                source.getBitmap(Size(targetWidthPx, height)).asImageBitmap()
+            }
+        }
+    }
+
+    private companion object {
+        const val FIRST_PAGE = 0
+    }
 }
 
 /**

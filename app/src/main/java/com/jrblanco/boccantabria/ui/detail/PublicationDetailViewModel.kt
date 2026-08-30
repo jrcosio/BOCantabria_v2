@@ -13,6 +13,7 @@ import com.jrblanco.boccantabria.domain.usecase.ObserveOfficialDocumentUseCase
 import com.jrblanco.boccantabria.domain.usecase.ObservePublicationUseCase
 import com.jrblanco.boccantabria.domain.usecase.OpenOfficialDocumentUseCase
 import com.jrblanco.boccantabria.domain.usecase.ShareOfficialDocumentUseCase
+import com.jrblanco.boccantabria.ui.share.ShareState
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -117,7 +118,7 @@ class PublicationDetailViewModel(
             shareState.value = when (val result = shareDocument(publication)) {
                 is AppResult.Success -> {
                     analytics.track(shareEvent(result.data))
-                    ShareState.Ready(result.data)
+                    ShareState.Ready(result.data, publication.title)
                 }
 
                 is AppResult.Failure -> ShareState.Idle

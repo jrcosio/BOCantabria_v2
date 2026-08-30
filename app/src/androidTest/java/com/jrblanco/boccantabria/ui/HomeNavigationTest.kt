@@ -96,7 +96,7 @@ class HomeNavigationTest {
     private fun setContent() {
         composeRule.setContent {
             BOCantabriaTheme {
-                MainShell(navController = rememberNavController())
+                MainShell(navController = rememberNavController(), onOpenPublication = {})
             }
         }
     }

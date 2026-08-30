@@ -9,9 +9,11 @@ import com.jrblanco.boccantabria.domain.usecase.ObserveOfficialDocumentUseCase
 import com.jrblanco.boccantabria.domain.usecase.ObservePublicationUseCase
 import com.jrblanco.boccantabria.domain.usecase.OpenOfficialDocumentUseCase
 import com.jrblanco.boccantabria.fake.FakeDocumentRepository
+import com.jrblanco.boccantabria.fake.FakePdfDocumentLoader
 import com.jrblanco.boccantabria.fake.FakePublicationRepository
 import com.jrblanco.boccantabria.fake.officialDocument
 import com.jrblanco.boccantabria.fake.publication
+import io.mockk.verify
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.StandardTestDispatcher
@@ -30,6 +32,7 @@ class PdfViewerViewModelTest {
 
     private val dispatcher = StandardTestDispatcher()
     private val documents = FakeDocumentRepository()
+    private val loader = FakePdfDocumentLoader()
 
     @Before
     fun setUp() = Dispatchers.setMain(dispatcher)
@@ -56,6 +59,8 @@ class PdfViewerViewModelTest {
             // The design document asks for an abbreviated title in the viewer's bar, and the
             // issuer is already implied by the document being open.
             assertEquals("Aprobación definitiva de la Ordenanza Fiscal.", ready.title)
+            assertEquals(loader.document, ready.pdf)
+            assertEquals(officialDocument(), ready.document)
             cancelAndIgnoreRemainingEvents()
         }
     }
@@ -127,6 +132,62 @@ class PdfViewerViewModelTest {
         assertEquals(0, documents.calls)
     }
 
+    @Test
+    fun `a file that cannot be opened is an error, not a blank screen`() = runTest(dispatcher) {
+        loader.failOnOpen = true
+        documents.emit(DocumentStatus.Available(officialDocument()))
+
+        viewModel().uiState.test {
+            advanceUntilIdle()
+            // Unknown and not Network: the bytes are ours and already verified, so telling the
+            // reader to check their connection would send them looking in the wrong place.
+            assertEquals(PdfViewerUiState.Error(DomainError.Unknown), expectMostRecentItem())
+            cancelAndIgnoreRemainingEvents()
+        }
+    }
+
+    @Test
+    fun `the open document is closed when the model is cleared`() = runTest(dispatcher) {
+        documents.emit(DocumentStatus.Available(officialDocument()))
+        val viewModel = viewModel()
+
+        viewModel.uiState.test {
+            advanceUntilIdle()
+            assertTrue(expectMostRecentItem() is PdfViewerUiState.Ready)
+            cancelAndIgnoreRemainingEvents()
+        }
+
+        viewModel.callOnCleared()
+
+        // The pages render in another process; a handle left open would keep it alive holding a
+        // file the cache may want to evict.
+        verify { loader.document.close() }
+    }
+
+    @Test
+    fun `the document is opened once, however many times the status is re-emitted`() =
+        runTest(dispatcher) {
+            documents.emit(DocumentStatus.Available(officialDocument()))
+            val viewModel = viewModel()
+
+            viewModel.uiState.test {
+                advanceUntilIdle()
+                documents.emit(DocumentStatus.Available(officialDocument()))
+                advanceUntilIdle()
+                cancelAndIgnoreRemainingEvents()
+            }
+
+            assertEquals(1, loader.opened.size)
+        }
+
+    /** `onCleared` is protected; the screen never calls it, the framework does. */
+    private fun PdfViewerViewModel.callOnCleared() {
+        PdfViewerViewModel::class.java.superclass
+            .getDeclaredMethod("onCleared")
+            .apply { isAccessible = true }
+            .invoke(this)
+    }
+
     private fun viewModel(
         stored: List<com.jrblanco.boccantabria.domain.model.Publication> = listOf(publication("boc:439765")),
     ): PdfViewerViewModel {
@@ -138,6 +199,7 @@ class PdfViewerViewModelTest {
             observePublication = ObservePublicationUseCase(publications),
             observeDocument = ObserveOfficialDocumentUseCase(documents),
             openDocument = OpenOfficialDocumentUseCase(documents),
+            loader = loader,
         )
     }
 }

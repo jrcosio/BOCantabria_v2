@@ -5,6 +5,7 @@ import com.jrblanco.boccantabria.domain.model.DomainError
 import com.jrblanco.boccantabria.domain.model.HomeSelection
 import com.jrblanco.boccantabria.domain.model.Publication
 import com.jrblanco.boccantabria.domain.model.SectionColorGroup
+import com.jrblanco.boccantabria.ui.share.ShareState
 
 /**
  * Everything the home screen draws.
@@ -21,6 +22,7 @@ data class HomeUiState(
     val content: HomeContentState = HomeContentState.Skeleton,
     val isRefreshing: Boolean = false,
     val isOffline: Boolean = false,
+    val share: ShareState = ShareState.Idle,
 )
 
 sealed interface HomeContentState {

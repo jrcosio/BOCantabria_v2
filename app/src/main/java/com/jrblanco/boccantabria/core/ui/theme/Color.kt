@@ -35,6 +35,9 @@ val BocSurface = Color(0xFFFFFFFF)
 val BocSurfaceSoft = Color(0xFFF0F4F7)
 val BocSurfaceStrong = Color(0xFFE6EDF1)
 
+/** Neutral grey the PDF pages sit on, section 24.2. Darker than any surface so the page reads. */
+val BocReaderSurface = Color(0xFFD9DEE2)
+
 val BocTextPrimary = Color(0xFF122B3A)
 val BocTextSecondary = Color(0xFF536873)
 val BocTextMuted = Color(0xFF778993)

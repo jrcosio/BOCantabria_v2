@@ -99,17 +99,34 @@ class PublicationCardTest {
     }
 
     @Test
-    fun the_body_of_the_card_navigates_nowhere_in_this_feature() {
-        // The detail screen is the next feature. Until then the card must not pretend otherwise.
-        setContent(publication())
+    fun the_whole_card_opens_the_publication() {
+        // Until this feature the card deliberately went nowhere, and a test said so. Opening the
+        // publication is precisely what was added, so that assertion is now the wrong one.
+        var opened = 0
+        setContent(publication(), onClick = { opened++ })
 
         composeRule.onNodeWithTag(TAG_PUBLICATION_CARD).performClick()
 
-        composeRule.onNodeWithTag(TAG_PUBLICATION_CARD).assertIsDisplayed()
+        assertEquals(1, opened)
+    }
+
+    @Test
+    fun sharing_from_the_card_does_not_also_open_the_publication() {
+        // The two actions sit inside the clickable card, and a tap that did both would send the
+        // reader to a screen they did not ask for every time they shared.
+        var opened = 0
+        var shares = 0
+        setContent(publication(), onClick = { opened++ }, onShare = { shares++ })
+
+        composeRule.onNodeWithTag(TAG_PUBLICATION_SHARE).performClick()
+
+        assertEquals(1, shares)
+        assertEquals(0, opened)
     }
 
     private fun setContent(
         publication: Publication,
+        onClick: () -> Unit = {},
         onShare: () -> Unit = {},
         onSave: () -> Unit = {},
     ) {
@@ -120,6 +137,7 @@ class PublicationCardTest {
                     publication = publication,
                     section = section,
                     formattedDate = "27 de agosto de 2026",
+                    onClick = onClick,
                     onShare = onShare,
                     onSave = onSave,
                 )

@@ -35,7 +35,7 @@ class BottomBarNavigationTest {
     fun setUp() {
         composeRule.setContent {
             BOCantabriaTheme {
-                MainShell(navController = rememberNavController())
+                MainShell(navController = rememberNavController(), onOpenPublication = {})
             }
         }
         // Waits for the first synchronisation to land. It is not politeness: while the loading

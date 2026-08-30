@@ -156,7 +156,7 @@ dentro de la aplicación.
       `MAIN/ui/navigation/Routes.kt` y registrarlas en `BOCantabriaNavHost.kt`, en el `NavHost`
       **exterior**: no llevan barra inferior, y la publicación viaja por clave y no por objeto
       (research.md D-005, D-006) (FR-006)
-- [ ] T025 [US1] Hacer que la tarjeta navegue: `MAIN/ui/home/component/PublicationCard.kt` acepta
+- [X] T025 [US1] Hacer que la tarjeta navegue: `MAIN/ui/home/component/PublicationCard.kt` acepta
       `onClick` y `MAIN/ui/main/MainShell.kt` lo enlaza a `Route.Detail`. **Cambiar
       `ATEST/ui/home/PublicationCardTest.kt`**, cuya prueba afirma hoy que la tarjeta no navega:
       justo eso es lo que esta feature añade (FR-001) (depende de T024)
@@ -164,26 +164,26 @@ dentro de la aplicación.
       `document` y `share` **fuera** de un sellado único porque son ejes independientes
 - [X] T027 [US1] Crear `MAIN/ui/detail/PublicationDetailViewModel.kt` hasta hacer pasar T018
       (depende de T022, T026)
-- [ ] T028 [P] [US1] Crear `MAIN/ui/detail/component/DocumentHeader.kt` con los cinco elementos del
+- [X] T028 [P] [US1] Crear `MAIN/ui/detail/component/DocumentHeader.kt` con los cinco elementos del
       apartado 18.2 en el orden del 18.3, el título en `headlineLarge` **sin recortar** y el
       distintivo perfilado. Sin hueco ni texto vacío cuando no hay organismo
       (FR-007, FR-008, FR-009, FR-010, FR-041)
-- [ ] T029 [P] [US1] Crear `MAIN/ui/detail/component/DetailTabs.kt` con las tres pestañas del
+- [X] T029 [P] [US1] Crear `MAIN/ui/detail/component/DetailTabs.kt` con las tres pestañas del
       apartado 18.4, indicador inferior de 3 dp y el icono de IA en la de resumen (FR-012)
-- [ ] T030 [P] [US1] Crear `MAIN/ui/detail/component/DetailActionBar.kt` según el apartado 18.5:
+- [X] T030 [P] [US1] Crear `MAIN/ui/detail/component/DetailActionBar.kt` según el apartado 18.5:
       fondo `surface` con borde superior, `Abrir PDF oficial` principal y `Preguntar` secundario,
       **apilados si no caben** (FR-037, FR-043)
-- [ ] T031 [US1] Crear `MAIN/ui/detail/component/DocumentTab.kt` y `DocumentPreview.kt`: ficha de
+- [X] T031 [US1] Crear `MAIN/ui/detail/component/DocumentTab.kt` y `DocumentPreview.kt`: ficha de
       metadatos con los seis bloques del apartado 19.2 y, debajo, la primera página obtenida con
       `PdfDocument.BitmapSource` (research.md D-011). La obtención se dispara **al mostrar la
       pestaña**, no al abrir el detalle (FR-013)
-- [ ] T032 [US1] Crear `MAIN/ui/detail/PublicationDetailScreen.kt` componiendo lo anterior, con la
+- [X] T032 [US1] Crear `MAIN/ui/detail/PublicationDetailScreen.kt` componiendo lo anterior, con la
       barra superior del apartado 18.1 —retroceso, escudo, título, guardar y compartir— y las
       etiquetas de prueba de `contracts/internal-contracts.md` §4.3 (FR-011) (depende de T027, T028, T029, T030, T031)
-- [ ] T033 [US1] Crear `MAIN/ui/pdf/PdfDocumentLoader.kt`, `PdfViewerUiState.kt` y
+- [X] T033 [US1] Crear `MAIN/ui/pdf/PdfDocumentLoader.kt`, `PdfViewerUiState.kt` y
       `PdfViewerViewModel.kt` hasta hacer pasar T019. El documento es `Closeable` y lo cierra el
       modelo en `onCleared()` (research.md D-009) (depende de T022)
-- [ ] T034 [US1] Crear `MAIN/ui/pdf/PdfViewerScreen.kt` con `PdfViewer` y `rememberPdfViewerState`,
+- [X] T034 [US1] Crear `MAIN/ui/pdf/PdfViewerScreen.kt` con `PdfViewer` y `rememberPdfViewerState`,
       la barra superior del apartado 24.1 y la zona de documento del 24.2. La primera página visible
       se guarda con `rememberSaveable` y se restaura con `scrollToPage()`, porque el estado del visor
       **no** es saveable (research.md D-010) (FR-026 … FR-029) (depende de T033)
@@ -236,7 +236,7 @@ se rechaza con mensaje y sin dejar fichero.
 - [X] T044 [US2] Asegurar en `DocumentRepositoryImpl` el borrado del temporal en todos los caminos de
       salida —rechazo, error y cancelación— hasta hacer pasar T041. `CancellationException` se
       repropaga (FR-019, FR-023)
-- [ ] T045 [US2] Mostrar el fallo en `DocumentTab` y en `PdfViewerScreen` reutilizando `ErrorMessage`
+- [X] T045 [US2] Mostrar el fallo en `DocumentTab` y en `PdfViewerScreen` reutilizando `ErrorMessage`
       de `core/ui/component`, para que el error no tenga un estilo propio por pantalla (apartado 34
       del documento de diseño) (FR-025, FR-030)
 - [ ] T046 [P] [US2] Ampliar `ATEST/ui/detail/PublicationDetailContentTest.kt` y
@@ -271,11 +271,11 @@ avión.
 - [X] T050 [US3] Crear `MAIN/domain/usecase/ShareOfficialDocumentUseCase.kt` hasta hacer pasar T048.
       Es el **único** sitio donde vive la regla de degradación: la pantalla pregunta y obedece
       (depende de T022)
-- [ ] T051 [US3] Conectar compartir en `PublicationDetailScreen` y `PdfViewerScreen`: el fichero se
+- [X] T051 [US3] Conectar compartir en `PublicationDetailScreen` y `PdfViewerScreen`: el fichero se
       ofrece con la `content://` del `FileProvider` y permiso temporal de lectura; el enlace, como
       texto, con su explicación. **Retirar el compartir por enlace de `MainShell`**, que la feature
       003 puso en la tarjeta (FR-031, FR-034) (depende de T006, T050)
-- [ ] T052 [P] [US3] Emitir `document_share` con el destino (`document` o `link`). Sin datos
+- [X] T052 [P] [US3] Emitir `document_share` con el destino (`document` o `link`). Sin datos
       personales
 - [ ] T053 [P] [US3] Ampliar `ATEST/ui/detail/PublicationDetailContentTest.kt` con el estado de
       preparación al compartir (FR-032)
