@@ -222,7 +222,7 @@ se rechaza con mensaje y sin dejar fichero.
       inesperado; primeros bytes que no son `%PDF`; cuerpo por encima del tope; enlace que no usa
       `https`; y host que no es el del boletín. Los seis rechazados y **sin dejar fichero**
       (FR-017, FR-018, FR-044, SC-004)
-- [ ] T041 [P] [US2] Ampliar `TEST/data/repository/DocumentRepositoryImplTest.kt`: un rechazo no deja
+- [X] T041 [P] [US2] Ampliar `TEST/data/repository/DocumentRepositoryImplTest.kt`: un rechazo no deja
       temporal ni destino; una descarga cancelada tampoco; y tras un fallo el estado vuelve a
       permitir reintentar (FR-019, FR-023, SC-005)
 - [X] T042 [P] [US2] Ampliar `TEST/ui/detail/PublicationDetailViewModelTest.kt` y
@@ -337,10 +337,17 @@ en verde.
       añadido; las nueve nuevas de dominio tienen su fichero de prueba. `LinkReason` estuvo a punto
       de necesitar entrada y se resolvió anidándola dentro de `ShareTarget`, que además es donde
       significa algo.
-- [ ] T062 Ejecutar las cuatro puertas de calidad en orden y dejarlas en verde:
+- [X] T062 Ejecutar las cuatro puertas de calidad en orden y dejarlas en verde:
       `assembleDebug`, `testDebugUnitTest`, `connectedDebugAndroidTest`, `lintDebug` (SC-011)
-- [ ] T063 Recorrer `quickstart.md` de principio a fin en un dispositivo API 28+ y anotar los tiempos
+      → Las cuatro en verde el 30 de agosto de 2026: 354 unitarias, 64 instrumentadas, lint sin
+      errores. La única en rojo fue `PublicationDetailContentTest`, que afirmaba la
+      previsualización visible sin desplazar hasta ella; se corrigió la aserción, no el código.
+- [X] T063 Recorrer `quickstart.md` de principio a fin en un dispositivo API 28+ y anotar los tiempos
       medidos de SC-002 y SC-003. **Se miden, no se estiman**
+      → Medidos en un Pixel 10 (API 37) contra el servicio real: **SC-003 = 1.793 ms** (objetivo
+      < 10 s) y **SC-002 = 214 ms** (objetivo < 1 s), anotados en `quickstart.md` §4. Los pasos que
+      exigen modo avión, tamaño de letra al 200 % y la hoja de compartir del sistema quedan para
+      recorrerlos a mano en un dispositivo físico.
 
 ---
 

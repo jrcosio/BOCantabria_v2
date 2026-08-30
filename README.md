@@ -40,7 +40,7 @@ tests que fallan si alguien la rompe.**
 |---|---|
 | **Versión** | 2.0.0 |
 | **Fase** | La publicación se abre y se lee: detalle del anuncio y visor del PDF oficial dentro de la aplicación |
-| **Pruebas** | 354 sin dispositivo + 64 de interfaz |
+| **Pruebas** | 355 sin dispositivo + 64 de interfaz |
 | **Arranque** | 648 ms medidos *(objetivo: < 3 s)* |
 | **Orientación** | Solo vertical en teléfonos |
 | **Capa de datos** | Room como única fuente de verdad, OkHttp para las diecinueve fuentes. Decidido y justificado en `specs/003-boletin-del-dia/research.md` |
@@ -246,7 +246,7 @@ ignorar o comentar una prueba para que pase la build.
 | **Interfaz** | `app/src/androidTest` | Compose UI Test | Los cuatro estados de pantalla, el reintento y el giro del dispositivo |
 
 ```bash
-./gradlew :app:testDebugUnitTest         # 354 pruebas · ~8 s · sin emulador
+./gradlew :app:testDebugUnitTest         # 355 pruebas · ~8 s · sin emulador
 ./gradlew :app:connectedDebugAndroidTest # 64 pruebas · requiere emulador
 ```
 

@@ -14,6 +14,8 @@ import com.jrblanco.boccantabria.fake.TestDispatcherProvider
 import com.jrblanco.boccantabria.fake.publication
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.async
+import kotlinx.coroutines.cancelAndJoin
+import kotlinx.coroutines.yield
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
@@ -133,6 +135,27 @@ class DocumentRepositoryImplTest {
             assertFalse("$refusal dejó restos", leftoversExist())
         }
     }
+
+    @Test
+    fun `a cancelled download leaves nothing behind, and cancellation is not swallowed`() =
+        runTest {
+            // The obvious way to reach this: someone opens the Documento tab and immediately goes
+            // back. The download dies with the screen's scope, and what must not survive it is a
+            // half-written file that a later reader would open as if it were the document.
+            downloader.gate = CompletableDeferred()
+            val repository = repository()
+
+            val job = async { repository.ensureLocalCopy(publication()) }
+            // Let it get as far as the gate, so there really is a download in flight to cancel.
+            while (downloader.calls == 0) yield()
+            job.cancelAndJoin()
+
+            // Cancelled, not completed with a failure: `CancellationException` is rethrown rather
+            // than translated into a `DomainError`, or the caller's scope would never learn that
+            // its work stopped.
+            assertTrue("la cancelación se tragó", job.isCancelled)
+            assertFalse("una descarga cancelada dejó restos", leftoversExist())
+        }
 
     @Test
     fun `an exploding downloader is a failure, not a crash`() = runTest {

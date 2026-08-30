@@ -65,6 +65,20 @@ Volver atrás y abrir el mismo documento otra vez, cronómetro en mano.
 
 **Se espera**: aparece en **menos de un segundo**. Repetirlo en modo avión: sigue abriéndose.
 
+> **Medido el 30 de agosto de 2026** en un Pixel 10 (API 37), contra el servicio real del BOC y
+> sobre el anuncio `boc:439765` —un PDF de 412.551 bytes—. Los dos criterios se **miden**, no se
+> estiman, así que se tomaron con un arnés que recorre la cadena de producción entera —descarga
+> validada, caché y apertura en el visor— y que se retiró después de tomar los números: reaching
+> the real service is exactly what the suite must never do.
+>
+> | Criterio | Objetivo | Medido |
+> |---|---|---|
+> | **SC-003** · nunca consultado, conexión normal | < 10 s | **1.793 ms** |
+> | **SC-002** · ya consultado, desde caché, abierto en el visor | < 1 s | **214 ms** |
+>
+> El margen es amplio en ambos, y por motivos distintos: el primero lo fija la red del servicio, y
+> el segundo no la toca en absoluto.
+
 ---
 
 ## Paso 5 — Que fallar se note (US2, FR-017, FR-019, FR-025, SC-004, SC-005)
