@@ -82,8 +82,13 @@ Existe para que la pantalla pueda **explicar** el caso degradado en lugar de que
 
 ### `DetailTab`
 
-`DOCUMENT` · `AI_SUMMARY` · `ASK`. Sobrevive al cambio de configuración (FR-015). Vive en `domain`
-porque las tres pestañas son parte de lo que la feature promete, no una decisión de dibujo.
+`DOCUMENT` · `AI_SUMMARY`. Sobrevive al cambio de configuración (FR-015). Vive en `domain` porque
+las dos pestañas son parte de lo que la feature promete, no una decisión de dibujo.
+
+> **Enmienda (30 de agosto de 2026).** Había un tercer valor, `ASK`. Preguntar es ahora una pantalla
+> (`Route.Ask`), no una pestaña. La restauración de la pestaña guardada se hace **por nombre y con
+> respaldo**, nunca con `valueOf`: una pestaña retirada entre versiones tumbaría la pantalla al
+> volver de la muerte del proceso, en el único camino que nadie recorre a mano.
 
 ---
 

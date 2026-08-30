@@ -424,6 +424,41 @@ T035  DocumentHeaderTest
 
 ---
 
+## Phase 8: Enmienda del propietario tras probar en dispositivo (30 de agosto de 2026)
+
+**Purpose**: tres correcciones sobre la captura `Datos_modelo/photo_2026-08-30 17.41.55.jpeg`, antes
+de integrar la rama en `main`. La feature no ha llegado a `main`, así que se termina bien en lugar de
+entrar con deuda.
+
+- [X] T064 Arreglar el solapamiento de `DetailActionBar` con la barra de navegación del sistema:
+      el inset va **dentro** de la `Surface`, como hace `NavigationBar` de Material. Un `Scaffold`
+      con `bottomBar` descarta su inset inferior, así que la barra es la única que puede resolverlo
+      (FR-049)
+- [X] T065 [P] Escribir `ATEST/ui/detail/DetailActionBarInsetTest.kt`: el hueco bajo el botón
+      principal es exactamente el relleno de la barra **más** el inset del sistema. Falla antes del
+      arreglo. Exige emulador con navegación de tres botones, anotado en `quickstart.md` (FR-049)
+- [X] T066 Bajar el título de `headlineLarge` a `headlineSmall` en `MAIN/ui/detail/component/
+      DocumentHeader.kt` y pasar `PublicationDetailScreen` a `LazyColumn` con las pestañas como
+      `stickyHeader`, para que la cabecera se desplace y el contenido disponga de la pantalla
+      entera. El título se sigue mostrando **completo** (FR-008, FR-050)
+- [X] T067 [P] Ampliar `ATEST/ui/detail/PublicationDetailContentTest.kt`: tras desplazar, las
+      pestañas siguen visibles y el título ya no. Las aserciones pasan a `performScrollToNode`,
+      porque una lista *lazy* solo compone lo que muestra (FR-050)
+- [X] T068 Retirar `DetailTab.ASK` y su pestaña; crear `MAIN/ui/ask/AskScreen.kt` —sin estado y sin
+      `ViewModel`, como Buscar y Guardados— y `Route.Ask(externalKey)` en el host **exterior**. El
+      botón de la barra de acciones navega en lugar de avisar (FR-012, FR-036)
+- [X] T069 Restaurar la pestaña guardada **por nombre y con respaldo** en lugar de con `valueOf`:
+      una pestaña retirada entre versiones tumbaría la pantalla al volver de la muerte del proceso.
+      Con su prueba unitaria
+- [X] T070 [P] Escribir `ATEST/ui/ask/AskScreenTest.kt` y ampliar `ATEST/ui/DetailNavigationTest.kt`
+      con el camino hasta la pantalla de preguntar y la vuelta (FR-047)
+- [X] T071 Enmendar la documentación: `spec.md` (FR-012, FR-014, FR-036, FR-047 y los dos requisitos
+      nuevos), `data-model.md`, `contracts/internal-contracts.md`, `quickstart.md` (paso 8 y paso 8
+      bis), el documento de diseño (§18.2, §18.4, §18.5, §21) y `CLAUDE.md`
+- [ ] T072 Volver a pasar las cuatro puertas, con el emulador en **navegación de tres botones**
+
+---
+
 ## Notes
 
 - `[P]` significa ficheros distintos y sin dependencias entre sí.

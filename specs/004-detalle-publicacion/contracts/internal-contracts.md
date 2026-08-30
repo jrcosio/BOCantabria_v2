@@ -157,10 +157,12 @@ lógica de negocio.
 |---|---|
 | `detail_back` · `detail_save` · `detail_share` | Barra superior |
 | `detail_header` · `detail_section` · `detail_title` · `detail_issuer` · `detail_date` · `detail_official_badge` | Cabecera |
-| `detail_tabs` · `detail_tab_document` · `detail_tab_summary` · `detail_tab_ask` | Pestañas |
+| `detail_tabs` · `detail_tab_document` · `detail_tab_summary` | Pestañas |
+| `detail_list` | La lista que desplaza cabecera y contenido |
 | `detail_metadata` · `detail_preview` · `detail_preview_loading` · `detail_preview_error` | Pestaña Documento |
 | `detail_action_open` · `detail_action_ask` | Barra de acciones |
 | `detail_missing` | La publicación ya no está guardada |
+| `ask_screen` · `ask_back` | Pantalla de preguntar |
 | `pdf_viewer` · `pdf_viewer_loading` · `pdf_viewer_error` · `pdf_viewer_share` · `pdf_viewer_back` | Visor |
 
 Se reutilizan `TAG_ERROR`, `TAG_RETRY` y `TAG_COMING_SOON` de `core/ui/component`: el error del
@@ -178,6 +180,7 @@ sealed interface Route {
     @Serializable data object Saved : Route
     @Serializable data class  Detail(val externalKey: String) : Route          // NUEVO
     @Serializable data class  PdfViewer(val externalKey: String) : Route       // NUEVO
+    @Serializable data class  Ask(val externalKey: String) : Route             // NUEVO
 }
 ```
 
@@ -186,6 +189,10 @@ sealed interface Route {
 - La tarjeta navega a `Detail(publication.externalKey)`. Se apila: el retroceso vuelve al boletín
   **en su posición**, que es lo que FR-005 pide.
 - `Abrir PDF oficial` navega a `PdfViewer(externalKey)`, que se apila sobre el detalle.
+- `Preguntar` de la barra de acciones navega a `Ask(externalKey)`, también en el host exterior y
+  también apilada. Lleva la clave aunque el marcador de posición no la lea: la conversación que
+  venga será sobre *ese* documento, y añadir el argumento después obligaría a cambiar una ruta que
+  ya estaría en la calle.
 - El retroceso desde el detalle **no** cierra la aplicación: vuelve a Inicio. Solo desde Inicio
   cierra, como hasta ahora.
 

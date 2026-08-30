@@ -131,12 +131,34 @@ verificar que el adjunto **se abre** y es el anuncio (FR-034).
 | Acción | Se espera |
 |---|---|
 | Pestaña `Resumen IA` | Dice que llegará próximamente, con el icono y la etiqueta de IA |
-| Pestaña `Preguntar` | Ídem |
-| Botón `Preguntar` de la barra inferior | Ídem |
+| Botón `Preguntar` de la barra inferior | **Abre una pantalla propia** que dice lo mismo, y el retroceso vuelve al detalle |
 | Guardar de la barra superior | Avisa de que llegará próximamente |
 
-**Comprobar**: `Abrir PDF oficial` sigue siendo la acción **más destacada** de la pantalla (FR-037),
-y ninguna de las cuatro deja sin respuesta.
+**Comprobar**: hay **dos** pestañas, no tres; `Abrir PDF oficial` sigue siendo la acción **más
+destacada** de la pantalla (FR-037); y ninguna de las tres deja sin respuesta.
+
+---
+
+## Paso 8 bis — La barra de acciones y la cabecera (FR-049, FR-050)
+
+> Añadido el 30 de agosto de 2026, tras probar la feature en un dispositivo real.
+
+Con el móvil en **navegación de tres botones** (Ajustes → Sistema → Navegación del sistema):
+
+1. Abrir una publicación de título largo —las hay de ciento treinta caracteres—.
+2. **Se espera**: `Abrir PDF oficial` y `Preguntar` quedan **por encima** de atrás, inicio y
+   recientes, sin que ninguno los pise. El color de la barra llega hasta el borde de la pantalla.
+3. Cambiar a navegación por gestos y repetir: la barra sigue bien, **sin un hueco de más** debajo.
+4. El título entra en cuatro o cinco líneas, no en seis.
+5. Desplazar el contenido: la cabecera sube y **las pestañas se quedan pegadas** bajo la barra azul.
+   La ficha de metadatos dispone entonces de la pantalla entera.
+
+**La tanda instrumentada debe correr con el emulador en navegación de tres botones.** Con gestos, el
+margen inferior puede ser cero y `DetailActionBarInsetTest`, aun siendo correcto, no comprueba nada:
+
+```bash
+adb shell settings put secure navigation_mode 0   # tres botones
+```
 
 ---
 

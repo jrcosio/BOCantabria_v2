@@ -926,6 +926,15 @@ En móviles estrechos puede omitirse el escudo para asegurar espacio suficiente.
 - Fecha con icono de calendario.
 - Distintivo outlined `Documento oficial`.
 
+> **Enmienda (30 de agosto de 2026, feature 004).** El título va en **`HeadlineSmall`**, no en
+> `HeadlineLarge`. A 30 sp un título real del BOC —los hay de ciento treinta caracteres— llenaba seis
+> líneas y dejaba la ficha de metadatos en una franja estrecha al pie de la pantalla. Se sigue
+> mostrando **completo, sin recortar**.
+>
+> Además, la cabecera **se desplaza con el contenido** y las pestañas quedan fijas bajo la barra
+> superior. Así, con cualquier título, el contenido acaba disponiendo de la pantalla entera; sin eso,
+> encoger la letra solo aplaza el problema hasta el siguiente título más largo.
+
 ## 18.3. Jerarquía
 
 La secuencia visual será:
@@ -945,6 +954,12 @@ La secuencia visual será:
 
 La pestaña `Resumen IA` incluye el icono `auto_awesome`.
 
+> **Enmienda (30 de agosto de 2026, feature 004).** Son **dos** pestañas: `Documento` y `Resumen IA`.
+> `Preguntar` deja de ser pestaña y pasa a ser **pantalla propia**, abierta desde el botón de la
+> barra de acciones. Una conversación sobre un boletín de cuarenta páginas necesita la pantalla
+> entera y su sitio en la pila de retroceso, que no es lo que da una pestaña junto a una ficha de
+> metadatos.
+
 ## 18.5. Barra de acciones inferior
 
 - Fondo `Surface`.
@@ -955,6 +970,12 @@ La pestaña `Resumen IA` incluye el icono `auto_awesome`.
 - Padding de 12–16 dp más área segura.
 
 En pantallas muy estrechas, los botones pueden apilarse.
+
+> **Enmienda (30 de agosto de 2026, feature 004).** «Más área segura» no era un adorno: la barra
+> aplica el margen de la barra de navegación **dentro** de su propia superficie, igual que hace
+> `NavigationBar` de Material. Un `Scaffold` con barra inferior descarta su margen inferior y ancla
+> la barra al borde crudo de la ventana, así que la barra es lo único que puede mantenerse por
+> encima de los tres botones del sistema.
 
 ---
 
@@ -1050,6 +1071,14 @@ Debajo de la tarjeta:
 ---
 
 ## 21. Pantalla Pregunta al BOC
+
+> **Nota (30 de agosto de 2026, feature 004).** La pantalla **existe ya**, como marcador de posición:
+> barra superior con Atrás y el título, y de contenido el aviso de que la función llegará
+> próximamente conservando el icono y la etiqueta de IA del apartado 20.1. Se llega desde el botón
+> `Preguntar` de la barra de acciones del detalle.
+>
+> Lo que este apartado describe —tarjeta de contexto, banner, conversación— es lo que la funcionalidad
+> de IA rellenará. La estructura queda hecha, que era el encargo.
 
 ## 21.1. Barra superior
 

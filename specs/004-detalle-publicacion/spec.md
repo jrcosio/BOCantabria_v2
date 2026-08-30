@@ -107,16 +107,16 @@ repetirlo en modo avión sin haberlo abierto antes y comprobar que ofrece el enl
 
 ### User Story 4 - Saber qué llegará y no toparse con callejones (Priority: P3)
 
-La persona ve tres pestañas —Documento, Resumen IA y Preguntar— y, abajo, un botón para preguntar
-sobre el anuncio. Las dos de inteligencia artificial y el botón de guardar todavía no hacen su
-trabajo, pero lo dicen con claridad y conservan su aspecto, de modo que se entiende que llegarán y no
-que están rotas.
+La persona ve dos pestañas —Documento y Resumen IA— y, abajo, un botón para preguntar sobre el
+anuncio que abre su propia pantalla. La pestaña de resumen, la pantalla de preguntar y el botón de
+guardar todavía no hacen su trabajo, pero lo dicen con claridad y conservan su aspecto, de modo que
+se entiende que llegarán y no que están rotas.
 
 **Why this priority**: no aporta valor por sí misma, pero deja fijada la estructura de la pantalla
 para la feature siguiente y evita que la aplicación se perciba como incompleta.
 
-**Independent Test**: recorrer las tres pestañas y las dos acciones aplazadas comprobando que
-ninguna deja a la persona sin respuesta.
+**Independent Test**: recorrer las dos pestañas y las dos acciones aplazadas comprobando que ninguna
+deja a la persona sin respuesta.
 
 **Acceptance Scenarios**:
 
@@ -180,14 +180,18 @@ ninguna deja a la persona sin respuesta.
 
 **Pestañas**
 
-- **FR-012**: El detalle MUST ofrecer tres pestañas: documento, resumen de inteligencia artificial y
-  preguntar.
+- **FR-012**: El detalle MUST ofrecer dos pestañas: documento y resumen de inteligencia artificial.
+
+  > **Enmienda (30 de agosto de 2026, propietario).** Eran tres. Preguntar deja de ser pestaña y
+  > pasa a ser **pantalla propia**, abierta desde el botón de la barra de acciones: una conversación
+  > sobre un boletín de cuarenta páginas necesita la pantalla entera y su sitio en la pila de
+  > retroceso, que no es lo que da una pestaña junto a una ficha de metadatos.
 - **FR-013**: La pestaña de documento MUST mostrar una ficha con los datos del anuncio —descripción,
   organismo, sección, fecha de publicación, referencia y documento oficial— y, debajo, la primera
   página del documento oficial como previsualización.
-- **FR-014**: Las pestañas de resumen y de preguntar MUST informar de que la función llegará
-  próximamente, conservando el icono y la etiqueta que identifican el contenido de inteligencia
-  artificial.
+- **FR-014**: La pestaña de resumen y la pantalla de preguntar MUST informar de que la función
+  llegará próximamente, conservando el icono y la etiqueta que identifican el contenido de
+  inteligencia artificial.
 - **FR-015**: La pestaña seleccionada MUST sobrevivir a un cambio de configuración del dispositivo.
 
 **El documento oficial**
@@ -236,9 +240,17 @@ ninguna deja a la persona sin respuesta.
 **Funciones aplazadas**
 
 - **FR-035**: La acción de guardar MUST informar de que llegará próximamente.
-- **FR-036**: El botón de preguntar de la barra de acciones MUST informar de que llegará
-  próximamente.
+- **FR-036**: El botón de preguntar de la barra de acciones MUST abrir la pantalla de preguntar, que
+  informa de que la función llegará próximamente.
+
+  > **Enmienda (30 de agosto de 2026, propietario).** Informaba con un aviso flotante. Abre una
+  > pantalla, para que la estructura de la funcionalidad siguiente quede hecha.
 - **FR-037**: Abrir el documento oficial MUST ser la acción más destacada de la pantalla.
+- **FR-049**: La barra de acciones MUST quedar por encima de la barra de navegación del sistema. Sus
+  botones no pueden solaparse con los de atrás, inicio y recientes.
+- **FR-050**: La cabecera del documento MUST desplazarse con el contenido, quedando las pestañas
+  fijas bajo la barra superior, de modo que un título largo no reduzca la zona de contenido de forma
+  permanente.
 - **FR-038**: Ninguna acción visible MUST quedarse sin respuesta.
 
 **Alcance de la plataforma**
@@ -268,8 +280,9 @@ ninguna deja a la persona sin respuesta.
 - **FR-046**: Cada modelo de pantalla que introduzca esta feature MUST tener pruebas automáticas sin
   dispositivo.
 - **FR-047**: MUST existir pruebas automáticas de interfaz que validen la composición de la cabecera
-  en su orden, que el título largo no se recorta, las tres pestañas con su contenido, la barra de
-  acciones, los estados del visor y la navegación desde la tarjeta hasta el documento.
+  en su orden, que el título largo no se recorta, las dos pestañas con su contenido, la barra de
+  acciones, los estados del visor y la navegación desde la tarjeta hasta el documento y hasta la
+  pantalla de preguntar.
 - **FR-048**: Las pruebas MUST ser deterministas: sin red real, sin reloj del sistema y sin depender
   del orden de ejecución.
 

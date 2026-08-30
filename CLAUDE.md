@@ -91,6 +91,10 @@ ui/
   main/           MainShell: panel lateral + barra inferior alrededor del NavHost interno
   home/           Inicio: HomeScreen + HomeViewModel + HomeUiState + component/
   sections/       Panel lateral de secciones del BOC
+  detail/         Detalle de la publicación + component/ (cabecera, pestañas, ficha)
+  pdf/            Visor del documento. ÚNICO sitio que toca androidx.pdf
+  share/          ShareState y el envío por FileProvider, común a las tres pantallas
+  ask/            Preguntar sobre el documento. Marcador de posición «Próximamente»
   search/         Marcador de posición «Próximamente»
   saved/          Marcador de posición «Próximamente»
   navigation/     Rutas tipadas, NavHost exterior y barra inferior
@@ -331,6 +335,18 @@ fichero de prueba. Si añades una clase de dominio sin test, la build falla.
 - **El estado del visor no es `rememberSaveable`.** La página visible se guarda a mano y se
   restaura con `scrollToPage()`; rotar el móvil y aterrizar en la página uno de un boletín de
   cuarenta deshace el trabajo de quien lee.
+- **Un `Scaffold` con `bottomBar` descarta su margen de ventana inferior.** En cuanto hay barra
+  inferior, Material sustituye ese margen por la **altura medida** de la barra y la ancla al borde
+  crudo de la ventana: poner `contentWindowInsets` no cambia nada. La barra es la única que puede
+  mantenerse por encima de los tres botones del sistema, y lo hace aplicando
+  `windowInsetsPadding(systemBars.only(Horizontal + Bottom))` **dentro** de su `Surface`, que es
+  justo lo que hace `NavigationBar`. Por eso la barra inferior del boletín nunca se solapó y la de
+  acciones del detalle sí (`DetailActionBarInsetTest`).
+- **Esa prueba solo muerde con navegación de tres botones.** Con gestos el margen puede ser cero.
+  `adb shell settings put secure navigation_mode 0` antes de la tanda instrumentada.
+- **Una pestaña guardada se restaura por nombre, nunca con `valueOf`.** `Preguntar` fue pestaña y hoy
+  es pantalla; un nombre guardado que ya no existe tumbaría el detalle al volver de la muerte del
+  proceso, en el único camino que nadie recorre a mano.
 - **`onCleared()` es `protected`.** Para comprobar que el visor cierra el documento, la prueba lo
   invoca por reflexión sobre la superclase; en producción quien lo llama es el framework.
 
