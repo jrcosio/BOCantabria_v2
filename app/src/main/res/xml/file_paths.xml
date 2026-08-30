@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Acotado al subdirectorio de documentos de la caché, no a la caché entera. Compartir un fichero
+  exige una content:// y esta declaración es la que decide qué puede salir de la aplicación; abrirla
+  de más es cómo un fallo futuro acaba exponiendo algo que no toca (research.md D-008).
+-->
+<paths>
+    <cache-path name="documents" path="documents/" />
+</paths>

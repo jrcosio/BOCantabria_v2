@@ -11,6 +11,10 @@ import com.jrblanco.boccantabria.domain.usecase.GetBocSectionsUseCase
 import com.jrblanco.boccantabria.domain.usecase.ObserveBulletinHeaderUseCase
 import com.jrblanco.boccantabria.domain.usecase.ObservePublicationsUseCase
 import com.jrblanco.boccantabria.domain.usecase.RefreshPublicationsUseCase
+import com.jrblanco.boccantabria.domain.repository.ConnectivityRepository
+import com.jrblanco.boccantabria.domain.usecase.ReleaseUnusedDocumentsUseCase
+import com.jrblanco.boccantabria.domain.usecase.ShareOfficialDocumentUseCase
+import com.jrblanco.boccantabria.fake.FakeDocumentRepository
 import com.jrblanco.boccantabria.fake.FakePublicationRepository
 import com.jrblanco.boccantabria.fake.RecordingAnalyticsTracker
 import com.jrblanco.boccantabria.fake.publication
@@ -263,6 +267,13 @@ class HomeViewModelTest {
             observeHeader = ObserveBulletinHeaderUseCase(repository),
             refreshPublications = RefreshPublicationsUseCase(repository),
             getSections = GetBocSectionsUseCase(BocSectionRepositoryImpl()),
+            shareDocument = ShareOfficialDocumentUseCase(
+            // Sharing is exercised in its own tests; here it only has to exist so the
+            // bulletin can be built.
+            documents = FakeDocumentRepository(),
+            connectivity = object : ConnectivityRepository { override fun isOnline() = true },
+        ),
+        releaseUnusedDocuments = ReleaseUnusedDocumentsUseCase(FakeDocumentRepository()),
             analytics = analytics,
         )
     }

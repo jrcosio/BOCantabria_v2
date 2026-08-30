@@ -23,6 +23,8 @@ data class BocExtendedColors(
     val textMuted: Color,
     val surfaceSoft: Color,
     val surfaceStrong: Color,
+    /** The grey behind the pages of the document viewer, section 24.2. */
+    val readerSurface: Color,
     val divider: Color,
     val accentOfficial: Color,
     val aiAccent: Color,
@@ -46,6 +48,7 @@ private val ExtendedColors = BocExtendedColors(
     textMuted = BocTextMuted,
     surfaceSoft = BocSurfaceSoft,
     surfaceStrong = BocSurfaceStrong,
+    readerSurface = BocReaderSurface,
     divider = BocDivider,
     accentOfficial = BocAccentOfficial,
     aiAccent = BocAiAccent,

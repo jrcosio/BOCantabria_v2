@@ -7,7 +7,10 @@ import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
+import com.jrblanco.boccantabria.ui.ask.AskScreen
+import com.jrblanco.boccantabria.ui.detail.PublicationDetailScreen
 import com.jrblanco.boccantabria.ui.main.MainShell
+import com.jrblanco.boccantabria.ui.pdf.PdfViewerScreen
 import com.jrblanco.boccantabria.ui.splash.SplashScreen
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -54,7 +57,29 @@ fun BOCantabriaNavHost(
             )
         }
         composable<Route.Home> {
-            MainShell(navController = mainNavController)
+            MainShell(
+                navController = mainNavController,
+                onOpenPublication = { externalKey ->
+                    navController.navigate(Route.Detail(externalKey))
+                },
+            )
+        }
+        composable<Route.Detail> {
+            PublicationDetailScreen(
+                onBack = navController::popBackStack,
+                onOpenDocument = { externalKey ->
+                    navController.navigate(Route.PdfViewer(externalKey))
+                },
+                onAsk = { externalKey ->
+                    navController.navigate(Route.Ask(externalKey))
+                },
+            )
+        }
+        composable<Route.PdfViewer> {
+            PdfViewerScreen(onBack = navController::popBackStack)
+        }
+        composable<Route.Ask> {
+            AskScreen(onBack = navController::popBackStack)
         }
     }
 }

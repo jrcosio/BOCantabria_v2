@@ -37,6 +37,9 @@ const val TAG_PUBLICATION_SHARE: String = "publication_share"
 /**
  * The central component of the application, per section 12 of the design document.
  *
+ * The whole card is the target for opening the publication, not just the title: on a phone the
+ * title is a two-line strip of text and everything around it would look tappable and not be.
+ *
  * Reading order is issuer, title, date, actions. The four-dp rule on the left carries the
  * section's colour, and the section name travels with it as text: colour groups, text
  * identifies. Nine sections share five colours, so without the text the indicator would say
@@ -47,11 +50,13 @@ fun PublicationCard(
     publication: Publication,
     section: BocSection?,
     formattedDate: String,
+    onClick: () -> Unit,
     onShare: () -> Unit,
     onSave: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     Card(
+        onClick = onClick,
         modifier = modifier
             .fillMaxWidth()
             .testTag(TAG_PUBLICATION_CARD),

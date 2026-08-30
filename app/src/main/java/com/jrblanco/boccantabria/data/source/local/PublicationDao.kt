@@ -47,6 +47,10 @@ interface PublicationDao {
     )
     fun observeBySubsection(subsectionCode: String): Flow<List<PublicationEntity>>
 
+    /** Emits `null` when the key is not stored. The detail screen turns that into an explanation. */
+    @Query("SELECT * FROM publications WHERE external_key = :externalKey")
+    fun observePublication(externalKey: String): Flow<PublicationEntity?>
+
     @Query("SELECT COUNT(*) FROM publications")
     suspend fun count(): Int
 

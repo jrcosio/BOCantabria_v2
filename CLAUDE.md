@@ -91,6 +91,10 @@ ui/
   main/           MainShell: panel lateral + barra inferior alrededor del NavHost interno
   home/           Inicio: HomeScreen + HomeViewModel + HomeUiState + component/
   sections/       Panel lateral de secciones del BOC
+  detail/         Detalle de la publicación + component/ (cabecera, pestañas, ficha)
+  pdf/            Visor del documento. ÚNICO sitio que toca androidx.pdf
+  share/          ShareState y el envío por FileProvider, común a las tres pantallas
+  ask/            Preguntar sobre el documento. Marcador de posición «Próximamente»
   search/         Marcador de posición «Próximamente»
   saved/          Marcador de posición «Próximamente»
   navigation/     Rutas tipadas, NavHost exterior y barra inferior
@@ -190,7 +194,9 @@ Composable → ViewModel → UseCase → Repository (interfaz en domain)
   en una revisión, hay que rechazarlo.
 - **La sección la manda la fuente**, no el campo `categorias`, que se guarda en crudo y solo sirve
   para enriquecer y verificar. Razón: el feed 4.3 trae entradas con los componentes permutados.
-- `java.time` funciona con `minSdk 24` gracias al **azucarado** (`desugar_jdk_libs`).
+- `java.time` es **nativo**: desde la enmienda 1.1.0 de la constitución `minSdk` es 28. El azucarado
+  de la biblioteca estándar que lo cubría con `minSdk 24` se retiró en la feature 004 porque dejó de
+  hacer falta; si algún día vuelve a necesitarse, hay que decir para qué.
 
 ### Dependencias Gradle
 
@@ -202,6 +208,27 @@ Composable → ViewModel → UseCase → Repository (interfaz en domain)
 - `gradle.properties` lleva `android.disallowKotlinSourceSets=false`. AGP 9 prohíbe que un plugin
   añada fuentes por `kotlin.sourceSets` y KSP hace justo eso con sus directorios generados; es la
   vía que AGP documenta. Cuando KSP migre a `android.sourceSets`, la bandera sobra.
+
+### El documento oficial
+
+- **`ui/pdf` es la única frontera con `androidx.pdf`.** La biblioteca está en **beta** y su API
+  puede cambiar: fuera de ese paquete nadie la nombra. `PdfDocumentLoader` es el seam —abrir un
+  fichero y dibujar su primera página— y devuelve tipos de Compose, no de la biblioteca.
+  `PdfViewer` y `rememberPdfViewerState` exigen `@OptIn(ExperimentalPdfApi::class)`.
+- El visor **renderiza en otro proceso** (`SandboxedPdfLoader`). No es un detalle: los documentos
+  vienen de un servicio público por internet y uno malformado no debe poder tumbar la aplicación.
+  El `PdfDocument` es `Closeable` y lo cierra el `ViewModel` en `onCleared()`; olvidarlo mantiene
+  vivo ese proceso reteniendo un fichero que la caché quiere poder liberar.
+- `pdf-compose` arrastra `pdf-document-service` solo en ámbito de ejecución: hay que declararlo
+  **explícitamente** en el catálogo, o `SandboxedPdfLoader` no resuelve.
+- El PDF se guarda en `cacheDir/documents/`, con **caché y no almacén**: guardar para leer sin
+  conexión será la funcionalidad de Guardados. La purga corre al terminar una sincronización.
+- Compartir un fichero exige una `content://`: hay un `FileProvider` con autoridad
+  `${applicationId}.documents`, acotado en `res/xml/file_paths.xml` a `cache-path documents/`.
+  Nunca amplíes ese ámbito para resolver un caso concreto.
+- Nada que venga de la red se da por bueno sin validar: HTTPS, host del boletín, tipo de contenido,
+  bytes mágicos `%PDF-`, tope de tamaño y SHA-256. Una página de error con HTTP 200 no puede acabar
+  guardada como documento oficial.
 
 ### Firebase
 
@@ -302,6 +329,27 @@ fichero de prueba. Si añades una clase de dominio sin test, la build falla.
   controla es la **pila de retroceso**, así que es eso lo que se afirma (`SplashBackStackTest`); el
   cierre efectivo es comportamiento de Android y se comprueba a mano según `quickstart.md`.
 
+- **Un `Card` con `onClick` no traga los toques de sus botones internos.** Se comprueba a
+  propósito (`PublicationCardTest`): compartir desde la tarjeta no debe además abrir la
+  publicación.
+- **El estado del visor no es `rememberSaveable`.** La página visible se guarda a mano y se
+  restaura con `scrollToPage()`; rotar el móvil y aterrizar en la página uno de un boletín de
+  cuarenta deshace el trabajo de quien lee.
+- **Un `Scaffold` con `bottomBar` descarta su margen de ventana inferior.** En cuanto hay barra
+  inferior, Material sustituye ese margen por la **altura medida** de la barra y la ancla al borde
+  crudo de la ventana: poner `contentWindowInsets` no cambia nada. La barra es la única que puede
+  mantenerse por encima de los tres botones del sistema, y lo hace aplicando
+  `windowInsetsPadding(systemBars.only(Horizontal + Bottom))` **dentro** de su `Surface`, que es
+  justo lo que hace `NavigationBar`. Por eso la barra inferior del boletín nunca se solapó y la de
+  acciones del detalle sí (`DetailActionBarInsetTest`).
+- **Esa prueba solo muerde con navegación de tres botones.** Con gestos el margen puede ser cero.
+  `adb shell settings put secure navigation_mode 0` antes de la tanda instrumentada.
+- **Una pestaña guardada se restaura por nombre, nunca con `valueOf`.** `Preguntar` fue pestaña y hoy
+  es pantalla; un nombre guardado que ya no existe tumbaría el detalle al volver de la muerte del
+  proceso, en el único camino que nadie recorre a mano.
+- **`onCleared()` es `protected`.** Para comprobar que el visor cierra el documento, la prueba lo
+  invoca por reflexión sobre la superclase; en producción quien lo llama es el framework.
+
 **Intermitencia conocida** — `SplashRestorationTest` falló una vez en cinco ejecuciones con
 `Activity never becomes requested state "[DESTROYED]"`. Es un tiempo de espera agotado dentro de
 `recreate()`, no la aserción de la prueba, y solo ocurrió en una tanda completa de 13 minutos; en
@@ -333,6 +381,11 @@ Antes de dar una feature por terminada, en este orden:
 
 ## Notas del proyecto
 
+- **Versión mínima soportada**: `minSdk 28` desde la enmienda 1.1.0 de la constitución
+  (30 de agosto de 2026). Subió de 24 porque el visor de PDF oficial de Jetpack para Compose
+  —`androidx.pdf:pdf-compose`, el que permite leer el documento dentro de la aplicación sin
+  Fragments— lo exige. Deja fuera Android 7 y 8. El motivo completo y las alternativas descartadas
+  están en el Sync Impact Report de `.specify/memory/constitution.md`.
 - **Orientación**: la aplicación está **bloqueada en vertical** por decisión de producto. En
   pantallas de 600 dp o más Android ignora la restricción desde la API 36 y no se intentará
   sortearlo. Los dos avisos de lint correspondientes están suprimidos a conciencia en el manifest.

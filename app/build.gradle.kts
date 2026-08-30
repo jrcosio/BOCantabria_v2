@@ -15,7 +15,7 @@ android {
 
     defaultConfig {
         applicationId = "com.jrblanco.boccantabria"
-        minSdk = 24
+        minSdk = 28
         targetSdk = 37
         versionCode = 4
         versionName = "2.0.0"
@@ -33,9 +33,6 @@ android {
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_11
         targetCompatibility = JavaVersion.VERSION_11
-        // java.time exige API 26 y minSdk es 24. El azucarado cubre ese hueco sin tocar minSdk,
-        // que la constitución fija (research.md D-004).
-        isCoreLibraryDesugaringEnabled = true
     }
     buildFeatures {
         compose = true
@@ -82,6 +79,12 @@ dependencies {
     // --- Red (BOM gobierna las versiones) ---
     implementation(platform(libs.okhttp.bom))
     implementation(libs.okhttp)
+
+    // --- Visor de PDF ---
+    // El oficial de Jetpack, expuesto como componible. Se eligió frente a pdf-viewer-fragment
+    // porque la constitución prohíbe Fragments, y exige minSdk 28: de ahí la enmienda 1.1.0.
+    implementation(libs.androidx.pdf.compose)
+    implementation(libs.androidx.pdf.document.service)
 
     // --- Corrutinas ---
     implementation(libs.kotlinx.coroutines.android)
@@ -134,7 +137,4 @@ dependencies {
     // --- Solo debug ---
     debugImplementation(libs.androidx.compose.ui.test.manifest)
     debugImplementation(libs.androidx.compose.ui.tooling)
-
-    // --- Azucarado de la biblioteca estándar ---
-    coreLibraryDesugaring(libs.desugar.jdk.libs)
 }

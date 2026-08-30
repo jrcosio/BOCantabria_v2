@@ -23,6 +23,21 @@
             - DiscouragedApi avisa de que a partir de Android 16 se ignora en pantallas grandes.
               Es cierto y está aceptado: en tablets no se intentará forzar (research.md, D-011).
         -->
+        <!--
+          Compartir el PDF exige una content:// con permiso temporal de lectura: pasar un file://
+          lanza FileUriExposedException desde Android 7. `exported="false"` y `grantUriPermissions`
+          es la combinación que da acceso solo a quien recibe el Intent, y solo a ese fichero.
+        -->
+        <provider
+            android:name="androidx.core.content.FileProvider"
+            android:authorities="${applicationId}.documents"
+            android:exported="false"
+            android:grantUriPermissions="true">
+            <meta-data
+                android:name="android.support.FILE_PROVIDER_PATHS"
+                android:resource="@xml/file_paths" />
+        </provider>
+
         <activity
             android:name=".MainActivity"
             android:exported="true"

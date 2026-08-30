@@ -1,5 +1,6 @@
 package com.jrblanco.boccantabria.ui.home
 
+import android.widget.Toast
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -14,9 +15,11 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -36,6 +39,9 @@ import com.jrblanco.boccantabria.ui.home.component.PublicationCardSkeleton
 import com.jrblanco.boccantabria.ui.home.component.SKELETON_COUNT
 import com.jrblanco.boccantabria.ui.home.component.SectionFilterChips
 import org.koin.androidx.compose.koinViewModel
+import com.jrblanco.boccantabria.domain.model.ShareTarget
+import com.jrblanco.boccantabria.ui.share.ShareState
+import com.jrblanco.boccantabria.ui.share.share
 import java.time.format.DateTimeFormatter
 import java.util.Locale
 
@@ -49,12 +55,37 @@ fun HomeScreen(
     onSelectSection: (String?) -> Unit,
     onSearch: () -> Unit,
     onInfo: () -> Unit,
-    onShare: (Publication) -> Unit,
+    onOpenPublication: (Publication) -> Unit,
     onSave: () -> Unit,
     modifier: Modifier = Modifier,
     viewModel: HomeViewModel = koinViewModel(),
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
+    val context = LocalContext.current
+    val preparing = stringResource(R.string.share_preparing)
+    val linkFallback = stringResource(R.string.share_link_fallback)
+
+    // Sharing sends the official document, which may still have to be fetched. Both the wait and
+    // the fall back to the link are said out loud: a share sheet that takes three seconds to
+    // appear, or that offers a link when the document was asked for, would otherwise look like
+    // the application ignoring the tap.
+    val share = state.share
+    LaunchedEffect(share) {
+        when (share) {
+            ShareState.Preparing ->
+                Toast.makeText(context, preparing, Toast.LENGTH_SHORT).show()
+
+            is ShareState.Ready -> {
+                if (share.target is ShareTarget.Link) {
+                    Toast.makeText(context, linkFallback, Toast.LENGTH_LONG).show()
+                }
+                context.share(share.target, share.subject)
+                viewModel.onShareConsumed()
+            }
+
+            ShareState.Idle -> Unit
+        }
+    }
 
     HomeContent(
         state = state,
@@ -65,7 +96,8 @@ fun HomeScreen(
         onSelectSection = onSelectSection,
         onSearch = onSearch,
         onInfo = onInfo,
-        onShare = onShare,
+        onOpenPublication = onOpenPublication,
+        onShare = viewModel::onShare,
         onSave = onSave,
         modifier = modifier,
     )
@@ -91,6 +123,7 @@ fun HomeContent(
     onSelectSection: (String?) -> Unit = {},
     onSearch: () -> Unit = {},
     onInfo: () -> Unit = {},
+    onOpenPublication: (Publication) -> Unit = {},
     onShare: (Publication) -> Unit = {},
     onSave: () -> Unit = {},
 ) {
@@ -140,6 +173,7 @@ fun HomeContent(
                     is HomeContentState.Publications -> PublicationList(
                         publications = content.items,
                         sectionsByCode = sectionsByCode,
+                        onOpenPublication = onOpenPublication,
                         onShare = onShare,
                         onSave = onSave,
                     )
@@ -174,6 +208,7 @@ private fun SkeletonList() {
 private fun PublicationList(
     publications: List<Publication>,
     sectionsByCode: Map<String, BocSection>,
+    onOpenPublication: (Publication) -> Unit,
     onShare: (Publication) -> Unit,
     onSave: () -> Unit,
 ) {
@@ -193,6 +228,7 @@ private fun PublicationList(
                 publication = publication,
                 section = sectionsByCode[publication.classificationCode],
                 formattedDate = publication.publicationDate.format(SPANISH_LONG_DATE),
+                onClick = { onOpenPublication(publication) },
                 onShare = { onShare(publication) },
                 onSave = onSave,
             )

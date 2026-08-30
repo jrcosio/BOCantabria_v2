@@ -26,6 +26,17 @@ interface PublicationRepository {
     /** Publications matching [selection], newest first, in a stable order. */
     fun observePublications(selection: HomeSelection): Flow<List<Publication>>
 
+    /**
+     * One publication, by its stable key.
+     *
+     * Emits `null` when it is not stored — because it never was, or because it was cleared. That is
+     * information, not a failure: the detail screen uses it to explain rather than show a blank.
+     *
+     * It keeps emitting, so a later synchronisation that corrects the title reaches an open detail
+     * screen without anyone having to go back and in again.
+     */
+    fun observePublication(externalKey: String): Flow<Publication?>
+
     /** Date and count for the editorial header of [selection]. */
     fun observeHeader(selection: HomeSelection): Flow<BulletinHeaderData>
 

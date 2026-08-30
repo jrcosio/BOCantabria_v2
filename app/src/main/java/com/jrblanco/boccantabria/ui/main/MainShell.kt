@@ -1,6 +1,5 @@
 package com.jrblanco.boccantabria.ui.main
 
-import android.content.Intent
 import android.widget.Toast
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
@@ -27,7 +26,6 @@ import androidx.navigation.compose.currentBackStackEntryAsState
 import com.jrblanco.boccantabria.R
 import com.jrblanco.boccantabria.domain.model.BocSection
 import com.jrblanco.boccantabria.domain.model.HomeSelection
-import com.jrblanco.boccantabria.domain.model.Publication
 import com.jrblanco.boccantabria.domain.usecase.GetBocSectionsUseCase
 import com.jrblanco.boccantabria.ui.home.HomeScreen
 import com.jrblanco.boccantabria.ui.navigation.BocBottomBar
@@ -52,6 +50,7 @@ import org.koin.compose.koinInject
 @Composable
 fun MainShell(
     navController: NavHostController,
+    onOpenPublication: (String) -> Unit,
     modifier: Modifier = Modifier,
     sectionsViewModel: SectionsViewModel = koinViewModel(),
     getSections: GetBocSectionsUseCase = koinInject(),
@@ -131,7 +130,9 @@ fun MainShell(
                         },
                         onSearch = ::showComingSoon,
                         onInfo = {},
-                        onShare = { publication -> context.sharePublication(publication) },
+                        onOpenPublication = { publication ->
+                            onOpenPublication(publication.externalKey)
+                        },
                         onSave = ::showComingSoon,
                     )
                 }
@@ -159,14 +160,4 @@ private fun NavBackStackEntry?.toDestination(): BottomDestination = when {
     this?.destination?.hasRoute<Route.Search>() == true -> BottomDestination.SEARCH
     this?.destination?.hasRoute<Route.Saved>() == true -> BottomDestination.SAVED
     else -> BottomDestination.HOME
-}
-
-/** Shares the link to the official document, which is all the feeds give us. */
-private fun android.content.Context.sharePublication(publication: Publication) {
-    val intent = Intent(Intent.ACTION_SEND).apply {
-        type = "text/plain"
-        putExtra(Intent.EXTRA_SUBJECT, publication.title)
-        putExtra(Intent.EXTRA_TEXT, "${publication.title}\n${publication.documentUrl}")
-    }
-    startActivity(Intent.createChooser(intent, getString(R.string.publication_share_chooser)))
 }

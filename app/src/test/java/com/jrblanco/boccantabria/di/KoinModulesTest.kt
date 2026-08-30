@@ -25,13 +25,22 @@ import com.jrblanco.boccantabria.data.source.remote.RemoteConfigValues
 import com.jrblanco.boccantabria.domain.repository.AppConfigRepository
 import com.jrblanco.boccantabria.domain.repository.BocSectionRepository
 import com.jrblanco.boccantabria.domain.repository.ConnectivityRepository
+import com.jrblanco.boccantabria.domain.repository.DocumentRepository
 import com.jrblanco.boccantabria.domain.repository.PublicationRepository
 import com.jrblanco.boccantabria.domain.usecase.GetBocSectionsUseCase
 import com.jrblanco.boccantabria.domain.usecase.ObserveBulletinHeaderUseCase
+import com.jrblanco.boccantabria.domain.usecase.ObserveOfficialDocumentUseCase
+import com.jrblanco.boccantabria.domain.usecase.ObservePublicationUseCase
 import com.jrblanco.boccantabria.domain.usecase.ObservePublicationsUseCase
+import com.jrblanco.boccantabria.domain.usecase.OpenOfficialDocumentUseCase
 import com.jrblanco.boccantabria.domain.usecase.PrepareStartupUseCase
 import com.jrblanco.boccantabria.domain.usecase.RefreshPublicationsUseCase
+import com.jrblanco.boccantabria.domain.usecase.ReleaseUnusedDocumentsUseCase
+import com.jrblanco.boccantabria.domain.usecase.ShareOfficialDocumentUseCase
+import com.jrblanco.boccantabria.ui.detail.PublicationDetailViewModel
 import com.jrblanco.boccantabria.ui.home.HomeViewModel
+import com.jrblanco.boccantabria.ui.pdf.PdfDocumentLoader
+import com.jrblanco.boccantabria.ui.pdf.PdfViewerViewModel
 import com.jrblanco.boccantabria.ui.sections.SectionsViewModel
 import com.jrblanco.boccantabria.ui.splash.SplashViewModel
 import okhttp3.OkHttpClient
@@ -126,6 +135,18 @@ class KoinModulesTest {
         koin.get<PublicationNormalizer>()
         koin.get<OkHttpClient>()
 
+        // El documento oficial. El detalle y el visor no se resuelven aquí a propósito: ambos
+        // exigen la clave de la publicación como argumento de navegación, y un grafo sin pantalla
+        // no puede inventarla. Lo que sí depende del cableado es todo lo que arrastran, y eso es
+        // lo que se resuelve una por una; que las declaraciones existen lo comprueba verify().
+        koin.get<DocumentRepository>()
+        koin.get<ObservePublicationUseCase>()
+        koin.get<ObserveOfficialDocumentUseCase>()
+        koin.get<OpenOfficialDocumentUseCase>()
+        koin.get<ShareOfficialDocumentUseCase>()
+        koin.get<ReleaseUnusedDocumentsUseCase>()
+        koin.get<PdfDocumentLoader>()
+
         koin.get<DispatcherProvider>()
         koin.get<TimeProvider>()
         koin.get<RandomProvider>()
@@ -162,6 +183,15 @@ class KoinModulesTest {
             AppVersionProvider::class,
             PrepareStartupUseCase::class,
             HomeViewModel::class,
+            DocumentRepository::class,
+            ObservePublicationUseCase::class,
+            ObserveOfficialDocumentUseCase::class,
+            OpenOfficialDocumentUseCase::class,
+            ShareOfficialDocumentUseCase::class,
+            ReleaseUnusedDocumentsUseCase::class,
+            PublicationDetailViewModel::class,
+            PdfViewerViewModel::class,
+            PdfDocumentLoader::class,
         )
     }
 }
