@@ -43,4 +43,14 @@ sealed interface Route {
     /** The official document, full screen. Reached from the detail screen. */
     @Serializable
     data class PdfViewer(val externalKey: String) : Route
+
+    /**
+     * Asking about the document.
+     *
+     * Carries the key although the placeholder does not read it: the conversation this becomes will
+     * be about *this* document, and adding the argument later would mean changing a route that is
+     * already out in the world.
+     */
+    @Serializable
+    data class Ask(val externalKey: String) : Route
 }

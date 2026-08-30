@@ -80,7 +80,6 @@
     <!-- Pestañas -->
     <string name="detail_tab_document">Documento</string>
     <string name="detail_tab_summary">Resumen IA</string>
-    <string name="detail_tab_ask">Preguntar</string>
 
     <!-- Ficha de metadatos -->
     <string name="detail_field_description">Descripción</string>
@@ -112,6 +111,7 @@
     <!-- Pestañas aplazadas -->
     <string name="detail_summary_label">Resumen generado por IA</string>
     <string name="detail_summary_coming">Aquí verás un resumen del anuncio, con sus fuentes.</string>
+    <string name="ask_title">Preguntar al BOC</string>
     <string name="detail_ask_label">Pregunta al BOC</string>
     <string name="detail_ask_coming">Aquí podrás preguntar sobre este documento.</string>
 

@@ -24,14 +24,13 @@ import com.jrblanco.boccantabria.domain.model.DetailTab
 const val TAG_DETAIL_TABS: String = "detail_tabs"
 const val TAG_TAB_DOCUMENT: String = "detail_tab_document"
 const val TAG_TAB_SUMMARY: String = "detail_tab_summary"
-const val TAG_TAB_ASK: String = "detail_tab_ask"
 
 /**
- * The three tabs of section 18.4.
+ * The two tabs of section 18.4.
  *
- * The two unbuilt ones are selectable rather than disabled: their content says «Próximamente» in
- * its own voice, which tells the reader what is coming. A greyed-out tab says only that something
- * is broken.
+ * The unbuilt one is selectable rather than disabled: its content says «Próximamente» in its own
+ * voice, which tells the reader what is coming. A greyed-out tab says only that something is
+ * broken.
  */
 @Composable
 fun DetailTabs(
@@ -75,7 +74,7 @@ private fun TabLabel(tab: DetailTab) {
         ),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        // Only the summary carries the AI mark, per section 18.4. «Preguntar» keeps its identity
+        // Only the summary carries the AI mark, per section 18.4. Asking keeps its identity
         // through the action bar's own icon, and two sparkles side by side would say nothing.
         if (tab == DetailTab.AI_SUMMARY) {
             Icon(
@@ -99,14 +98,12 @@ private val DetailTab.labelRes: Int
     get() = when (this) {
         DetailTab.DOCUMENT -> R.string.detail_tab_document
         DetailTab.AI_SUMMARY -> R.string.detail_tab_summary
-        DetailTab.ASK -> R.string.detail_tab_ask
     }
 
 private val DetailTab.testTag: String
     get() = when (this) {
         DetailTab.DOCUMENT -> TAG_TAB_DOCUMENT
         DetailTab.AI_SUMMARY -> TAG_TAB_SUMMARY
-        DetailTab.ASK -> TAG_TAB_ASK
     }
 
 private val INDICATOR_HEIGHT = 3.dp

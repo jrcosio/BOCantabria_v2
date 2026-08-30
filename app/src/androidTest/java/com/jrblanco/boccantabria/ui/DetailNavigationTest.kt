@@ -11,7 +11,10 @@ import com.jrblanco.boccantabria.core.ui.theme.BOCantabriaTheme
 import com.jrblanco.boccantabria.fake.FakeBocRemoteDataSource
 import com.jrblanco.boccantabria.fake.KoinOverrideRule
 import com.jrblanco.boccantabria.fake.testGraphOverrides
+import com.jrblanco.boccantabria.ui.ask.TAG_ASK_BACK
+import com.jrblanco.boccantabria.ui.ask.TAG_ASK_SCREEN
 import com.jrblanco.boccantabria.ui.detail.TAG_DETAIL_BACK
+import com.jrblanco.boccantabria.ui.detail.component.TAG_ACTION_ASK
 import com.jrblanco.boccantabria.ui.detail.component.TAG_ACTION_OPEN
 import com.jrblanco.boccantabria.ui.detail.component.TAG_DETAIL_HEADER
 import com.jrblanco.boccantabria.ui.home.TAG_PUBLICATIONS
@@ -64,6 +67,19 @@ class DetailNavigationTest {
 
         // The document never arrives in this graph, so the viewer is honestly still opening.
         composeRule.onNodeWithTag(TAG_PDF_VIEWER_LOADING).assertIsDisplayed()
+    }
+
+    @Test
+    fun asking_opens_its_own_screen_and_back_returns_to_the_detail() {
+        start()
+
+        composeRule.onAllNodesWithTag(TAG_PUBLICATION_CARD)[0].performClick()
+        composeRule.onNodeWithTag(TAG_ACTION_ASK).performClick()
+
+        composeRule.onNodeWithTag(TAG_ASK_SCREEN).assertIsDisplayed()
+
+        composeRule.onNodeWithTag(TAG_ASK_BACK).performClick()
+        composeRule.onNodeWithTag(TAG_DETAIL_HEADER).assertIsDisplayed()
     }
 
     private fun start(): NavHostController {

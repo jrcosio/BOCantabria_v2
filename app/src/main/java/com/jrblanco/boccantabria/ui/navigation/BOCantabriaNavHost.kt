@@ -7,6 +7,7 @@ import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
+import com.jrblanco.boccantabria.ui.ask.AskScreen
 import com.jrblanco.boccantabria.ui.detail.PublicationDetailScreen
 import com.jrblanco.boccantabria.ui.main.MainShell
 import com.jrblanco.boccantabria.ui.pdf.PdfViewerScreen
@@ -69,10 +70,16 @@ fun BOCantabriaNavHost(
                 onOpenDocument = { externalKey ->
                     navController.navigate(Route.PdfViewer(externalKey))
                 },
+                onAsk = { externalKey ->
+                    navController.navigate(Route.Ask(externalKey))
+                },
             )
         }
         composable<Route.PdfViewer> {
             PdfViewerScreen(onBack = navController::popBackStack)
+        }
+        composable<Route.Ask> {
+            AskScreen(onBack = navController::popBackStack)
         }
     }
 }

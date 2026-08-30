@@ -278,9 +278,24 @@ class PublicationDetailViewModelTest {
         assertEquals(mapOf("target" to "document"), event.parameters)
     }
 
+    @Test
+    fun `a saved tab that no longer exists falls back to the document`() = runTest(dispatcher) {
+        // «Preguntar» was a tab and is a screen now. Someone who left the application on it, and
+        // came back after the process died, would otherwise be met by a crash on the one path
+        // nobody exercises by hand.
+        val viewModel = viewModel(savedTab = "ASK")
+
+        viewModel.uiState.test {
+            advanceUntilIdle()
+            assertEquals(DetailTab.DOCUMENT, expectMostRecentItem().selectedTab)
+            cancelAndIgnoreRemainingEvents()
+        }
+    }
+
     private fun viewModel(
         stored: List<com.jrblanco.boccantabria.domain.model.Publication> = listOf(publication("boc:439765")),
         key: String = "boc:439765",
+        savedTab: String? = null,
     ): PublicationDetailViewModel {
         val publications = FakePublicationRepository(stored)
         val connectivity = object : ConnectivityRepository {
@@ -288,7 +303,10 @@ class PublicationDetailViewModelTest {
         }
         return PublicationDetailViewModel(
             savedStateHandle = SavedStateHandle(
-                mapOf(PublicationDetailViewModel.ARG_EXTERNAL_KEY to key),
+                buildMap {
+                    put(PublicationDetailViewModel.ARG_EXTERNAL_KEY, key)
+                    savedTab?.let { put(PublicationDetailViewModel.KEY_TAB, it) }
+                },
             ),
             observePublication = ObservePublicationUseCase(publications),
             observeDocument = ObserveOfficialDocumentUseCase(documents),

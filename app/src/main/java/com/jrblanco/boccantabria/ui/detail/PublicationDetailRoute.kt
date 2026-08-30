@@ -25,6 +25,7 @@ import org.koin.androidx.compose.koinViewModel
 fun PublicationDetailScreen(
     onBack: () -> Unit,
     onOpenDocument: (String) -> Unit,
+    onAsk: (String) -> Unit,
     modifier: Modifier = Modifier,
     viewModel: PublicationDetailViewModel = koinViewModel(),
 ) {
@@ -64,7 +65,7 @@ fun PublicationDetailScreen(
         onShare = viewModel::onShare,
         onTabSelected = viewModel::onTabSelected,
         onOpenDocument = { state.publication?.let { onOpenDocument(it.externalKey) } },
-        onAsk = ::showComingSoon,
+        onAsk = { state.publication?.let { onAsk(it.externalKey) } },
         onRetry = viewModel::onRetry,
         modifier = modifier,
     )

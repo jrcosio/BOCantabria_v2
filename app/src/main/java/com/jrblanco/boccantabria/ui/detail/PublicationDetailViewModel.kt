@@ -49,9 +49,7 @@ class PublicationDetailViewModel(
     }
 
     private val sections = getSections()
-    private val selectedTab = MutableStateFlow(
-        savedStateHandle.get<String>(KEY_TAB)?.let(DetailTab::valueOf) ?: DetailTab.DOCUMENT,
-    )
+    private val selectedTab = MutableStateFlow(restoredTab(savedStateHandle))
     private val shareState = MutableStateFlow<ShareState>(ShareState.Idle)
 
     private var openJob: Job? = null
@@ -89,6 +87,18 @@ class PublicationDetailViewModel(
         viewModelScope.launch {
             observePublication(externalKey).collect { hasRead = true }
         }
+    }
+
+    /**
+     * The tab a previous instance was on, if it still exists.
+     *
+     * Matched by name rather than with `valueOf`, which throws. A tab can be withdrawn between
+     * versions —«Preguntar» was— and a saved name that no longer matches anything would then take
+     * the screen down on the way back from process death, on the one path nobody exercises by hand.
+     */
+    private fun restoredTab(savedStateHandle: SavedStateHandle): DetailTab {
+        val saved = savedStateHandle.get<String>(KEY_TAB)
+        return DetailTab.entries.firstOrNull { it.name == saved } ?: DetailTab.DOCUMENT
     }
 
     fun onTabSelected(tab: DetailTab) {
@@ -149,7 +159,8 @@ class PublicationDetailViewModel(
         const val SCREEN_NAME: String = "publication_detail"
         const val ARG_EXTERNAL_KEY: String = "externalKey"
         const val EVENT_SHARE: String = "document_share"
-        private const val KEY_TAB = "detail_tab"
+        /** Internal, but visible to the test that a withdrawn tab does not take the screen down. */
+        const val KEY_TAB: String = "detail_tab"
         private const val SUBSCRIPTION_TIMEOUT_MILLIS = 5_000L
     }
 }
