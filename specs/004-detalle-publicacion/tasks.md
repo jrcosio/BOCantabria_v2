@@ -319,20 +319,24 @@ en verde.
 
 - [X] T057 Enlazar `releaseUnused()` a un momento razonable —al terminar una sincronización, o al
       abrir un documento nuevo— para que la caché no crezca sin límite, y probarlo (FR-024)
-- [ ] T058 Actualizar `docs/diseno/especificaciones-diseno.md` con las dos desviaciones de esta
+- [X] T058 Actualizar `docs/diseno/especificaciones-diseno.md` con las dos desviaciones de esta
       feature, cada una con su motivo, como se hizo en la 003: **§19** la pestaña Documento muestra
       ficha y previsualización en lugar de bloques de texto extraído, porque del RSS no llega texto y
       el modo lectura del 19.3 queda para cuando exista esa extracción; **§24.1** el visor lleva
       Atrás, título y compartir, sin buscar en el documento ni menú de opciones, que quedan fuera de
       alcance
-- [ ] T059 [P] Actualizar `CLAUDE.md`: los paquetes nuevos `ui/detail` y `ui/pdf`, la nota de que
+- [X] T059 [P] Actualizar `CLAUDE.md`: los paquetes nuevos `ui/detail` y `ui/pdf`, la nota de que
       `ui/pdf` es la única frontera con la API en beta del visor, el `FileProvider`, y las trampas
       nuevas que aparezcan al implementar
-- [ ] T060 [P] Actualizar `README.md`: estado de la feature, recuento de pruebas y la fila del visor
+- [X] T060 [P] Actualizar `README.md`: estado de la feature, recuento de pruebas y la fila del visor
       de PDF en la tabla de stack
-- [ ] T061 Revisar la lista blanca `DOMAIN_CLASSES_WITHOUT_BEHAVIOUR` de
+- [X] T061 Revisar la lista blanca `DOMAIN_CLASSES_WITHOUT_BEHAVIOUR` de
       `TEST/architecture/ArchitectureRulesTest.kt`: **no añadir** ninguna clase nueva salvo que se
       justifique por escrito. Cada entrada es un agujero en SC-010
+      → Revisada: sigue con una sola entrada, `AppConfig`. Ninguna clase de esta feature se ha
+      añadido; las nueve nuevas de dominio tienen su fichero de prueba. `LinkReason` estuvo a punto
+      de necesitar entrada y se resolvió anidándola dentro de `ShareTarget`, que además es donde
+      significa algo.
 - [ ] T062 Ejecutar las cuatro puertas de calidad en orden y dejarlas en verde:
       `assembleDebug`, `testDebugUnitTest`, `connectedDebugAndroidTest`, `lintDebug` (SC-011)
 - [ ] T063 Recorrer `quickstart.md` de principio a fin en un dispositivo API 28+ y anotar los tiempos

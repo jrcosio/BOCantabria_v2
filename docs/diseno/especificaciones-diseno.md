@@ -979,6 +979,12 @@ En pantallas muy estrechas, los botones pueden apilarse.
 
 Las etiquetas usarán `LabelMedium` y los valores `BodyLarge`.
 
+> **Enmienda (30 de agosto de 2026, feature 004).** La pestaña muestra la ficha de metadatos y,
+> debajo, la **primera página del PDF** como previsualización. No hay bloques de texto extraído
+> porque del RSS no llega texto: llega el enlace a un documento. El apartado 19.3 describe cómo
+> presentar ese texto y se conserva para cuando exista la extracción que lo produzca, pero **no se
+> implementa** en esta feature.
+
 ## 19.3. Modo lectura
 
 Si se muestra texto extraído:
@@ -1194,6 +1200,14 @@ Debajo o encima del campo:
 - Buscar en documento.
 - Compartir.
 - Más opciones.
+
+> **Enmienda (30 de agosto de 2026, feature 004).** La barra lleva **tres** controles: Atrás, el
+> título abreviado y compartir. Buscar dentro del documento queda explícitamente fuera del alcance
+> de la feature, y un menú de «Más opciones» sin nada que ofrecer sería un botón que no hace nada.
+> Ambos vuelven en cuanto tengan contenido que justificarlos.
+>
+> El título abreviado es el del anuncio **sin el organismo**, que ya va implícito en el propio
+> documento y dejaría sin sitio a la parte que dice de qué trata.
 
 ## 24.2. Zona de documento
 

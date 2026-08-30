@@ -99,7 +99,6 @@ class PdfViewerViewModel(
 
     override fun onCleared() {
         closeOpen()
-        super.onCleared()
     }
 
     private fun ensureFetched(publication: Publication) {

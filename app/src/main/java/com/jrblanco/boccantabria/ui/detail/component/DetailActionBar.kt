@@ -15,7 +15,8 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.LocalWindowInfo
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
@@ -39,7 +40,11 @@ fun DetailActionBar(
     onAsk: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    val stacked = LocalConfiguration.current.screenWidthDp < STACK_BELOW_WIDTH_DP
+    val widthDp = with(LocalDensity.current) {
+        LocalWindowInfo.current.containerSize.width.toDp()
+    }
+    val stacked = widthDp < STACK_BELOW_WIDTH
+
 
     Surface(modifier = modifier.fillMaxWidth(), color = MaterialTheme.colorScheme.surface) {
         Column {
@@ -100,6 +105,6 @@ private fun AskButton(onClick: () -> Unit, modifier: Modifier = Modifier) {
     }
 }
 
-private const val STACK_BELOW_WIDTH_DP = 360
+private val STACK_BELOW_WIDTH = 360.dp
 private const val OPEN_WEIGHT = 1.4f
 private val BUTTON_ICON_SIZE = 18.dp

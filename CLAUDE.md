@@ -205,6 +205,27 @@ Composable → ViewModel → UseCase → Repository (interfaz en domain)
   añada fuentes por `kotlin.sourceSets` y KSP hace justo eso con sus directorios generados; es la
   vía que AGP documenta. Cuando KSP migre a `android.sourceSets`, la bandera sobra.
 
+### El documento oficial
+
+- **`ui/pdf` es la única frontera con `androidx.pdf`.** La biblioteca está en **beta** y su API
+  puede cambiar: fuera de ese paquete nadie la nombra. `PdfDocumentLoader` es el seam —abrir un
+  fichero y dibujar su primera página— y devuelve tipos de Compose, no de la biblioteca.
+  `PdfViewer` y `rememberPdfViewerState` exigen `@OptIn(ExperimentalPdfApi::class)`.
+- El visor **renderiza en otro proceso** (`SandboxedPdfLoader`). No es un detalle: los documentos
+  vienen de un servicio público por internet y uno malformado no debe poder tumbar la aplicación.
+  El `PdfDocument` es `Closeable` y lo cierra el `ViewModel` en `onCleared()`; olvidarlo mantiene
+  vivo ese proceso reteniendo un fichero que la caché quiere poder liberar.
+- `pdf-compose` arrastra `pdf-document-service` solo en ámbito de ejecución: hay que declararlo
+  **explícitamente** en el catálogo, o `SandboxedPdfLoader` no resuelve.
+- El PDF se guarda en `cacheDir/documents/`, con **caché y no almacén**: guardar para leer sin
+  conexión será la funcionalidad de Guardados. La purga corre al terminar una sincronización.
+- Compartir un fichero exige una `content://`: hay un `FileProvider` con autoridad
+  `${applicationId}.documents`, acotado en `res/xml/file_paths.xml` a `cache-path documents/`.
+  Nunca amplíes ese ámbito para resolver un caso concreto.
+- Nada que venga de la red se da por bueno sin validar: HTTPS, host del boletín, tipo de contenido,
+  bytes mágicos `%PDF-`, tope de tamaño y SHA-256. Una página de error con HTTP 200 no puede acabar
+  guardada como documento oficial.
+
 ### Firebase
 
 - Los SDK solo se tocan desde `data`. Nunca desde `ui`, `domain` ni un `ViewModel`.
@@ -303,6 +324,15 @@ fichero de prueba. Si añades una clase de dominio sin test, la build falla.
   la acción global del sistema tampoco alcanzó la app dentro de la suite. Lo que esta aplicación
   controla es la **pila de retroceso**, así que es eso lo que se afirma (`SplashBackStackTest`); el
   cierre efectivo es comportamiento de Android y se comprueba a mano según `quickstart.md`.
+
+- **Un `Card` con `onClick` no traga los toques de sus botones internos.** Se comprueba a
+  propósito (`PublicationCardTest`): compartir desde la tarjeta no debe además abrir la
+  publicación.
+- **El estado del visor no es `rememberSaveable`.** La página visible se guarda a mano y se
+  restaura con `scrollToPage()`; rotar el móvil y aterrizar en la página uno de un boletín de
+  cuarenta deshace el trabajo de quien lee.
+- **`onCleared()` es `protected`.** Para comprobar que el visor cierra el documento, la prueba lo
+  invoca por reflexión sobre la superclase; en producción quien lo llama es el framework.
 
 **Intermitencia conocida** — `SplashRestorationTest` falló una vez en cinco ejecuciones con
 `Activity never becomes requested state "[DESTROYED]"`. Es un tiempo de espera agotado dentro de

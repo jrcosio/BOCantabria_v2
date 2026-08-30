@@ -39,11 +39,12 @@ tests que fallan si alguien la rompe.**
 | | |
 |---|---|
 | **Versión** | 2.0.0 |
-| **Fase** | El boletín real en pantalla: lectura de los 19 feeds oficiales, almacenamiento local e Inicio con panel de secciones |
-| **Pruebas** | 250 sin dispositivo + las de interfaz |
+| **Fase** | La publicación se abre y se lee: detalle del anuncio y visor del PDF oficial dentro de la aplicación |
+| **Pruebas** | 354 sin dispositivo + 64 de interfaz |
 | **Arranque** | 648 ms medidos *(objetivo: < 3 s)* |
 | **Orientación** | Solo vertical en teléfonos |
 | **Capa de datos** | Room como única fuente de verdad, OkHttp para las diecinueve fuentes. Decidido y justificado en `specs/003-boletin-del-dia/research.md` |
+| **Documento oficial** | Se descarga validado, se cachea y se lee sin salir de la aplicación. `specs/004-detalle-publicacion/research.md` |
 
 ---
 
@@ -198,6 +199,9 @@ com.jrblanco.boccantabria
 ├── ui
 │   ├── splash        Arranque: comprueba, prepara y da paso a Inicio
 │   ├── main          Armazón: panel de secciones + barra inferior
+│   ├── detail        Detalle de la publicación: cabecera, pestañas y ficha
+│   ├── pdf           Visor del documento · ÚNICO sitio que toca androidx.pdf
+│   ├── share         Envío del PDF por FileProvider, común a las tres pantallas
 │   ├── home          Inicio: cabecera, chips y tarjetas de publicación
 │   ├── sections      Panel lateral con las nueve secciones del BOC
 │   ├── search/saved  Destinos reales, «Próximamente» por ahora
@@ -220,6 +224,7 @@ com.jrblanco.boccantabria
 | **Persistencia** | [Room](https://developer.android.com/training/data-storage/room) 2.8 | Un corpus de ~1.900 anuncios con inserción-o-actualización, consultas y `Flow`. **Nunca borra** |
 | **Red** | [OkHttp](https://square.github.io/okhttp/) 5, sin Retrofit | Diecinueve GET de XML crudo: no hay API tipada que convertir |
 | **XML** | DOM de `javax.xml.parsers` | Kotlin puro, así sus ~50 pruebas corren sin emulador |
+| **Visor de PDF** | [`androidx.pdf`](https://developer.android.com/jetpack/androidx/releases/pdf) 1.0.0-beta01 | El oficial de Jetpack, componible. Dibuja en otro proceso y exige `minSdk 28`: de ahí la enmienda 1.1.0 de la constitución |
 | **Fechas** | `java.time` nativo | El tipo correcto para una fecha sin hora. Con `minSdk 28` no hace falta azucarado |
 
 Todas las dependencias se declaran en
@@ -241,8 +246,8 @@ ignorar o comentar una prueba para que pase la build.
 | **Interfaz** | `app/src/androidTest` | Compose UI Test | Los cuatro estados de pantalla, el reintento y el giro del dispositivo |
 
 ```bash
-./gradlew :app:testDebugUnitTest         # 57 pruebas · ~6 s · sin emulador
-./gradlew :app:connectedDebugAndroidTest # 16 pruebas · requiere emulador
+./gradlew :app:testDebugUnitTest         # 354 pruebas · ~8 s · sin emulador
+./gradlew :app:connectedDebugAndroidTest # 64 pruebas · requiere emulador
 ```
 
 La integración continua ejecuta compilación, pruebas sin dispositivo y análisis estático en cada
