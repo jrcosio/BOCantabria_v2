@@ -34,14 +34,14 @@ Antes de cualquier comando Gradle:
 el visor sirve. Es el riesgo con más probabilidad de morder: si no sirviera, la enmienda de `minSdk`
 se quedaría sin su motivo.
 
-- [ ] T001 Añadir `androidx.pdf:pdf-compose` `1.0.0-beta01` a `gradle/libs.versions.toml` y **retirar
+- [X] T001 Añadir `androidx.pdf:pdf-compose` `1.0.0-beta01` a `gradle/libs.versions.toml` y **retirar
       de él** `desugar_jdk_libs`. Ninguna coordenada ni versión literal fuera del catálogo
       (research.md D-001, D-013) (FR-040)
-- [ ] T002 En `app/build.gradle.kts`: `minSdk = 28`, declarar `pdf-compose`, y **eliminar**
+- [X] T002 En `app/build.gradle.kts`: `minSdk = 28`, declarar `pdf-compose`, y **eliminar**
       `isCoreLibraryDesugaringEnabled` y `coreLibraryDesugaring(...)` junto con el comentario que los
       justificaba. Si al retirarlos algo deja de compilar, se quedan y se anota **para qué sirven
       ahora** (FR-039, FR-040)
-- [ ] T003 **Prueba de humo del visor, antes que nada más**: componer una pantalla mínima que abra un
+- [X] T003 **Prueba de humo del visor, antes que nada más**: componer una pantalla mínima que abra un
       PDF de ejemplo con `PdfLoader.openDocument()` y lo pinte con `PdfViewer`, y comprobar que
       compila y se ve en un dispositivo API 28+. Confirmar de paso si
       `androidx.pdf:pdf-document-service` hay que declararlo explícitamente o llega por transitividad,

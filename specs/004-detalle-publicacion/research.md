@@ -237,8 +237,22 @@ tiene que cambiar según la causa, se añade entonces y con motivo.
 |---|---|---|
 | `androidx.pdf:pdf-compose` | `1.0.0-beta01` | `minSdk 28`. Arrastra `pdf-viewer` y `pdf-core` |
 
-**A confirmar en la primera tarea, no al final**: si `androidx.pdf:pdf-document-service` —donde vive
-el cargador que abre el documento— hay que declararlo explícitamente o llega por transitividad, y si
-la versión del BOM de Compose del proyecto (2026.02.01) convive con las que el artefacto pide
-(1.7.8). Es el riesgo con más probabilidad de morder y por eso va primero: si `pdf-compose` no
-sirviera, la enmienda de `minSdk` se quedaría sin su motivo.
+| `androidx.pdf:pdf-document-service` | `1.0.0-beta01` | **Hay que declararlo**: ver abajo |
+
+**Confirmado en T003, no supuesto.** La prueba de humo abre un PDF de tres páginas y lo renderiza en
+un dispositivo real. La enmienda de `minSdk` queda justificada. Dos cosas que la comprobación
+descubrió y que el plan daba por resolver:
+
+1. **`pdf-document-service` hay que declararlo.** `pdf-compose` solo lo arrastra con ámbito de
+   *runtime*, así que `SandboxedPdfLoader` —el cargador— no está en el classpath de compilación.
+   Sin declararlo, el código que lo nombra no compila.
+2. **La API no está solo en beta: está marcada como experimental.** `PdfViewer` y
+   `rememberPdfViewerState` exigen `@OptIn(ExperimentalPdfApi::class)`. Refuerza D-014: cuanto menos
+   código la conozca, mejor. La anotación vive únicamente en `ui/pdf`.
+
+3. **El BOM de Compose del proyecto convive sin problema** con lo que el artefacto pide.
+
+**Ventaja que no se buscaba y conviene aprovechar**: `SandboxedPdfLoader` renderiza en un **proceso
+separado**. Los documentos vienen de un servicio público por internet, así que un PDF malformado no
+puede tumbar el proceso de la aplicación. Es un argumento más frente al visor propio sobre
+`PdfRenderer`, que habría corrido dentro.
