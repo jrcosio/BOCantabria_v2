@@ -133,11 +133,20 @@ fun MainShell(
                         onOpenPublication = { publication ->
                             onOpenPublication(publication.externalKey)
                         },
-                        onSave = ::showComingSoon,
                     )
                 }
                 composable<Route.Search> { SearchScreen() }
-                composable<Route.Saved> { SavedScreen() }
+                composable<Route.Saved> {
+                    SavedScreen(
+                        sections = sections,
+                        // La misma lambda que Inicio: el detalle vive en el grafo exterior, así que
+                        // abierto desde aquí tampoco dibuja la barra inferior.
+                        onOpenPublication = { publication ->
+                            onOpenPublication(publication.externalKey)
+                        },
+                        onExplore = { navController.navigateTo(BottomDestination.HOME) },
+                    )
+                }
             }
         }
     }

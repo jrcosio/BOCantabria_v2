@@ -9,6 +9,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.jrblanco.boccantabria.R
+import com.jrblanco.boccantabria.core.ui.component.SaveFailureToast
 import com.jrblanco.boccantabria.domain.model.DetailTab
 import com.jrblanco.boccantabria.domain.model.ShareTarget
 import com.jrblanco.boccantabria.ui.share.ShareState
@@ -31,8 +32,9 @@ fun PublicationDetailScreen(
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     val context = LocalContext.current
-    val comingSoon = stringResource(R.string.coming_soon)
     val linkFallback = stringResource(R.string.share_link_fallback)
+
+    SaveFailureToast(failed = state.saveFailed, onConsumed = viewModel::onSaveFailureConsumed)
 
     // The fetch is triggered by the tab being on screen, not by the screen opening: someone who
     // only wanted to see what the announcement was about should not pay for a PDF in data.
@@ -54,14 +56,10 @@ fun PublicationDetailScreen(
         viewModel.onShareConsumed()
     }
 
-    fun showComingSoon() {
-        Toast.makeText(context, comingSoon, Toast.LENGTH_SHORT).show()
-    }
-
     PublicationDetailContent(
         state = state,
         onBack = onBack,
-        onSave = ::showComingSoon,
+        onSave = viewModel::onToggleSaved,
         onShare = viewModel::onShare,
         onTabSelected = viewModel::onTabSelected,
         onOpenDocument = { state.publication?.let { onOpenDocument(it.externalKey) } },

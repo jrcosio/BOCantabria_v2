@@ -1,6 +1,5 @@
 package com.jrblanco.boccantabria.ui.home
 
-import android.widget.Toast
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -15,16 +14,16 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.jrblanco.boccantabria.R
 import com.jrblanco.boccantabria.core.ui.component.EmptyMessage
+import com.jrblanco.boccantabria.core.ui.component.PublicationCard
+import com.jrblanco.boccantabria.core.ui.component.SaveFailureToast
 import com.jrblanco.boccantabria.core.ui.component.ErrorMessage
 import com.jrblanco.boccantabria.core.ui.component.OfflineBanner
 import com.jrblanco.boccantabria.core.ui.theme.BocTheme
@@ -34,14 +33,11 @@ import com.jrblanco.boccantabria.domain.model.HomeSelection
 import com.jrblanco.boccantabria.domain.model.Publication
 import com.jrblanco.boccantabria.ui.home.component.BulletinHeader
 import com.jrblanco.boccantabria.ui.home.component.HomeTopBar
-import com.jrblanco.boccantabria.ui.home.component.PublicationCard
 import com.jrblanco.boccantabria.ui.home.component.PublicationCardSkeleton
 import com.jrblanco.boccantabria.ui.home.component.SKELETON_COUNT
 import com.jrblanco.boccantabria.ui.home.component.SectionFilterChips
+import com.jrblanco.boccantabria.ui.share.ShareEffect
 import org.koin.androidx.compose.koinViewModel
-import com.jrblanco.boccantabria.domain.model.ShareTarget
-import com.jrblanco.boccantabria.ui.share.ShareState
-import com.jrblanco.boccantabria.ui.share.share
 import java.time.format.DateTimeFormatter
 import java.util.Locale
 
@@ -56,36 +52,16 @@ fun HomeScreen(
     onSearch: () -> Unit,
     onInfo: () -> Unit,
     onOpenPublication: (Publication) -> Unit,
-    onSave: () -> Unit,
     modifier: Modifier = Modifier,
     viewModel: HomeViewModel = koinViewModel(),
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
-    val context = LocalContext.current
-    val preparing = stringResource(R.string.share_preparing)
-    val linkFallback = stringResource(R.string.share_link_fallback)
 
-    // Sharing sends the official document, which may still have to be fetched. Both the wait and
-    // the fall back to the link are said out loud: a share sheet that takes three seconds to
-    // appear, or that offers a link when the document was asked for, would otherwise look like
-    // the application ignoring the tap.
-    val share = state.share
-    LaunchedEffect(share) {
-        when (share) {
-            ShareState.Preparing ->
-                Toast.makeText(context, preparing, Toast.LENGTH_SHORT).show()
-
-            is ShareState.Ready -> {
-                if (share.target is ShareTarget.Link) {
-                    Toast.makeText(context, linkFallback, Toast.LENGTH_LONG).show()
-                }
-                context.share(share.target, share.subject)
-                viewModel.onShareConsumed()
-            }
-
-            ShareState.Idle -> Unit
-        }
-    }
+    // Sharing sends the official document, which may still have to be fetched, so both the wait and
+    // the fall back to the link are said out loud. Shared with Guardados, which does exactly the
+    // same: see `ui/share/ShareEffect.kt`.
+    ShareEffect(share = state.share, onConsumed = viewModel::onShareConsumed)
+    SaveFailureToast(failed = state.saveFailed, onConsumed = viewModel::onSaveFailureConsumed)
 
     HomeContent(
         state = state,
@@ -98,7 +74,7 @@ fun HomeScreen(
         onInfo = onInfo,
         onOpenPublication = onOpenPublication,
         onShare = viewModel::onShare,
-        onSave = onSave,
+        onToggleSaved = viewModel::onToggleSaved,
         modifier = modifier,
     )
 }
@@ -125,7 +101,7 @@ fun HomeContent(
     onInfo: () -> Unit = {},
     onOpenPublication: (Publication) -> Unit = {},
     onShare: (Publication) -> Unit = {},
-    onSave: () -> Unit = {},
+    onToggleSaved: (Publication) -> Unit = {},
 ) {
     val sectionsByCode = remember(sections) { sections.associateBy { it.code } }
 
@@ -173,9 +149,10 @@ fun HomeContent(
                     is HomeContentState.Publications -> PublicationList(
                         publications = content.items,
                         sectionsByCode = sectionsByCode,
+                        savedKeys = state.savedKeys,
                         onOpenPublication = onOpenPublication,
                         onShare = onShare,
-                        onSave = onSave,
+                        onToggleSaved = onToggleSaved,
                     )
 
                     HomeContentState.Empty -> EmptyMessage(
@@ -205,12 +182,14 @@ private fun SkeletonList() {
 }
 
 @Composable
+@Suppress("LongParameterList")
 private fun PublicationList(
     publications: List<Publication>,
     sectionsByCode: Map<String, BocSection>,
+    savedKeys: Set<String>,
     onOpenPublication: (Publication) -> Unit,
     onShare: (Publication) -> Unit,
-    onSave: () -> Unit,
+    onToggleSaved: (Publication) -> Unit,
 ) {
     LazyColumn(
         modifier = Modifier
@@ -228,9 +207,10 @@ private fun PublicationList(
                 publication = publication,
                 section = sectionsByCode[publication.classificationCode],
                 formattedDate = publication.publicationDate.format(SPANISH_LONG_DATE),
+                isSaved = publication.externalKey in savedKeys,
                 onClick = { onOpenPublication(publication) },
                 onShare = { onShare(publication) },
-                onSave = onSave,
+                onSave = { onToggleSaved(publication) },
             )
         }
     }

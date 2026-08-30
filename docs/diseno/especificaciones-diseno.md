@@ -619,6 +619,12 @@ Utilizada en búsqueda y guardados:
 - Título máximo tres líneas.
 - Menos separación vertical.
 
+> **Enmienda (30 de agosto de 2026, feature 005).** Guardados usa la **tarjeta estándar**, la misma
+> que Inicio. La variante compacta queda aplazada, no descartada. El motivo: la tarjeta pasa a ser un
+> componible compartido entre las dos pantallas, y añadirle un parámetro de densidad para diferenciar
+> dos listas que muestran lo mismo habría sido más superficie de la que la diferencia justifica. Si
+> Buscar la necesita cuando llegue, se añade entonces y con su motivo.
+
 ### Tarjeta destacada
 
 Utilizada para una publicación relevante:
@@ -1182,6 +1188,28 @@ Debajo o encima del campo:
 - Texto de apoyo.
 - Botón secundario `Explorar el BOC`.
 
+> **Enmienda (30 de agosto de 2026, feature 005).** La pantalla se construye con la cabecera del
+> 22.1 —barra `Primary` y el título `Guardados`—, la lista y el estado vacío del 22.3 tal como están
+> escritos. Lo que **no** entra, y por qué:
+>
+> - **La acción de ordenar.** La lista tiene un solo orden, el instante de guardado con lo último
+>   arriba, así que un menú de ordenación sería un menú de una opción.
+> - **Los chips `Sin conexión` y `Con resumen`.** El primero necesita que guardar conserve el
+>   documento, que es una feature propia y todavía no existe; el segundo, el resumen de inteligencia
+>   artificial, que sigue siendo un marcador de posición. Un chip que no puede filtrar nada es peor
+>   que su ausencia. El chip `Todos` sin los otros dos no filtra nada tampoco.
+> - **El indicador de descarga.** Depende de lo mismo: hoy ningún elemento de la lista está
+>   descargado de forma permanente.
+> - **La fecha de guardado como metadato visible.** El instante se almacena —es lo que ordena la
+>   lista— pero no se muestra: la tarjeta ya lleva la fecha de publicación, y dos fechas juntas
+>   confunden más de lo que informan.
+> - **La selección múltiple**, que el propio apartado 22.1 ya marcaba como opcional.
+> - **La tarjeta compacta**, aplazada en el apartado 12.2 con su motivo.
+>
+> Y una advertencia que conviene no perder: **guardar marca, no descarga**. El documento de una
+> publicación guardada sigue viviendo en la caché y puede retirarse de ella. Leer sin conexión es una
+> feature futura con sus propias decisiones que tomar.
+
 ---
 
 ## 23. Pantalla Avisos
@@ -1675,10 +1703,10 @@ Icono estándar:         24 dp
 
 ### Guardados y Avisos
 
-- [ ] Tarjetas compactas.
-- [ ] Estados vacíos.
-- [ ] Filtros mediante chips.
-- [ ] Iconos activos e inactivos coherentes.
+- [ ] Tarjetas compactas. *(Guardados usa la estándar; ver la enmienda del apartado 12.2.)*
+- [x] Estados vacíos. *(Guardados, feature 005. Avisos sigue pendiente.)*
+- [ ] Filtros mediante chips. *(Aplazados; ver la enmienda del apartado 22.)*
+- [x] Iconos activos e inactivos coherentes. *(Marcador relleno y contorneado, feature 005.)*
 
 ---
 

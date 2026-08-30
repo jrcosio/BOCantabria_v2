@@ -10,12 +10,15 @@ import com.jrblanco.boccantabria.domain.model.SyncSummary
 import com.jrblanco.boccantabria.domain.usecase.GetBocSectionsUseCase
 import com.jrblanco.boccantabria.domain.usecase.ObserveBulletinHeaderUseCase
 import com.jrblanco.boccantabria.domain.usecase.ObservePublicationsUseCase
+import com.jrblanco.boccantabria.domain.usecase.ObserveSavedKeysUseCase
 import com.jrblanco.boccantabria.domain.usecase.RefreshPublicationsUseCase
 import com.jrblanco.boccantabria.domain.repository.ConnectivityRepository
 import com.jrblanco.boccantabria.domain.usecase.ReleaseUnusedDocumentsUseCase
+import com.jrblanco.boccantabria.domain.usecase.SetPublicationSavedUseCase
 import com.jrblanco.boccantabria.domain.usecase.ShareOfficialDocumentUseCase
 import com.jrblanco.boccantabria.fake.FakeDocumentRepository
 import com.jrblanco.boccantabria.fake.FakePublicationRepository
+import com.jrblanco.boccantabria.fake.FakeSavedPublicationRepository
 import com.jrblanco.boccantabria.fake.RecordingAnalyticsTracker
 import com.jrblanco.boccantabria.fake.publication
 import kotlinx.coroutines.Dispatchers
@@ -250,6 +253,73 @@ class HomeViewModelTest {
         assertEquals(listOf(HomeViewModel.SCREEN_NAME), analytics.screenViews)
     }
 
+    // ---------- Lo guardado (feature 005) ----------
+
+    @Test
+    fun `the saved keys reach the state, so a card knows how to draw itself`() = runTest(dispatcher) {
+        savedRepository.emit(listOf(publication("boc:1")))
+        val viewModel = viewModel(FakePublicationRepository(listOf(publication("boc:1"))))
+
+        viewModel.uiState.test {
+            advanceUntilIdle()
+            assertEquals(setOf("boc:1"), expectMostRecentItem().savedKeys)
+            cancelAndIgnoreRemainingEvents()
+        }
+    }
+
+    @Test
+    fun `toggling an unsaved publication asks for it to be saved`() = runTest(dispatcher) {
+        val viewModel = viewModel(FakePublicationRepository(listOf(publication("boc:1"))))
+
+        viewModel.uiState.test {
+            advanceUntilIdle()
+            viewModel.onToggleSaved(publication("boc:1"))
+            advanceUntilIdle()
+            cancelAndIgnoreRemainingEvents()
+        }
+
+        assertEquals(listOf("boc:1" to true), savedRepository.writes)
+    }
+
+    @Test
+    fun `toggling a saved publication asks for it to be taken off`() = runTest(dispatcher) {
+        savedRepository.emit(listOf(publication("boc:1")))
+        val viewModel = viewModel(FakePublicationRepository(listOf(publication("boc:1"))))
+
+        viewModel.uiState.test {
+            advanceUntilIdle()
+            // El valor se deduce de lo que el estado muestra: no hay una lectura extra al almacén.
+            viewModel.onToggleSaved(publication("boc:1"))
+            advanceUntilIdle()
+            cancelAndIgnoreRemainingEvents()
+        }
+
+        assertEquals(listOf("boc:1" to false), savedRepository.writes)
+    }
+
+    @Test
+    fun `a failed write is reported and the publication is never shown as saved`() = runTest(dispatcher) {
+        savedRepository.failWrites = true
+        val viewModel = viewModel(FakePublicationRepository(listOf(publication("boc:1"))))
+
+        viewModel.uiState.test {
+            advanceUntilIdle()
+            viewModel.onToggleSaved(publication("boc:1"))
+            advanceUntilIdle()
+            val state = expectMostRecentItem()
+            assertTrue(state.saveFailed)
+            // La otra mitad de FR-009 sale gratis: el estado viene de lo almacenado.
+            assertTrue(state.savedKeys.isEmpty())
+
+            viewModel.onSaveFailureConsumed()
+            advanceUntilIdle()
+            assertFalse(expectMostRecentItem().saveFailed)
+            cancelAndIgnoreRemainingEvents()
+        }
+    }
+
+    private val savedRepository = FakeSavedPublicationRepository()
+
     private fun viewModel(
         repository: FakePublicationRepository,
         sectionCode: String? = null,
@@ -267,6 +337,8 @@ class HomeViewModelTest {
             observeHeader = ObserveBulletinHeaderUseCase(repository),
             refreshPublications = RefreshPublicationsUseCase(repository),
             getSections = GetBocSectionsUseCase(BocSectionRepositoryImpl()),
+            observeSavedKeys = ObserveSavedKeysUseCase(savedRepository),
+            setPublicationSaved = SetPublicationSavedUseCase(savedRepository),
             shareDocument = ShareOfficialDocumentUseCase(
             // Sharing is exercised in its own tests; here it only has to exist so the
             // bulletin can be built.

@@ -18,6 +18,7 @@ import com.jrblanco.boccantabria.ui.navigation.TAG_BOTTOM_BAR
 import com.jrblanco.boccantabria.ui.navigation.TAG_BOTTOM_HOME
 import com.jrblanco.boccantabria.ui.navigation.TAG_BOTTOM_SAVED
 import com.jrblanco.boccantabria.ui.navigation.TAG_BOTTOM_SEARCH
+import com.jrblanco.boccantabria.ui.saved.TAG_SAVED_EMPTY
 import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
@@ -56,12 +57,23 @@ class BottomBarNavigationTest {
     }
 
     @Test
-    fun search_and_saved_say_they_are_coming_and_home_comes_back() {
+    fun search_still_says_it_is_coming_and_home_comes_back() {
         composeRule.onNodeWithTag(TAG_BOTTOM_SEARCH).performClick()
         composeRule.onNodeWithTag(TAG_COMING_SOON).assertIsDisplayed()
 
+        composeRule.onNodeWithTag(TAG_BOTTOM_HOME).performClick()
+        composeRule.onNodeWithTag(TAG_HEADER).assertIsDisplayed()
+    }
+
+    @Test
+    fun saved_is_a_real_screen_and_no_longer_announces_itself_as_coming() {
+        // Esta es la prueba que demuestra que el marcador de posición se ha retirado de verdad
+        // (FR-010, SC-008). Antes de la feature 005 afirmaba justo lo contrario.
         composeRule.onNodeWithTag(TAG_BOTTOM_SAVED).performClick()
-        composeRule.onNodeWithTag(TAG_COMING_SOON).assertIsDisplayed()
+
+        composeRule.onNodeWithTag(TAG_COMING_SOON).assertDoesNotExist()
+        // Sin nada guardado, lo que se ve es el estado vacío, que explica qué falta.
+        composeRule.onNodeWithTag(TAG_SAVED_EMPTY).assertIsDisplayed()
 
         composeRule.onNodeWithTag(TAG_BOTTOM_HOME).performClick()
         composeRule.onNodeWithTag(TAG_HEADER).assertIsDisplayed()

@@ -14,9 +14,12 @@ import com.jrblanco.boccantabria.domain.usecase.GetBocSectionsUseCase
 import com.jrblanco.boccantabria.data.repository.BocSectionRepositoryImpl
 import com.jrblanco.boccantabria.domain.usecase.ObserveOfficialDocumentUseCase
 import com.jrblanco.boccantabria.domain.usecase.ObservePublicationUseCase
+import com.jrblanco.boccantabria.domain.usecase.ObserveSavedKeysUseCase
 import com.jrblanco.boccantabria.domain.usecase.OpenOfficialDocumentUseCase
+import com.jrblanco.boccantabria.domain.usecase.SetPublicationSavedUseCase
 import com.jrblanco.boccantabria.domain.usecase.ShareOfficialDocumentUseCase
 import com.jrblanco.boccantabria.fake.FakePublicationRepository
+import com.jrblanco.boccantabria.fake.FakeSavedPublicationRepository
 import com.jrblanco.boccantabria.fake.RecordingAnalyticsTracker
 import com.jrblanco.boccantabria.fake.TestDispatcherProvider
 import com.jrblanco.boccantabria.fake.publication
@@ -175,6 +178,9 @@ class DocumentFlowIntegrationTest {
                     override fun isOnline() = true
                 },
             ),
+            // Lo guardado tiene su propia prueba de integración; aquí solo hace falta que exista.
+            observeSavedKeys = ObserveSavedKeysUseCase(FakeSavedPublicationRepository()),
+            setPublicationSaved = SetPublicationSavedUseCase(FakeSavedPublicationRepository()),
             getSections = GetBocSectionsUseCase(BocSectionRepositoryImpl()),
             analytics = RecordingAnalyticsTracker(),
         )

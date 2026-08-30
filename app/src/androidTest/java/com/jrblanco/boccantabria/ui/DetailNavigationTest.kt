@@ -18,7 +18,7 @@ import com.jrblanco.boccantabria.ui.detail.component.TAG_ACTION_ASK
 import com.jrblanco.boccantabria.ui.detail.component.TAG_ACTION_OPEN
 import com.jrblanco.boccantabria.ui.detail.component.TAG_DETAIL_HEADER
 import com.jrblanco.boccantabria.ui.home.TAG_PUBLICATIONS
-import com.jrblanco.boccantabria.ui.home.component.TAG_PUBLICATION_CARD
+import com.jrblanco.boccantabria.core.ui.component.TAG_PUBLICATION_CARD
 import com.jrblanco.boccantabria.ui.navigation.BOCantabriaNavHost
 import com.jrblanco.boccantabria.ui.navigation.Route
 import com.jrblanco.boccantabria.ui.pdf.TAG_PDF_VIEWER_LOADING
