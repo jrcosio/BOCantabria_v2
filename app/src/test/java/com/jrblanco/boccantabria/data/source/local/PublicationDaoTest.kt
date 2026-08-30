@@ -197,6 +197,30 @@ class PublicationDaoTest {
     }
 
     @Test
+    fun `one publication can be observed by its key`() = runTest {
+        dao.upsertAll(listOf(entity("boc:1", title = "Aprobación definitiva")))
+
+        assertEquals("Aprobación definitiva", dao.observePublication("boc:1").first()?.title)
+    }
+
+    @Test
+    fun `a key that is not stored emits null, which is information and not a failure`() = runTest {
+        dao.upsertAll(listOf(entity("boc:1")))
+
+        assertNull(dao.observePublication("boc:desconocida").first())
+    }
+
+    @Test
+    fun `the observed publication reflects a later correction`() = runTest {
+        dao.upsertAll(listOf(entity("boc:1", title = "Título original")))
+
+        // A synchronisation corrects the title while a detail screen is open.
+        dao.upsertAll(listOf(entity("boc:1", title = "Título corregido")))
+
+        assertEquals("Título corregido", dao.observePublication("boc:1").first()?.title)
+    }
+
+    @Test
     fun `the sync state remembers the last body hash and the last success`() = runTest {
         val stateDao = database.feedSyncStateDao()
         assertNull(stateDao.lastSuccessAt())

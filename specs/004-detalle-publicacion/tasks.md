@@ -47,16 +47,16 @@ se quedaría sin su motivo.
       `androidx.pdf:pdf-document-service` hay que declararlo explícitamente o llega por transitividad,
       y si el BOM de Compose del proyecto convive con lo que el artefacto pide (research.md D-016).
       **Si esto no sale, hay que volver al propietario antes de seguir** (depende de T002)
-- [ ] T004 [P] Añadir a `RES/drawable/` los vectores que faltan, con los trazados **tomados de las
+- [X] T004 [P] Añadir a `RES/drawable/` los vectores que faltan, con los trazados **tomados de las
       fuentes oficiales de Material Symbols, no inventados**, con el mismo mecanismo de la feature
       003: `arrow_back`, `account_balance` (organismo), `verified_user` (documento oficial),
       `auto_awesome` (IA), `chat_bubble` (preguntar) y `description` (documento)
-- [ ] T005 [P] Añadir a `RES/values/strings.xml` los textos del apartado 32 del documento de diseño,
+- [X] T005 [P] Añadir a `RES/values/strings.xml` los textos del apartado 32 del documento de diseño,
       en español: `Detalle de publicación`, `Documento oficial`, `Documento`, `Resumen IA`,
       `Preguntar`, `Abrir PDF oficial`; más las etiquetas de la ficha de metadatos, los mensajes de
       error de descarga, el aviso del caso degradado al compartir y las descripciones de
       accesibilidad de cada acción
-- [ ] T006 Declarar el `FileProvider` en `app/src/main/AndroidManifest.xml` con `authorities` propio
+- [X] T006 Declarar el `FileProvider` en `app/src/main/AndroidManifest.xml` con `authorities` propio
       y `RES/xml/file_paths.xml` **acotado al subdirectorio `documents` de la caché**, no a la caché
       entera: acotar es lo que impide que un fallo futuro exponga algo que no toca
       (research.md D-008) (FR-034)
@@ -73,31 +73,31 @@ historias necesitan.
 
 **⚠️ CRÍTICO**: ninguna historia puede empezar hasta que esta fase esté completa.
 
-- [ ] T007 [P] Crear `MAIN/domain/model/OfficialDocument.kt` con los cinco campos de data-model.md §2
+- [X] T007 [P] Crear `MAIN/domain/model/OfficialDocument.kt` con los cinco campos de data-model.md §2
       y su prueba `TEST/domain/model/OfficialDocumentTest.kt`: clave y ruta no vacías, tamaño mayor
       que cero, y suma de verificación de 64 caracteres hexadecimales
-- [ ] T008 [P] Crear `MAIN/domain/model/DocumentStatus.kt` (sellado: `Absent`, `Downloading`,
+- [X] T008 [P] Crear `MAIN/domain/model/DocumentStatus.kt` (sellado: `Absent`, `Downloading`,
       `Available`, `Failed`) y su prueba `TEST/domain/model/DocumentStatusTest.kt`, incluido que el
       total de bytes es anulable porque el servicio puede no declararlo
-- [ ] T009 [P] Crear `MAIN/domain/model/ShareTarget.kt` con `LinkReason` y su prueba
+- [X] T009 [P] Crear `MAIN/domain/model/ShareTarget.kt` con `LinkReason` y su prueba
       `TEST/domain/model/ShareTargetTest.kt`. Existe para poder **explicar** el caso degradado, no
       solo para señalarlo (FR-033)
-- [ ] T010 [P] Crear `MAIN/domain/model/DetailTab.kt` y su prueba `TEST/domain/model/DetailTabTest.kt`
+- [X] T010 [P] Crear `MAIN/domain/model/DetailTab.kt` y su prueba `TEST/domain/model/DetailTabTest.kt`
       (FR-012, FR-015)
-- [ ] T011 Declarar `MAIN/domain/repository/DocumentRepository.kt` y ampliar
+- [X] T011 Declarar `MAIN/domain/repository/DocumentRepository.kt` y ampliar
       `MAIN/domain/repository/PublicationRepository.kt` con `observePublication`, según
       `contracts/internal-contracts.md` §1.1. Documentar en KDoc que **nunca lanzan**, que
       `observePublication` emite `null` sin que eso sea un fallo, y que `ensureLocalCopy` es
       idempotente y deduplicada (FR-004, FR-022)
-- [ ] T012 Ampliar `TEST/data/source/local/PublicationDaoTest.kt` con `observePublication`
+- [X] T012 Ampliar `TEST/data/source/local/PublicationDaoTest.kt` con `observePublication`
       —encontrada, no encontrada, y que emite de nuevo cuando la publicación cambia— y después
       añadir la consulta a `MAIN/data/source/local/PublicationDao.kt` (FR-002, FR-003, FR-004)
-- [ ] T013 Escribir `TEST/data/source/local/FileDocumentCacheTest.kt` **antes** que la caché:
+- [X] T013 Escribir `TEST/data/source/local/FileDocumentCacheTest.kt` **antes** que la caché:
       escritura y lectura, reutilización sin volver a escribir, que el nombre de fichero se deriva de
       una **huella** del `externalKey` y no de la clave en crudo —una clave trae `:` y `/`—, retirada
       por tope de tamaño, retirada por antigüedad de uso con el tiempo inyectado, y que la retirada
       **nunca** borra el documento en uso (FR-024, FR-045)
-- [ ] T014 Crear `MAIN/data/source/local/DocumentCache.kt` y `FileDocumentCache.kt` hasta hacer pasar
+- [X] T014 Crear `MAIN/data/source/local/DocumentCache.kt` y `FileDocumentCache.kt` hasta hacer pasar
       T013. Escritura a `<huella>.pdf.part` y renombrado atómico al final: **nunca existe un fichero
       con el nombre bueno y contenido a medias** (FR-019) (depende de T013)
 

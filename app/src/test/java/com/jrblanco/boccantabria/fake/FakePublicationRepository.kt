@@ -42,6 +42,14 @@ class FakePublicationRepository(
         return publications
     }
 
+    /** What `observePublication` returns. `null` means the publication is no longer stored. */
+    var publicationsByKey: Map<String, Publication> = emptyMap()
+
+    override fun observePublication(externalKey: String): Flow<Publication?> =
+        publications.map { stored ->
+            publicationsByKey[externalKey] ?: stored.firstOrNull { it.externalKey == externalKey }
+        }
+
     override fun observeHeader(selection: HomeSelection): Flow<BulletinHeaderData> =
         publications.map { items ->
             BulletinHeaderData(

@@ -64,4 +64,61 @@
     <string name="coming_soon">Próximamente</string>
     <string name="coming_soon_search">La búsqueda llegará en una próxima versión.</string>
     <string name="coming_soon_saved">Aquí podrás consultar lo que guardes.</string>
+    <!-- ===== Feature 004: detalle de publicación y visor del PDF ===== -->
+
+    <!-- Barra superior del detalle -->
+    <string name="detail_title">Detalle de publicación</string>
+    <string name="detail_back">Volver</string>
+    <string name="detail_save">Guardar</string>
+    <string name="detail_share">Compartir</string>
+
+    <!-- Cabecera -->
+    <string name="detail_official_badge">Documento oficial</string>
+    <string name="detail_issuer_description">Organismo emisor</string>
+    <string name="detail_date_description">Fecha de publicación</string>
+
+    <!-- Pestañas -->
+    <string name="detail_tab_document">Documento</string>
+    <string name="detail_tab_summary">Resumen IA</string>
+    <string name="detail_tab_ask">Preguntar</string>
+
+    <!-- Ficha de metadatos -->
+    <string name="detail_field_description">Descripción</string>
+    <string name="detail_field_issuer">Organismo</string>
+    <string name="detail_field_section">Sección</string>
+    <string name="detail_field_date">Fecha de publicación</string>
+    <string name="detail_field_reference">Referencia</string>
+    <string name="detail_field_official">Documento oficial</string>
+    <string name="detail_field_edition_ordinary">Edición ordinaria</string>
+    <string name="detail_field_edition_extraordinary">Edición extraordinaria</string>
+    <string name="detail_field_edition_unknown">Edición sin especificar</string>
+
+    <!-- Previsualización y descarga -->
+    <string name="detail_preview_title">Primera página</string>
+    <string name="detail_preview_loading">Preparando el documento…</string>
+    <string name="document_error_network">No hemos podido traer el documento. Comprueba tu conexión.</string>
+    <string name="document_error_invalid">Lo que ha devuelto el servicio no es el documento oficial.</string>
+
+    <!-- Barra de acciones -->
+    <string name="detail_action_open">Abrir PDF oficial</string>
+    <string name="detail_action_ask">Preguntar</string>
+
+    <!-- Publicación retirada -->
+    <string name="detail_missing_title">Esta publicación ya no está disponible</string>
+    <string name="detail_missing_body">Puede que se haya retirado al liberar espacio. Vuelve al boletín para buscarla de nuevo.</string>
+    <string name="detail_missing_action">Volver al boletín</string>
+
+    <!-- Pestañas aplazadas -->
+    <string name="detail_summary_label">Resumen generado por IA</string>
+    <string name="detail_summary_coming">Aquí verás un resumen del anuncio, con sus fuentes.</string>
+    <string name="detail_ask_label">Pregunta al BOC</string>
+    <string name="detail_ask_coming">Aquí podrás preguntar sobre este documento.</string>
+
+    <!-- Visor -->
+    <string name="pdf_viewer_loading">Abriendo el documento…</string>
+    <string name="pdf_viewer_error">No hemos podido abrir el documento.</string>
+
+    <!-- Compartir -->
+    <string name="share_preparing">Preparando el documento…</string>
+    <string name="share_link_fallback">Sin conexión para traer el documento. Se comparte el enlace al original.</string>
 </resources>

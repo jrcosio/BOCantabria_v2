@@ -72,6 +72,16 @@ class PublicationRepositoryImpl(
             }
             .flowOn(dispatchers.io)
 
+    override fun observePublication(externalKey: String): Flow<Publication?> =
+        publicationDao.observePublication(externalKey)
+            .map { entity -> entity?.toDomain() }
+            .catch { cause ->
+                if (cause is CancellationException) throw cause
+                crashReporter.recordNonFatal(cause)
+                emit(null)
+            }
+            .flowOn(dispatchers.io)
+
     override fun observeHeader(selection: HomeSelection): Flow<BulletinHeaderData> =
         observePublications(selection).map { publications ->
             BulletinHeaderData(
