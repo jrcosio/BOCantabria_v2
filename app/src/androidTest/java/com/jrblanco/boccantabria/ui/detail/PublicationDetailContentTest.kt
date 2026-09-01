@@ -9,7 +9,7 @@ import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.hasTestTag
 import androidx.compose.ui.test.performScrollToNode
-import com.jrblanco.boccantabria.core.ui.component.TAG_COMING_SOON
+import com.jrblanco.boccantabria.ui.detail.component.TAG_COMING_SOON
 import com.jrblanco.boccantabria.core.ui.component.TAG_ERROR
 import com.jrblanco.boccantabria.core.ui.component.TAG_RETRY
 import com.jrblanco.boccantabria.core.ui.theme.BOCantabriaTheme

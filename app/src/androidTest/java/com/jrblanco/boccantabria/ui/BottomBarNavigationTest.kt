@@ -6,7 +6,7 @@ import androidx.compose.ui.test.onAllNodesWithTag
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.performClick
 import androidx.navigation.compose.rememberNavController
-import com.jrblanco.boccantabria.core.ui.component.TAG_COMING_SOON
+import com.jrblanco.boccantabria.ui.detail.component.TAG_COMING_SOON
 import com.jrblanco.boccantabria.core.ui.theme.BOCantabriaTheme
 import com.jrblanco.boccantabria.fake.FakeBocRemoteDataSource
 import com.jrblanco.boccantabria.fake.KoinOverrideRule
@@ -19,6 +19,7 @@ import com.jrblanco.boccantabria.ui.navigation.TAG_BOTTOM_HOME
 import com.jrblanco.boccantabria.ui.navigation.TAG_BOTTOM_SAVED
 import com.jrblanco.boccantabria.ui.navigation.TAG_BOTTOM_SEARCH
 import com.jrblanco.boccantabria.ui.saved.TAG_SAVED_EMPTY
+import com.jrblanco.boccantabria.ui.search.TAG_SEARCH_INITIAL
 import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
@@ -57,9 +58,14 @@ class BottomBarNavigationTest {
     }
 
     @Test
-    fun search_still_says_it_is_coming_and_home_comes_back() {
+    fun search_is_a_real_screen_and_no_longer_announces_itself_as_coming() {
+        // Esta prueba afirmaba justo lo contrario hasta la feature 006, y ese cambio es el que
+        // demuestra que el marcador de posición se ha retirado de verdad (FR-021).
         composeRule.onNodeWithTag(TAG_BOTTOM_SEARCH).performClick()
-        composeRule.onNodeWithTag(TAG_COMING_SOON).assertIsDisplayed()
+
+        composeRule.onNodeWithTag(TAG_COMING_SOON).assertDoesNotExist()
+        // Sin nada escrito, lo que se ve es el estado inicial: ni un vacío ni un error.
+        composeRule.onNodeWithTag(TAG_SEARCH_INITIAL).assertIsDisplayed()
 
         composeRule.onNodeWithTag(TAG_BOTTOM_HOME).performClick()
         composeRule.onNodeWithTag(TAG_HEADER).assertIsDisplayed()

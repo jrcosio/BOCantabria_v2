@@ -63,7 +63,6 @@
 
     <!-- Funcionalidades aplazadas -->
     <string name="coming_soon">Próximamente</string>
-    <string name="coming_soon_search">La búsqueda llegará en una próxima versión.</string>
     <!-- ===== Feature 004: detalle de publicación y visor del PDF ===== -->
 
     <!-- Barra superior del detalle -->
@@ -134,4 +133,58 @@
 
     <!-- Fallo al escribir la marca -->
     <string name="save_failed">No hemos podido guardar el cambio. Inténtalo de nuevo.</string>
+
+    <!-- ===== Feature 006: buscar ===== -->
+
+    <!-- Pantalla Buscar -->
+    <!-- La barra dice «Buscar», como la pestaña que lleva a ella y como el apartado 17.1 del
+         documento de diseño; el texto de ayuda del campo dice «Buscar publicaciones». No repiten:
+         la frase larga justo encima del campo que ya la dice era ruido, y un lector de pantalla la
+         leía dos veces seguidas. -->
+    <string name="search_title">Buscar</string>
+    <string name="search_hint">Buscar publicaciones</string>
+    <string name="search_clear">Borrar la búsqueda</string>
+    <string name="search_initial_title">Busca en todo el BOC</string>
+    <string name="search_initial_body">Escribe al menos dos letras y verás las publicaciones que coincidan.</string>
+    <string name="search_empty_title">No hemos encontrado publicaciones</string>
+    <string name="search_empty_body">Prueba con otras palabras o quita alguno de los filtros.</string>
+    <plurals name="search_truncated">
+        <item quantity="one">Hay más de %d publicación. Acota la búsqueda para verlas todas.</item>
+        <item quantity="other">Hay más de %d publicaciones. Acota la búsqueda para verlas todas.</item>
+    </plurals>
+    <plurals name="search_result_count">
+        <item quantity="one">%d resultado</item>
+        <item quantity="other">%d resultados</item>
+    </plurals>
+
+    <!-- Filtros y orden -->
+    <string name="search_filters_open">Filtrar resultados</string>
+    <string name="search_filters_title">Filtrar resultados</string>
+    <string name="search_filters_apply">Aplicar filtros</string>
+    <string name="search_filters_clear">Limpiar</string>
+    <string name="search_chips_clear_all">Limpiar todo</string>
+    <string name="search_filter_date_from">Fecha desde</string>
+    <string name="search_filter_date_to">Fecha hasta</string>
+    <string name="search_filter_section">Sección</string>
+    <string name="search_filter_subsection">Subsección</string>
+    <string name="search_filter_issuer">Organismo</string>
+    <string name="search_filter_issuer_hint">Buscar un organismo</string>
+    <string name="search_filter_all_feminine">Todas</string>
+    <string name="search_filter_all_masculine">Todos</string>
+    <string name="search_filter_remove">Quitar el filtro %1$s</string>
+    <string name="search_sort_label">Ordenar por</string>
+    <string name="search_sort_newest">Más recientes</string>
+    <string name="search_sort_oldest">Más antiguas</string>
+
+    <!-- Búsqueda rápida en Inicio -->
+    <string name="home_search_hint">Buscar en esta edición…</string>
+    <string name="home_search_close">Cerrar la búsqueda</string>
+    <string name="home_search_clear">Borrar el texto</string>
+    <plurals name="home_search_match_count">
+        <item quantity="one">%d coincidencia</item>
+        <item quantity="other">%d coincidencias</item>
+    </plurals>
+    <string name="home_no_results_title">Nada en esta edición</string>
+    <string name="home_no_results_body">No hay publicaciones que coincidan con «%1$s» en lo que estás viendo.</string>
+    <string name="home_search_globally">Buscar en todo el BOC</string>
 </resources>

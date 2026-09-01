@@ -30,7 +30,24 @@ data class HomeUiState(
     val savedKeys: Set<String> = emptySet(),
     /** One-shot: the screen says so and clears it (FR-009). */
     val saveFailed: Boolean = false,
+    /** The in-place search of the top bar. Closed and empty is the ordinary state. */
+    val search: HomeSearchState = HomeSearchState(),
 )
+
+/**
+ * The magnifier's state.
+ *
+ * Deliberately just these two: what the person is looking at is decided by [HomeSelection], which
+ * arrives as a navigation argument, and searching does not change it. Opening, typing and closing
+ * never navigate.
+ */
+data class HomeSearchState(
+    val isOpen: Boolean = false,
+    val query: String = "",
+) {
+    /** Blank text is not a filter. A field with only spaces is a field nobody typed in. */
+    val isFiltering: Boolean get() = isOpen && query.isNotBlank()
+}
 
 sealed interface HomeContentState {
 
@@ -41,6 +58,16 @@ sealed interface HomeContentState {
 
     /** The selection holds nothing. Not an error: several sections are legitimately quiet. */
     data object Empty : HomeContentState
+
+    /**
+     * There **are** publications in this edition, but none of them match what was typed.
+     *
+     * A case of its own rather than reusing [Empty], because the two say opposite things: [Empty]
+     * is "nothing has been published here", and this one is "there is plenty here, just not this".
+     * It is also the only state that offers the way out to the archive-wide search, which is why it
+     * carries the query — the screen hands it straight to Buscar.
+     */
+    data class NoSearchResults(val query: String) : HomeContentState
 
     /** Nothing to show and the synchronisation failed. The only case that offers a retry. */
     data class Error(val error: DomainError) : HomeContentState

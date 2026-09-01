@@ -19,6 +19,7 @@ import com.jrblanco.boccantabria.domain.model.Publication
 import com.jrblanco.boccantabria.domain.repository.ConnectivityRepository
 import com.jrblanco.boccantabria.domain.repository.PublicationRepository
 import com.jrblanco.boccantabria.domain.repository.SavedPublicationRepository
+import com.jrblanco.boccantabria.domain.usecase.FilterPublicationsUseCase
 import com.jrblanco.boccantabria.domain.usecase.GetBocSectionsUseCase
 import com.jrblanco.boccantabria.domain.usecase.ObserveBulletinHeaderUseCase
 import com.jrblanco.boccantabria.domain.usecase.ObservePublicationsUseCase
@@ -252,6 +253,7 @@ class SavedFlowIntegrationTest {
             observePublications = ObservePublicationsUseCase(publications),
             observeHeader = ObserveBulletinHeaderUseCase(publications),
             refreshPublications = RefreshPublicationsUseCase(publications),
+            filterPublications = FilterPublicationsUseCase(),
             getSections = GetBocSectionsUseCase(BocSectionRepositoryImpl()),
             observeSavedKeys = ObserveSavedKeysUseCase(savedRepository),
             setPublicationSaved = SetPublicationSavedUseCase(savedRepository),

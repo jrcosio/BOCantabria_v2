@@ -12,6 +12,8 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -19,12 +21,14 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.res.pluralStringResource
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.jrblanco.boccantabria.R
 import com.jrblanco.boccantabria.core.ui.component.EmptyMessage
 import com.jrblanco.boccantabria.core.ui.component.PublicationCard
 import com.jrblanco.boccantabria.core.ui.component.SaveFailureToast
 import com.jrblanco.boccantabria.core.ui.component.ErrorMessage
+import com.jrblanco.boccantabria.core.ui.component.IllustratedMessage
 import com.jrblanco.boccantabria.core.ui.component.OfflineBanner
 import com.jrblanco.boccantabria.core.ui.theme.BocTheme
 import com.jrblanco.boccantabria.domain.model.BocSection
@@ -42,6 +46,9 @@ import java.time.format.DateTimeFormatter
 import java.util.Locale
 
 const val TAG_PUBLICATIONS: String = "home_publications"
+const val TAG_HOME_SEARCH_COUNT: String = "home_search_count"
+const val TAG_HOME_NO_RESULTS: String = "home_no_results"
+const val TAG_HOME_SEARCH_GLOBALLY: String = "home_search_globally"
 
 @Composable
 @Suppress("LongParameterList")
@@ -49,7 +56,7 @@ fun HomeScreen(
     sections: List<BocSection>,
     onOpenSections: () -> Unit,
     onSelectSection: (String?) -> Unit,
-    onSearch: () -> Unit,
+    onSearchGlobally: (String) -> Unit,
     onInfo: () -> Unit,
     onOpenPublication: (Publication) -> Unit,
     modifier: Modifier = Modifier,
@@ -70,7 +77,10 @@ fun HomeScreen(
         onRetry = viewModel::onRetry,
         onOpenSections = onOpenSections,
         onSelectSection = onSelectSection,
-        onSearch = onSearch,
+        onSearchOpened = viewModel::onSearchOpened,
+        onSearchQueryChanged = viewModel::onSearchQueryChanged,
+        onSearchClosed = viewModel::onSearchClosed,
+        onSearchGlobally = onSearchGlobally,
         onInfo = onInfo,
         onOpenPublication = onOpenPublication,
         onShare = viewModel::onShare,
@@ -97,7 +107,10 @@ fun HomeContent(
     modifier: Modifier = Modifier,
     onOpenSections: () -> Unit = {},
     onSelectSection: (String?) -> Unit = {},
-    onSearch: () -> Unit = {},
+    onSearchOpened: () -> Unit = {},
+    onSearchQueryChanged: (String) -> Unit = {},
+    onSearchClosed: () -> Unit = {},
+    onSearchGlobally: (String) -> Unit = {},
     onInfo: () -> Unit = {},
     onOpenPublication: (Publication) -> Unit = {},
     onShare: (Publication) -> Unit = {},
@@ -110,8 +123,11 @@ fun HomeContent(
         topBar = {
             HomeTopBar(
                 onOpenSections = onOpenSections,
-                onSearch = onSearch,
+                onSearch = onSearchOpened,
                 onInfo = onInfo,
+                search = state.search,
+                onSearchQueryChanged = onSearchQueryChanged,
+                onSearchClosed = onSearchClosed,
             )
         },
     ) { innerPadding ->
@@ -150,9 +166,15 @@ fun HomeContent(
                         publications = content.items,
                         sectionsByCode = sectionsByCode,
                         savedKeys = state.savedKeys,
+                        matchCount = content.items.size.takeIf { state.search.isFiltering },
                         onOpenPublication = onOpenPublication,
                         onShare = onShare,
                         onToggleSaved = onToggleSaved,
+                    )
+
+                    is HomeContentState.NoSearchResults -> NoSearchResultsMessage(
+                        query = content.query,
+                        onSearchGlobally = { onSearchGlobally(content.query) },
                     )
 
                     HomeContentState.Empty -> EmptyMessage(
@@ -167,6 +189,32 @@ fun HomeContent(
             }
         }
     }
+}
+
+/**
+ * Nothing matched **in this edition** — which is not the same thing as nothing being published, and
+ * must not be worded as if it were.
+ *
+ * It is the only state that offers a way out: the same words, searched across everything the device
+ * holds. Without it the in-place search would end in a dead end at the exact moment somebody needs
+ * help, and nobody would ever discover that the archive-wide search exists.
+ */
+@Composable
+private fun NoSearchResultsMessage(query: String, onSearchGlobally: () -> Unit) {
+    IllustratedMessage(
+        iconRes = R.drawable.ic_search,
+        title = stringResource(R.string.home_no_results_title),
+        description = stringResource(R.string.home_no_results_body, query),
+        modifier = Modifier.testTag(TAG_HOME_NO_RESULTS),
+        action = {
+            TextButton(
+                onClick = onSearchGlobally,
+                modifier = Modifier.testTag(TAG_HOME_SEARCH_GLOBALLY),
+            ) {
+                Text(text = stringResource(R.string.home_search_globally))
+            }
+        },
+    )
 }
 
 @Composable
@@ -187,10 +235,28 @@ private fun PublicationList(
     publications: List<Publication>,
     sectionsByCode: Map<String, BocSection>,
     savedKeys: Set<String>,
+    matchCount: Int?,
     onOpenPublication: (Publication) -> Unit,
     onShare: (Publication) -> Unit,
     onToggleSaved: (Publication) -> Unit,
 ) {
+    // While a search is on, how many matched. The editorial header above says nothing about it: it
+    // describes the edition, not the result, and rewriting it would make the day's count untrustworthy.
+    if (matchCount != null) {
+        Text(
+            text = pluralStringResource(R.plurals.home_search_match_count, matchCount, matchCount),
+            style = MaterialTheme.typography.labelLarge,
+            color = BocTheme.colors.textSecondary,
+            modifier = Modifier
+                .padding(
+                    start = BocTheme.spacing.screenMargin,
+                    end = BocTheme.spacing.screenMargin,
+                    bottom = BocTheme.spacing.space2,
+                )
+                .testTag(TAG_HOME_SEARCH_COUNT),
+        )
+    }
+
     LazyColumn(
         modifier = Modifier
             .fillMaxSize()

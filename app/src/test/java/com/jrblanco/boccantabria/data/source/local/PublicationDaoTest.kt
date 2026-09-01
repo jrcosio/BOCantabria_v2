@@ -233,6 +233,69 @@ class PublicationDaoTest {
         assertEquals(2, stateDao.all().size)
     }
 
+    // ---------- The searchable text ----------
+
+    /**
+     * The searchable text is derived from what the source publishes, so a corrected title has to
+     * correct it too. Otherwise the announcement would stay findable only by its old wording.
+     */
+    @Test
+    fun `a correction from the source updates the searchable text as well`() = runTest {
+        dao.upsertAll(listOf(entity("boc:1", title = "Título viejo", searchText = "titulo viejo")))
+
+        dao.upsertAll(listOf(entity("boc:1", title = "Título nuevo", searchText = "titulo nuevo")))
+
+        assertEquals("titulo nuevo", dao.observePublication("boc:1").first()?.searchText)
+    }
+
+    /**
+     * The other half of the same statement, and the one a review has to keep an eye on: the mark
+     * belongs to the person and the synchronisation's allow-list does not name it.
+     */
+    @Test
+    fun `updating the searchable text leaves the saved mark alone`() = runTest {
+        dao.upsertAll(listOf(entity("boc:1", searchText = "viejo")))
+        database.savedPublicationDao().setSavedAt("boc:1", 5_000L)
+
+        dao.upsertAll(listOf(entity("boc:1", searchText = "nuevo")))
+
+        val stored = dao.observePublication("boc:1").first()!!
+        assertEquals("nuevo", stored.searchText)
+        assertEquals(java.lang.Long.valueOf(5_000L), stored.savedAt)
+    }
+
+    @Test
+    fun `only the rows with no searchable text are handed to the backfill`() = runTest {
+        dao.upsertAll(
+            listOf(
+                entity("boc:1", searchText = ""),
+                entity("boc:2", searchText = "ya tiene"),
+                entity("boc:3", searchText = ""),
+            ),
+        )
+
+        val pending = dao.withoutSearchText(limit = 10).map { it.externalKey }
+
+        assertEquals(listOf("boc:1", "boc:3"), pending.sorted())
+    }
+
+    @Test
+    fun `the backfill query respects its limit, which is what makes it a batch`() = runTest {
+        dao.upsertAll((1..5).map { entity("boc:$it", searchText = "") })
+
+        assertEquals(2, dao.withoutSearchText(limit = 2).size)
+    }
+
+    @Test
+    fun `filling one row in takes it out of the pending set`() = runTest {
+        dao.upsertAll(listOf(entity("boc:1", searchText = "")))
+
+        dao.setSearchText("boc:1", "ayuntamiento de santona")
+
+        assertTrue(dao.withoutSearchText(limit = 10).isEmpty())
+        assertEquals("ayuntamiento de santona", dao.observePublication("boc:1").first()?.searchText)
+    }
+
     private fun entity(
         externalKey: String,
         blobId: String? = externalKey.substringAfter(':'),
@@ -241,6 +304,7 @@ class PublicationDaoTest {
         subsectionCode: String? = null,
         date: LocalDate = LocalDate.of(2026, 8, 27),
         seenAt: Long = 1_000,
+        searchText: String = "ayuntamiento de pielagos aprobacion definitiva",
     ) = PublicationEntity(
         externalKey = externalKey,
         blobId = blobId,
@@ -258,5 +322,6 @@ class PublicationDaoTest {
         warnings = setOf(ParserWarning.EDITION_TYPE_MISSING),
         firstSeenAt = seenAt,
         lastSeenAt = seenAt,
+        searchText = searchText,
     )
 }

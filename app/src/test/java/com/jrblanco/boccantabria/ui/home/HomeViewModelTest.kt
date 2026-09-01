@@ -7,6 +7,7 @@ import com.jrblanco.boccantabria.domain.model.AppResult
 import com.jrblanco.boccantabria.domain.model.DomainError
 import com.jrblanco.boccantabria.domain.model.HomeSelection
 import com.jrblanco.boccantabria.domain.model.SyncSummary
+import com.jrblanco.boccantabria.domain.usecase.FilterPublicationsUseCase
 import com.jrblanco.boccantabria.domain.usecase.GetBocSectionsUseCase
 import com.jrblanco.boccantabria.domain.usecase.ObserveBulletinHeaderUseCase
 import com.jrblanco.boccantabria.domain.usecase.ObservePublicationsUseCase
@@ -320,6 +321,211 @@ class HomeViewModelTest {
 
     private val savedRepository = FakeSavedPublicationRepository()
 
+    // ---------- The in-place search ----------
+
+    @Test
+    fun `opening the magnifier changes nothing but the bar`() = runTest(dispatcher) {
+        val repository = FakePublicationRepository(listOf(publication("boc:1")))
+        val viewModel = viewModel(repository)
+
+        viewModel.uiState.test {
+            advanceUntilIdle()
+            val before = expectMostRecentItem()
+            viewModel.onSearchOpened()
+            advanceUntilIdle()
+            val after = expectMostRecentItem()
+
+            assertTrue(after.search.isOpen)
+            assertEquals("", after.search.query)
+            assertEquals(before.content, after.content)
+            // Abrir la lupa no habla con la red: sigue habiendo una única sincronización, la del
+            // arranque.
+            assertEquals(1, repository.refreshCount + repository.staleChecks - 1)
+            cancelAndIgnoreRemainingEvents()
+        }
+    }
+
+    @Test
+    fun `typing narrows the list to what matches`() = runTest(dispatcher) {
+        val repository = FakePublicationRepository(
+            listOf(
+                publication("boc:1", title = "AYUNTAMIENTO DE PIÉLAGOS: Aprobación."),
+                publication("boc:2", title = "AYUNTAMIENTO DE SANTOÑA: Bases.", issuer = "Ayuntamiento de Santoña"),
+            ),
+        )
+        val viewModel = viewModel(repository)
+
+        viewModel.uiState.test {
+            advanceUntilIdle()
+            viewModel.onSearchOpened()
+            viewModel.onSearchQueryChanged("pielagos")
+            advanceUntilIdle()
+
+            val content = expectMostRecentItem().content
+            assertTrue(content is HomeContentState.Publications)
+            assertEquals(listOf("boc:1"), (content as HomeContentState.Publications).items.map { it.externalKey })
+            cancelAndIgnoreRemainingEvents()
+        }
+    }
+
+    /**
+     * The whole point of the in-place search: it narrows what is on screen and can never reach
+     * outside it. What is on screen is decided by the selection, which the store already applied.
+     */
+    @Test
+    fun `the search never reaches outside the selection on screen`() = runTest(dispatcher) {
+        val repository = FakePublicationRepository(
+            listOf(publication("boc:1", title = "Contratación de obra en Piélagos")),
+        )
+        val viewModel = viewModel(repository, sectionCode = "3")
+
+        viewModel.uiState.test {
+            advanceUntilIdle()
+            viewModel.onSearchOpened()
+            viewModel.onSearchQueryChanged("pielagos")
+            advanceUntilIdle()
+
+            // Lo que se filtra es exactamente lo que el almacén devolvió para esta selección.
+            assertEquals(listOf(HomeSelection.Section("3")), repository.observedSelections)
+            cancelAndIgnoreRemainingEvents()
+        }
+    }
+
+    @Test
+    fun `clearing the text brings the whole list back`() = runTest(dispatcher) {
+        val repository = FakePublicationRepository(
+            listOf(publication("boc:1", title = "Piélagos"),
+                publication("boc:2", title = "Santoña", issuer = "Ayuntamiento de Santoña")),
+        )
+        val viewModel = viewModel(repository)
+
+        viewModel.uiState.test {
+            advanceUntilIdle()
+            viewModel.onSearchOpened()
+            viewModel.onSearchQueryChanged("pielagos")
+            advanceUntilIdle()
+            viewModel.onSearchQueryChanged("")
+            advanceUntilIdle()
+
+            val content = expectMostRecentItem().content as HomeContentState.Publications
+            assertEquals(2, content.items.size)
+            cancelAndIgnoreRemainingEvents()
+        }
+    }
+
+    /** A filter still applied but no longer visible is worse than no filter at all. */
+    @Test
+    fun `closing the search clears the text, so reopening starts blank`() = runTest(dispatcher) {
+        val viewModel = viewModel(FakePublicationRepository(listOf(publication("boc:1"))))
+
+        viewModel.uiState.test {
+            advanceUntilIdle()
+            viewModel.onSearchOpened()
+            viewModel.onSearchQueryChanged("pielagos")
+            advanceUntilIdle()
+            viewModel.onSearchClosed()
+            advanceUntilIdle()
+
+            val state = expectMostRecentItem()
+            assertFalse(state.search.isOpen)
+            assertEquals("", state.search.query)
+            assertTrue(state.content is HomeContentState.Publications)
+            cancelAndIgnoreRemainingEvents()
+        }
+    }
+
+    /**
+     * "Nothing here matches" and "nothing has been published here" say opposite things, and only
+     * the first one has a way out to offer.
+     */
+    @Test
+    fun `nothing matching is its own state and not the empty one`() = runTest(dispatcher) {
+        val viewModel = viewModel(
+            FakePublicationRepository(listOf(publication("boc:1", title = "Piélagos"))),
+        )
+
+        viewModel.uiState.test {
+            advanceUntilIdle()
+            viewModel.onSearchOpened()
+            viewModel.onSearchQueryChanged("expropiacion")
+            advanceUntilIdle()
+
+            val content = expectMostRecentItem().content
+            assertTrue(content is HomeContentState.NoSearchResults)
+            assertEquals("expropiacion", (content as HomeContentState.NoSearchResults).query)
+            cancelAndIgnoreRemainingEvents()
+        }
+    }
+
+    /** The header describes the edition, not the result. Rewriting it would make it untrustworthy. */
+    @Test
+    fun `the header keeps counting the edition while a search is on`() = runTest(dispatcher) {
+        val viewModel = viewModel(
+            FakePublicationRepository(
+                listOf(publication("boc:1", title = "Piélagos"),
+                publication("boc:2", title = "Santoña", issuer = "Ayuntamiento de Santoña")),
+            ),
+        )
+
+        viewModel.uiState.test {
+            advanceUntilIdle()
+            viewModel.onSearchOpened()
+            viewModel.onSearchQueryChanged("pielagos")
+            advanceUntilIdle()
+
+            assertEquals(2, expectMostRecentItem().header.publicationCount)
+            cancelAndIgnoreRemainingEvents()
+        }
+    }
+
+    /**
+     * The state lives in the view model, which is what a rotation keeps. Rebuilding the flow is the
+     * closest a unit test gets to turning the phone.
+     */
+    @Test
+    fun `the typed text and its result survive the screen being rebuilt`() = runTest(dispatcher) {
+        val viewModel = viewModel(
+            FakePublicationRepository(
+                listOf(publication("boc:1", title = "Piélagos"),
+                publication("boc:2", title = "Santoña", issuer = "Ayuntamiento de Santoña")),
+            ),
+        )
+
+        viewModel.uiState.test {
+            advanceUntilIdle()
+            viewModel.onSearchOpened()
+            viewModel.onSearchQueryChanged("pielagos")
+            advanceUntilIdle()
+            cancelAndIgnoreRemainingEvents()
+        }
+
+        viewModel.uiState.test {
+            advanceUntilIdle()
+            val state = expectMostRecentItem()
+            assertEquals("pielagos", state.search.query)
+            assertTrue(state.search.isOpen)
+            assertEquals(1, (state.content as HomeContentState.Publications).items.size)
+            cancelAndIgnoreRemainingEvents()
+        }
+    }
+
+    @Test
+    fun `a blank query is not a filter`() = runTest(dispatcher) {
+        val viewModel = viewModel(
+            FakePublicationRepository(listOf(publication("boc:1"), publication("boc:2"))),
+        )
+
+        viewModel.uiState.test {
+            advanceUntilIdle()
+            viewModel.onSearchOpened()
+            viewModel.onSearchQueryChanged("   ")
+            advanceUntilIdle()
+
+            assertEquals(2, (expectMostRecentItem().content as HomeContentState.Publications).items.size)
+            cancelAndIgnoreRemainingEvents()
+        }
+    }
+
     private fun viewModel(
         repository: FakePublicationRepository,
         sectionCode: String? = null,
@@ -337,6 +543,7 @@ class HomeViewModelTest {
             observeHeader = ObserveBulletinHeaderUseCase(repository),
             refreshPublications = RefreshPublicationsUseCase(repository),
             getSections = GetBocSectionsUseCase(BocSectionRepositoryImpl()),
+            filterPublications = FilterPublicationsUseCase(),
             observeSavedKeys = ObserveSavedKeysUseCase(savedRepository),
             setPublicationSaved = SetPublicationSavedUseCase(savedRepository),
             shareDocument = ShareOfficialDocumentUseCase(

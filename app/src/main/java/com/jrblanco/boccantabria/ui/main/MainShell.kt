@@ -1,6 +1,5 @@
 package com.jrblanco.boccantabria.ui.main
 
-import android.widget.Toast
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
@@ -14,8 +13,6 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.res.stringResource
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavBackStackEntry
 import androidx.navigation.NavDestination.Companion.hasRoute
@@ -23,7 +20,6 @@ import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
-import com.jrblanco.boccantabria.R
 import com.jrblanco.boccantabria.domain.model.BocSection
 import com.jrblanco.boccantabria.domain.model.HomeSelection
 import com.jrblanco.boccantabria.domain.usecase.GetBocSectionsUseCase
@@ -57,7 +53,6 @@ fun MainShell(
 ) {
     val drawerState = rememberDrawerState(DrawerValue.Closed)
     val scope = rememberCoroutineScope()
-    val context = LocalContext.current
     val sectionsState by sectionsViewModel.uiState.collectAsStateWithLifecycle()
     val backStackEntry by navController.currentBackStackEntryAsState()
 
@@ -65,10 +60,21 @@ fun MainShell(
     // panel, so using them would empty the chips and strip the section label off every card the
     // moment someone searched.
     val sections = remember(getSections) { getSections() }
-    val comingSoon = stringResource(R.string.coming_soon)
 
-    fun showComingSoon() {
-        Toast.makeText(context, comingSoon, Toast.LENGTH_SHORT).show()
+    /**
+     * El puente entre las dos búsquedas: lo que no aparecía en la edición se busca en todo lo
+     * almacenado, con el término ya escrito.
+     *
+     * **Sin `restoreState`**, al contrario que la barra inferior. Con restauración, el estado
+     * guardado de la pestaña Buscar pisaría el argumento y el término traspasado se perdería —justo
+     * en el caso de quien ya había usado Buscar antes—, y lo haría sin error: se llegaría con el
+     * campo vacío.
+     */
+    fun searchGlobally(query: String) {
+        navController.navigate(Route.Search(query)) {
+            popUpTo(navController.graph.startDestinationId) { saveState = true }
+            launchSingleTop = true
+        }
     }
 
     fun openSection(section: BocSection?) {
@@ -128,14 +134,23 @@ fun MainShell(
                         onSelectSection = { code ->
                             openSection(sections.firstOrNull { it.code == code })
                         },
-                        onSearch = ::showComingSoon,
+                        onSearchGlobally = ::searchGlobally,
                         onInfo = {},
                         onOpenPublication = { publication ->
                             onOpenPublication(publication.externalKey)
                         },
                     )
                 }
-                composable<Route.Search> { SearchScreen() }
+                composable<Route.Search> {
+                    SearchScreen(
+                        sections = sections,
+                        // La misma lambda que Inicio y Guardados: el detalle vive en el grafo
+                        // exterior, así que abierto desde aquí tampoco dibuja la barra inferior.
+                        onOpenPublication = { publication ->
+                            onOpenPublication(publication.externalKey)
+                        },
+                    )
+                }
                 composable<Route.Saved> {
                     SavedScreen(
                         sections = sections,
@@ -155,7 +170,7 @@ fun MainShell(
 private fun NavHostController.navigateTo(destination: BottomDestination) {
     val route: Route = when (destination) {
         BottomDestination.HOME -> Route.Home()
-        BottomDestination.SEARCH -> Route.Search
+        BottomDestination.SEARCH -> Route.Search()
         BottomDestination.SAVED -> Route.Saved
     }
     navigate(route) {
