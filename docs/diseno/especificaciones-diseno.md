@@ -872,6 +872,37 @@ La tarjeta es informativa y visualmente secundaria respecto al listado.
 
 ## 17. Pantalla Buscar
 
+> **Enmienda (31 de agosto de 2026, feature 006).** La pantalla ya existe, y difiere de lo que este
+> apartado describía. Lo que cambia, y por qué:
+>
+> - **La barra superior lleva el título `Buscar`, sin flecha atrás y sin menú de tres puntos, y en
+>   azul institucional.** El título es el que este mismo apartado 17.1 ya pedía y el que lleva la
+>   pestaña; la imagen de referencia decía `Buscar publicaciones`, pero eso es el texto de ayuda del
+>   campo que va justo debajo y repetirlo era ruido. Es un destino de la barra inferior, no una pantalla apilada:
+>   una flecha atrás no tendría a dónde ir. La imagen de referencia del propietario dibujaba las dos
+>   cosas y además una barra blanca; se dejaron fuera a conciencia, porque esa imagen era una idea y
+>   no una especificación, y porque dos destinos de la misma barra inferior con cabeceras de distinto
+>   color se leen como dos aplicaciones. Inicio conserva la barra blanca por un motivo propio: debajo
+>   va la cabecera editorial azul. Esto concreta el apartado 10.2, que dejaba la elección abierta.
+> - **Los filtros van en hoja inferior, y los filtros activos se ven en la pantalla.** El apartado
+>   17.3 ya pedía la hoja; lo que se añade es que lo aplicado quede visible como chips con su aspa,
+>   más `Limpiar todo`. Un panel de seis selectores siempre visible empujaba los resultados fuera de
+>   la pantalla, y los resultados son lo que se ha venido a ver.
+> - **No hay ordenación por relevancia.** Solo `Más recientes`, por defecto, y `Más antiguas`. Una
+>   puntuación hay que poder explicarla a quien lee la lista, y para el volumen que maneja esta
+>   aplicación el orden cronológico responde a la pregunta que la gente hace de verdad.
+> - **No hay filtro de municipio.** El servicio del BOC no lo publica y solo se deduciría del
+>   organismo, y solo cuando es un ayuntamiento. Aplazado, no descartado. Mientras tanto el
+>   organismo sí se busca, así que escribir el nombre del municipio devuelve lo de su ayuntamiento.
+> - **No hay resaltado de coincidencias** (apartado 17.2) ni **fragmento de contexto**. La tarjeta
+>   muestra el título completo hasta cuatro líneas, que es donde está el término.
+> - **No hay `Búsquedas recientes` ni bloque `Explorar por`** (apartado 17.1). El estado inicial es
+>   un mensaje ilustrado que invita a escribir.
+> - **La tarjeta es la estándar**, no la compacta del apartado 12.2, por el mismo motivo que la
+>   aplazó la feature 005.
+>
+> El resto de lo que sigue conserva su valor para cuando esas piezas lleguen.
+
 ## 17.1. Estado inicial
 
 - Barra superior con título `Buscar`.

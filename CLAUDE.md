@@ -76,7 +76,8 @@ core/
   ui/theme/       Sistema de diseño: Color, Type, Spacing, Shape, Elevation, Theme
   ui/component/   Componibles compartidos sin estado, incluida PublicationCard —la usan Inicio y
                   Guardados— e IllustratedMessage, del que ComingSoonMessage es un caso
-  util/       DispatcherProvider, AppVersionProvider y utilidades transversales
+  util/       DispatcherProvider, AppVersionProvider, SearchText —la normalización de texto que
+              usan las tres capas— y demás utilidades transversales
 data/
   repository/     Implementaciones de las interfaces de domain
   source/local/   Room: BocDatabase, entidades, DAOs y Converters
@@ -96,7 +97,7 @@ ui/
   pdf/            Visor del documento. ÚNICO sitio que toca androidx.pdf
   share/          ShareState y el envío por FileProvider, común a las tres pantallas
   ask/            Preguntar sobre el documento. Marcador de posición «Próximamente»
-  search/         Marcador de posición «Próximamente»
+  search/         Buscar: la búsqueda global sobre todo lo almacenado, con filtros y orden
   saved/          Guardados: la lista de lo que la persona ha marcado
   navigation/     Rutas tipadas, NavHost exterior y barra inferior
 BOCantabriaApp    Application: arranca Koin
@@ -199,11 +200,36 @@ Composable → ViewModel → UseCase → Repository (interfaz en domain)
   es una lista blanca de columnas y `saved_at` no está en ella, igual que `first_seen_at`. Si alguien
   la añade a ese `UPDATE`, la prueba de regresión de `SavedPublicationDaoTest` se pone roja, que es
   exactamente para lo que está. La escriben solo `SavedPublicationDao` y su repositorio.
-- **La base de datos está en la versión 2**, con `AutoMigration(1, 2)` contra el esquema exportado.
+- **El texto de la búsqueda se normaliza al escribir, no al consultar.** `LIKE` de SQLite solo pliega
+  mayúsculas para ASCII y **nunca** pliega tildes, y Android no trae la colación de ICU que lo
+  arreglaría. Así que cada publicación guarda una columna `search_text` —título, organismo, jerarquía,
+  referencia y **nombre** de sección y subsección, en minúsculas y sin tildes— y la consulta se
+  normaliza igual antes de compararse. `core/util/SearchText` es el único sitio que decide qué
+  significa normalizar: si cambia, lo ya escrito deja de concordar con lo que se busca y hay que
+  reconstruir la columna entera.
+- **`search_text` sí entra en la lista blanca de `PublicationDao.updateColumns`**, y conviene decirlo
+  alto porque es justo el `UPDATE` que esta guía protege. Es un dato **derivado de la fuente**: si la
+  fuente corrige un título, el texto buscable tiene que corregirse con él. `saved_at` y
+  `first_seen_at` siguen fuera, y `SavedPublicationDaoTest` es la prueba que lo vigila.
+- **Una columna nueva deja sin rellenar las filas anteriores, y eso no se ve en una instalación
+  limpia.** Tras migrar, todo lo ya almacenado queda con `search_text` vacío, y una sincronización
+  solo refresca los últimos cien anuncios de cada fuente: sin relleno, el archivo anterior sería
+  inbuscable para siempre, y solo en el móvil de quien ya tenía la aplicación. `refresh()` rellena por
+  lotes usando `search_text = ''` como marcador —`buildSearchText` nunca devuelve vacío, porque el
+  título nunca está en blanco—, de modo que el estado vive en la propia columna y no hay bandera que
+  guardar.
+- **`PublicationSearchDao` es de solo lectura.** La línea es: `PublicationDao` escribe todo lo que se
+  deriva de la fuente, incluido el relleno; `SavedPublicationDao` escribe lo de la persona; y el de
+  búsqueda solo lee. Lleva **dos** sentencias, una por sentido de ordenación, porque Room no
+  parametriza la dirección de un `ORDER BY`.
+- **La base de datos está en la versión 3**, con `AutoMigration(1, 2)` y `AutoMigration(2, 3)` contra
+  los esquemas exportados. La 1→2 se conserva: quien se salte una versión tiene que poder llegar de la
+  1 a la 3 de una vez.
   `bocDatabase()` es un `.build()` limpio a propósito: las migraciones automáticas no necesitan
   `addMigrations`, y `fallbackToDestructiveMigration()` no entra aquí ni como último recurso —pasaría
   la puerta de compilación y vaciaría el boletín de quien ya tiene la aplicación instalada—. Los
   esquemas de `app/schemas/` **se versionan**: son el material de la migración siguiente.
+- **Sigue sin haber ninguna sentencia de borrado en el proyecto**, en ninguno de los tres DAO.
 - **La sección la manda la fuente**, no el campo `categorias`, que se guarda en crudo y solo sirve
   para enriquecer y verificar. Razón: el feed 4.3 trae entradas con los componentes permutados.
 - `java.time` es **nativo**: desde la enmienda 1.1.0 de la constitución `minSdk` es 28. El azucarado
@@ -235,6 +261,11 @@ Composable → ViewModel → UseCase → Repository (interfaz en domain)
   **explícitamente** en el catálogo, o `SandboxedPdfLoader` no resuelve.
 - El PDF se guarda en `cacheDir/documents/`, con **caché y no almacén**. La purga corre al terminar
   una sincronización.
+- **Buscar existe desde la feature 006 y son dos búsquedas, no una.** La lupa de la barra superior de
+  Inicio filtra **en memoria** lo que la pantalla ya tiene, sin tocar el almacén ni la red; la pestaña
+  Buscar consulta todo lo almacenado, con filtros y orden. Lo único que comparten es
+  `core/util/SearchText`. Entre las dos hay un puente: sin coincidencias en la edición, se ofrece la
+  misma consulta en el buscador global, que la recibe por el argumento de `Route.Search`.
 - **Guardados existe desde la feature 005, pero solo marca: no conserva el documento.** Esta guía
   prometía que guardar para leer sin conexión sería la funcionalidad de Guardados, y esa mitad queda
   **aplazada** por decisión del propietario, no olvidada: el requisito FR-024 de
@@ -361,11 +392,43 @@ fichero de prueba. Si añades una clase de dominio sin test, la build falla.
   `windowInsetsPadding(systemBars.only(Horizontal + Bottom))` **dentro** de su `Surface`, que es
   justo lo que hace `NavigationBar`. Por eso la barra inferior del boletín nunca se solapó y la de
   acciones del detalle sí (`DetailActionBarInsetTest`).
+- **Con más de un dispositivo conectado, la tanda instrumentada se reparte entre todos.** Si hay un
+  móvil enchufado además del emulador, Gradle ejecuta las pruebas también allí, y si tiene la
+  pantalla bloqueada fallan en bloque con `No compose hierarchies found in the app`: la actividad no
+  llega a lanzarse. No es un fallo del código. O se desconecta, o se deja desbloqueado, o se fija el
+  destino con `ANDROID_SERIAL=emulator-5554`.
 - **Esa prueba solo muerde con navegación de tres botones.** Con gestos el margen puede ser cero.
   `adb shell settings put secure navigation_mode 0` antes de la tanda instrumentada.
 - **Una pestaña guardada se restaura por nombre, nunca con `valueOf`.** `Preguntar` fue pestaña y hoy
   es pantalla; un nombre guardado que ya no existe tumbaría el detalle al volver de la muerte del
   proceso, en el único camino que nadie recorre a mano.
+- **Sembrar cientos de filas en un test de Robolectric tumba MockK, y el fallo aparece en clases que
+  no tienen nada que ver.** Una prueba que insertaba seiscientas publicaciones dejaba al JVM de
+  pruebas sin responder a la señal de adjunción del agente de ByteBuddy; MockK agotaba su espera de
+  diez segundos y **todas** las clases que usan un doble caían con `Could not initialize class
+  io.mockk.impl.JvmMockKGateway`. Diagnosticado en la feature 006 y arreglado en el origen: el tamaño
+  de lote del relleno se inyecta, y la prueba demuestra que el bucle da otra vuelta con un lote de
+  dos, no con un archivo entero. **Si hace falta comprobar volumen, se comprueba a mano.**
+- **Tocar un destino de la barra inferior y teclear a continuación es una carrera, y solo se ve con
+  la suite llena.** Una prueba de la feature 006 escribía en el campo de Buscar justo después de
+  pulsar su pestaña; el texto entraba en una composición que la navegación aún estaba descartando, el
+  modelo de pantalla no llegaba a verlo, y la espera de resultados se agotaba **sin error**. Aislada
+  pasaba siempre; en la tanda completa caía una de las dos pruebas de la clase, y no siempre la
+  misma. El arreglo es afirmar que la pantalla está montada **antes** de interactuar
+  —`onNodeWithTag(TAG_SEARCH_SCREEN).assertIsDisplayed()`— y comprobar después que el texto entró de
+  verdad. Subir el tiempo de espera **no** lo arregla: se probó con 45 segundos y falló igual.
+- **Un `waitUntil` que se agota no dice nada.** Cuando una espera pueda fallar por más de un motivo,
+  hay que envolverla y afirmar cuál fue —pantalla no montada, texto no introducido, o consulta que
+  devolvió cero—. Esa distinción es la que convirtió el fallo anterior de misterio en hecho, y es
+  barata: se escribe una vez y sirve para siempre.
+- **`LIKE` de SQLite no ignora las tildes.** Por eso la normalización se hace al escribir, en la
+  columna `search_text`, y no en la consulta. Y por eso `%` y `_` hay que escaparlos con
+  `ESCAPE '\'`: sin ello, buscar `100%` devuelve el archivo entero, y no falla —miente—.
+- **Navegar con `restoreState` se traga el argumento de la ruta.** La barra inferior navega con
+  `popUpTo(start) { saveState = true }` y `restoreState = true`, así que el estado guardado de una
+  pestaña gana al argumento con el que se navega. El puente de Inicio a Buscar navega **sin**
+  restauración por eso; con ella, el término traspasado se perdía sin error, llegando a Buscar con el
+  campo vacío. Lo fija `SearchHandoffTest`.
 - **`onCleared()` es `protected`.** Para comprobar que el visor cierra el documento, la prueba lo
   invoca por reflexión sobre la superclase; en producción quien lo llama es el framework.
 
