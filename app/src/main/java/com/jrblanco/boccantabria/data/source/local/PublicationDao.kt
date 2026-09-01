@@ -16,6 +16,12 @@ import kotlinx.coroutines.flow.Flow
  *
  * Every query orders by date, then by numeric identifier, then by key. The last term is what
  * makes two runs agree even though the nineteen sources answer in a different order each time.
+ *
+ * This is the synchronisation's data-access object: **everything the source publishes, and things
+ * derived from it, are written here** — including the searchable text and its backfill. What
+ * belongs to the person is written elsewhere, by `SavedPublicationDao`, and reading for a search
+ * happens elsewhere too, in `PublicationSearchDao`. Keeping this file to one owner is what lets the
+ * rule above be read in one go.
  */
 @Dao
 interface PublicationDao {
@@ -63,7 +69,14 @@ interface PublicationDao {
     /**
      * Updates everything a source can change, and **nothing else**. `first_seen_at` is absent
      * from the statement on purpose: it records when the application first learnt of the
-     * announcement, and a later sighting must not rewrite history.
+     * announcement, and a later sighting must not rewrite history. `saved_at` is absent for the
+     * stronger version of the same reason: it belongs to the person, and `SavedPublicationDaoTest`
+     * is the regression that keeps it out.
+     *
+     * `search_text` **is** here, and the difference is worth stating: it is derived from the title,
+     * the issuer and the classification the source publishes, so when the source corrects a title
+     * the searchable text has to be corrected with it. Leaving it out would mean a corrected
+     * announcement stayed findable only by its old wording.
      */
     @Query(
         """
@@ -81,7 +94,8 @@ interface PublicationDao {
             document_url = :documentUrl,
             raw_categories = :rawCategories,
             warnings = :warnings,
-            last_seen_at = :lastSeenAt
+            last_seen_at = :lastSeenAt,
+            search_text = :searchText
         WHERE external_key = :externalKey
         """,
     )
@@ -102,6 +116,7 @@ interface PublicationDao {
         rawCategories: String?,
         warnings: String,
         lastSeenAt: Long,
+        searchText: String,
     )
 
     /**
@@ -137,6 +152,7 @@ interface PublicationDao {
                 rawCategories = entity.rawCategories,
                 warnings = converters.warningsToString(entity.warnings),
                 lastSeenAt = entity.lastSeenAt,
+                searchText = entity.searchText,
             )
         }
         return UpsertCounts(
@@ -144,6 +160,20 @@ interface PublicationDao {
             updated = toUpdate.size,
         )
     }
+
+    /**
+     * Rows written before the searchable text existed.
+     *
+     * An empty `search_text` is a trustworthy marker of exactly that: `buildSearchText` can never
+     * return an empty string, because a publication's title can never be blank. So no flag has to be
+     * stored anywhere and the work can be picked up again wherever it was left.
+     */
+    @Query("SELECT * FROM publications WHERE search_text = '' LIMIT :limit")
+    suspend fun withoutSearchText(limit: Int): List<PublicationEntity>
+
+    /** Fills in one row's searchable text. Touches nothing else — least of all the saved mark. */
+    @Query("UPDATE publications SET search_text = :searchText WHERE external_key = :externalKey")
+    suspend fun setSearchText(externalKey: String, searchText: String)
 
     private companion object {
         const val IGNORED_ROW_ID = -1L

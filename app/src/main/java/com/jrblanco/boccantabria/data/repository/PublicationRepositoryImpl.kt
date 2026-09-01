@@ -8,6 +8,7 @@ import com.jrblanco.boccantabria.core.util.TimeProvider
 import com.jrblanco.boccantabria.data.source.local.FeedSyncStateDao
 import com.jrblanco.boccantabria.data.source.local.FeedSyncStateEntity
 import com.jrblanco.boccantabria.data.source.local.PublicationDao
+import com.jrblanco.boccantabria.data.source.local.buildSearchText
 import com.jrblanco.boccantabria.data.source.local.toDomain
 import com.jrblanco.boccantabria.data.source.local.toEntity
 import com.jrblanco.boccantabria.data.source.remote.BocFeedDefinition
@@ -58,6 +59,15 @@ class PublicationRepositoryImpl(
     private val dispatchers: DispatcherProvider,
     private val analytics: AnalyticsTracker,
     private val crashReporter: CrashReporter,
+    /**
+     * How many rows the backfill claims at a time.
+     *
+     * Injected for the same reason the dispatchers and the clock are: so a test can prove the loop
+     * comes back for a second pass without storing thousands of rows to do it. A test that needed
+     * volume to exercise a loop would be slow, and slow tests in a shared JVM break things that
+     * have nothing to do with them.
+     */
+    private val backfillBatchSize: Int = BACKFILL_BATCH_SIZE,
 ) : PublicationRepository {
 
     override fun observePublications(selection: HomeSelection): Flow<List<Publication>> =
@@ -107,6 +117,7 @@ class PublicationRepositoryImpl(
             }.fold(SyncSummary(), SyncSummary::plus)
 
             analytics.track(summary.toEvent())
+            backfillSearchText()
 
             if (summary.allFailed && publicationDao.count() == 0) {
                 AppResult.Failure(DomainError.Network)
@@ -118,6 +129,31 @@ class PublicationRepositoryImpl(
         } catch (unexpected: Throwable) {
             crashReporter.recordNonFatal(unexpected)
             AppResult.Failure(DomainError.Unknown)
+        }
+    }
+
+    /**
+     * Gives a searchable text to the rows that were stored before the column existed.
+     *
+     * This is the one failure of the search feature that **a clean install cannot reveal**. The
+     * automatic migration leaves every stored row with an empty `search_text`, and a
+     * synchronisation only refreshes each source's last hundred announcements — so without this,
+     * everything downloaded by an earlier version of the application would stay unfindable forever,
+     * and only on a phone that already had the application.
+     *
+     * An empty value is a trustworthy marker of "not filled in yet": `buildSearchText` can never
+     * return one, because a publication's title can never be blank. So the state lives in the column
+     * itself — no flag to store, nothing to keep in step, and a process that died halfway simply
+     * picks up where it left off. On a fresh install it costs one query that returns nothing.
+     */
+    private suspend fun backfillSearchText() {
+        while (true) {
+            val pending = publicationDao.withoutSearchText(backfillBatchSize)
+            if (pending.isEmpty()) return
+
+            pending.forEach { entity ->
+                publicationDao.setSearchText(entity.externalKey, searchTextOf(entity.toDomain()))
+            }
         }
     }
 
@@ -144,7 +180,9 @@ class PublicationRepositoryImpl(
                 val accepted = normalized.filterIsInstance<NormalizationResult.Accepted>()
                 val now = time.nowMillis()
 
-                val counts = publicationDao.upsertAll(accepted.map { it.publication.toEntity(now) })
+                val counts = publicationDao.upsertAll(
+                    accepted.map { it.publication.toEntity(now, searchTextOf(it.publication)) },
+                )
                 markSuccess(definition, result.bodyHash)
 
                 SyncSummary(
@@ -187,6 +225,26 @@ class PublicationRepositoryImpl(
         )
     }
 
+    /**
+     * What a search can match on this publication.
+     *
+     * The section and subsection **names** come from the compiled catalogue, which this class
+     * already holds for the editorial header. The table stores only codes, so without them nobody
+     * could find an announcement by typing the name of its section.
+     */
+    private fun searchTextOf(publication: Publication): String {
+        val sections = sectionRepository.sections()
+        return buildSearchText(
+            title = publication.title,
+            issuer = publication.issuer,
+            organizationPath = publication.organizationPath,
+            blobId = publication.blobId,
+            sectionName = sections.firstOrNull { it.code == publication.sectionCode }?.name,
+            subsectionName = publication.subsectionCode
+                ?.let { code -> sections.firstOrNull { it.code == code }?.name },
+        )
+    }
+
     private fun HomeSelection.query() = when (this) {
         HomeSelection.TodaysBulletin -> publicationDao.observeTodaysBulletin()
         is HomeSelection.Section ->
@@ -223,6 +281,9 @@ class PublicationRepositoryImpl(
 
         /** Never nineteen connections at once against a service with no availability promise. */
         const val MAX_CONCURRENT_FEEDS = 4
+
+        /** Big enough that a full archive takes a handful of passes, small enough to stay cheap. */
+        const val BACKFILL_BATCH_SIZE = 500
 
         const val EVENT_SYNC = "boc_sync"
     }

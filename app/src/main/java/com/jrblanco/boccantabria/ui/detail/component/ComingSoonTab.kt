@@ -21,7 +21,6 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.jrblanco.boccantabria.R
-import com.jrblanco.boccantabria.core.ui.component.TAG_COMING_SOON
 import com.jrblanco.boccantabria.core.ui.theme.BocTheme
 
 /**
@@ -32,6 +31,16 @@ import com.jrblanco.boccantabria.core.ui.theme.BocTheme
  * blank grey message would say only that something is missing. The first use in the project of the
  * `aiAccent` and `aiContainer` tokens.
  */
+/**
+ * The tag every "not built yet" screen carries.
+ *
+ * It used to live beside `ComingSoonMessage`, in `core/ui/component`. That composable lost its last
+ * caller when Buscar stopped being a placeholder in the feature 006, and was removed rather than
+ * left as dead code with a comment excusing it; the tag moved here, to the piece that still draws
+ * one. Several instrumented tests depend on the value, so the value did not change.
+ */
+const val TAG_COMING_SOON: String = "coming_soon"
+
 @Composable
 fun ComingSoonTab(
     iconRes: Int,

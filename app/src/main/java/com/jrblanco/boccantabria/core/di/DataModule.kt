@@ -8,6 +8,7 @@ import com.jrblanco.boccantabria.data.repository.DocumentRepositoryImpl
 import com.jrblanco.boccantabria.data.repository.ConnectivityRepositoryImpl
 import com.jrblanco.boccantabria.data.repository.PublicationRepositoryImpl
 import com.jrblanco.boccantabria.data.repository.SavedPublicationRepositoryImpl
+import com.jrblanco.boccantabria.data.repository.SearchRepositoryImpl
 import com.jrblanco.boccantabria.data.source.local.AndroidConnectivityDataSource
 import com.jrblanco.boccantabria.data.source.local.BocDatabase
 import com.jrblanco.boccantabria.data.source.local.ConnectivityDataSource
@@ -15,6 +16,7 @@ import com.jrblanco.boccantabria.data.source.local.DocumentCache
 import com.jrblanco.boccantabria.data.source.local.FileDocumentCache
 import com.jrblanco.boccantabria.data.source.local.FeedSyncStateDao
 import com.jrblanco.boccantabria.data.source.local.PublicationDao
+import com.jrblanco.boccantabria.data.source.local.PublicationSearchDao
 import com.jrblanco.boccantabria.data.source.local.SavedPublicationDao
 import com.jrblanco.boccantabria.data.source.local.bocDatabase
 import com.jrblanco.boccantabria.data.source.remote.BocFeedCatalog
@@ -35,6 +37,7 @@ import com.jrblanco.boccantabria.domain.repository.ConnectivityRepository
 import com.jrblanco.boccantabria.domain.repository.DocumentRepository
 import com.jrblanco.boccantabria.domain.repository.PublicationRepository
 import com.jrblanco.boccantabria.domain.repository.SavedPublicationRepository
+import com.jrblanco.boccantabria.domain.repository.SearchRepository
 import okhttp3.OkHttpClient
 import org.koin.android.ext.koin.androidContext
 import org.koin.dsl.module
@@ -54,6 +57,7 @@ val dataModule = module {
     single<PublicationDao> { get<BocDatabase>().publicationDao() }
     single<FeedSyncStateDao> { get<BocDatabase>().feedSyncStateDao() }
     single<SavedPublicationDao> { get<BocDatabase>().savedPublicationDao() }
+    single<PublicationSearchDao> { get<BocDatabase>().publicationSearchDao() }
 
     // --- Red ---
     single<OkHttpClient> { bocHttpClient() }
@@ -109,6 +113,15 @@ val dataModule = module {
             time = get(),
             dispatchers = get(),
             analytics = get(),
+            crashReporter = get(),
+        )
+    }
+
+    // --- Buscar (feature 006) ---
+    single<SearchRepository> {
+        SearchRepositoryImpl(
+            searchDao = get(),
+            dispatchers = get(),
             crashReporter = get(),
         )
     }

@@ -17,12 +17,20 @@ import androidx.room.TypeConverters
  * Version 2 adds one nullable column, which is the case an automatic migration resolves whole
  * against the exported schema. Writing the statement by hand would reproduce what the compiler
  * already knows how to generate, with the added risk of an identity hash that does not match.
+ *
+ * Version 3 adds the searchable text, and is the same case again. The 1→2 step **stays declared**:
+ * somebody who skipped a release has to be able to get from 1 to 3 in one go.
+ *
+ * What version 3 does **not** resolve on its own is the content of the new column: rows already
+ * stored come out of the migration with it empty, and a synchronisation only refreshes each
+ * source's last hundred announcements. Filling them is the repository's job, and it is the failure
+ * of this feature that a clean install cannot reveal.
  */
 @Database(
     entities = [PublicationEntity::class, FeedSyncStateEntity::class],
-    version = 2,
+    version = 3,
     exportSchema = true,
-    autoMigrations = [AutoMigration(from = 1, to = 2)],
+    autoMigrations = [AutoMigration(from = 1, to = 2), AutoMigration(from = 2, to = 3)],
 )
 @TypeConverters(Converters::class)
 abstract class BocDatabase : RoomDatabase() {
@@ -32,6 +40,8 @@ abstract class BocDatabase : RoomDatabase() {
     abstract fun feedSyncStateDao(): FeedSyncStateDao
 
     abstract fun savedPublicationDao(): SavedPublicationDao
+
+    abstract fun publicationSearchDao(): PublicationSearchDao
 
     companion object {
         const val NAME: String = "boc.db"

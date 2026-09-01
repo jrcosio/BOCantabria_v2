@@ -19,6 +19,7 @@ import com.jrblanco.boccantabria.data.source.remote.PublicationNormalizer
 import com.jrblanco.boccantabria.data.source.remote.PublicationRemoteDataSource
 import com.jrblanco.boccantabria.di.ROBOLECTRIC_SDK
 import com.jrblanco.boccantabria.domain.repository.PublicationRepository
+import com.jrblanco.boccantabria.domain.usecase.FilterPublicationsUseCase
 import com.jrblanco.boccantabria.domain.usecase.GetBocSectionsUseCase
 import com.jrblanco.boccantabria.domain.usecase.ObserveBulletinHeaderUseCase
 import com.jrblanco.boccantabria.domain.usecase.ObservePublicationsUseCase
@@ -202,7 +203,8 @@ class BulletinFlowIntegrationTest {
         observePublications = ObservePublicationsUseCase(repository),
         observeHeader = ObserveBulletinHeaderUseCase(repository),
         refreshPublications = RefreshPublicationsUseCase(repository),
-        getSections = GetBocSectionsUseCase(BocSectionRepositoryImpl()),
+        filterPublications = FilterPublicationsUseCase(),
+            getSections = GetBocSectionsUseCase(BocSectionRepositoryImpl()),
         // Lo guardado tiene su propia prueba de integración: aquí solo tiene que existir para que
         // el boletín se pueda construir.
         observeSavedKeys = ObserveSavedKeysUseCase(savedRepository),

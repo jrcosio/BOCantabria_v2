@@ -17,7 +17,9 @@ import com.jrblanco.boccantabria.domain.model.DomainError
 import com.jrblanco.boccantabria.domain.model.HomeSelection
 import com.jrblanco.boccantabria.fake.FakePublicationRemoteDataSource
 import com.jrblanco.boccantabria.fake.RecordingAnalyticsTracker
+import com.jrblanco.boccantabria.data.source.local.toEntity
 import com.jrblanco.boccantabria.fake.TestDispatcherProvider
+import com.jrblanco.boccantabria.fake.publication
 import com.jrblanco.boccantabria.fake.rssItem
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.test.runTest
@@ -316,9 +318,100 @@ class PublicationRepositoryImplTest {
         assertTrue(event.parameters.values.all { it.toIntOrNull() != null })
     }
 
+    // ---------- The searchable text, and the rows that predate it ----------
+
+    @Test
+    fun `what a synchronisation stores arrives with its searchable text`() = runTest {
+        remote.respondWithItems(
+            feedId = "6802081",
+            bodyHash = "hash-1",
+            rssItem(blobId = "900001", title = "AYUNTAMIENTO DE PIÉLAGOS: Aprobación"),
+        )
+
+        repository().refresh()
+
+        val stored = database.publicationDao().observePublication("boc:900001").first()!!
+        assertTrue(stored.searchText.contains("ayuntamiento de pielagos"))
+        // The section name is in there although the table only stores the code, which is what makes
+        // typing `disposiciones` find this announcement at all.
+        assertTrue(stored.searchText.contains("disposiciones generales"))
+    }
+
+    /**
+     * The failure a clean install cannot reveal.
+     *
+     * After the migration to version 3 every stored row has an empty `search_text`, and a
+     * synchronisation only refreshes each source's last hundred announcements — so without this,
+     * everything downloaded by an earlier version of the application would be unfindable forever.
+     */
+    @Test
+    fun `rows written before the column existed are filled in by a synchronisation`() = runTest {
+        givenStoredRowsWithoutSearchText(count = 3)
+
+        repository().refresh()
+
+        assertEquals(0, database.publicationDao().withoutSearchText(limit = 100).size)
+        val filled = database.publicationDao().observePublication("old:1").first()!!
+        assertTrue(filled.searchText.contains("ayuntamiento de santona"))
+    }
+
+    /**
+     * The loop comes back for what did not fit in the first pass.
+     *
+     * Proved with a batch of two rather than with an archive of thousands: the property is "it goes
+     * round again", and storing volume to demonstrate it would only make the suite slow. The batch
+     * size is injected for exactly this.
+     */
+    @Test
+    fun `the backfill goes round again for what did not fit in one batch`() = runTest {
+        givenStoredRowsWithoutSearchText(count = 5)
+
+        repository(backfillBatchSize = 2).refresh()
+
+        assertEquals(0, database.publicationDao().withoutSearchText(limit = 100).size)
+    }
+
+    /** Idempotent: a second run finds nothing to do and rewrites nothing. */
+    @Test
+    fun `a second synchronisation does not rewrite what is already filled in`() = runTest {
+        givenStoredRowsWithoutSearchText(count = 2)
+        repository().refresh()
+        val afterFirst = database.publicationDao().observePublication("old:1").first()!!.searchText
+
+        repository().refresh()
+
+        assertEquals(afterFirst, database.publicationDao().observePublication("old:1").first()!!.searchText)
+        assertEquals(0, database.publicationDao().withoutSearchText(limit = 100).size)
+    }
+
+    /** The saved mark is not the source's, and the backfill has no business touching it. */
+    @Test
+    fun `the backfill leaves the saved mark alone`() = runTest {
+        givenStoredRowsWithoutSearchText(count = 1)
+        database.savedPublicationDao().setSavedAt("old:1", 7_000L)
+
+        repository().refresh()
+
+        assertEquals(7_000L, database.publicationDao().observePublication("old:1").first()!!.savedAt)
+    }
+
+    /** Writes rows exactly as the automatic migration leaves them: content, but no searchable text. */
+    private suspend fun givenStoredRowsWithoutSearchText(count: Int) {
+        database.publicationDao().insert(
+            (1..count).map { index ->
+                publication(
+                    key = "old:$index",
+                    title = "AYUNTAMIENTO DE SANTOÑA: Bases reguladoras $index",
+                    issuer = "Ayuntamiento de Santoña",
+                ).toEntity(seenAt = 1L, searchText = "")
+            },
+        )
+    }
+
     private fun repository(
         remoteDataSource: com.jrblanco.boccantabria.data.source.remote.PublicationRemoteDataSource = remote,
         feeds: List<BocFeedDefinition> = BocFeedCatalog.definitions,
+        backfillBatchSize: Int = PublicationRepositoryImpl.BACKFILL_BATCH_SIZE,
     ) = PublicationRepositoryImpl(
         remoteDataSource = remoteDataSource,
         publicationDao = database.publicationDao(),
@@ -330,5 +423,6 @@ class PublicationRepositoryImplTest {
         dispatchers = TestDispatcherProvider(),
         analytics = analytics,
         crashReporter = NoOpCrashReporter(),
+        backfillBatchSize = backfillBatchSize,
     )
 }

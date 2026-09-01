@@ -183,7 +183,7 @@ class SavedPublicationRepositoryImplTest {
 
     private suspend fun storePublications(vararg keys: String) {
         database.publicationDao().upsertAll(
-            keys.map { publication(key = it).toEntity(seenAt = 1_000L) },
+            keys.map { publication(key = it).toEntity(seenAt = 1_000L, searchText = "") },
         )
     }
 }

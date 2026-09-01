@@ -20,8 +20,20 @@ sealed interface Route {
         val subsectionCode: String? = null,
     ) : Route
 
+    /**
+     * The archive-wide search.
+     *
+     * [query] is how the bulletin's in-place search hands over what somebody had already typed when
+     * it found nothing in the edition on screen. Same mechanism [Home] uses for the section, and for
+     * the same reason: the route is the single source of truth of where the application is, and an
+     * argument survives process death without a line of code.
+     *
+     * The property is called `query` on purpose: that is the key the search screen reads and writes
+     * in its saved state. Two different names would break the hand-off **silently** — no error, just
+     * a search screen that opened empty.
+     */
     @Serializable
-    data object Search : Route
+    data class Search(val query: String? = null) : Route
 
     @Serializable
     data object Saved : Route

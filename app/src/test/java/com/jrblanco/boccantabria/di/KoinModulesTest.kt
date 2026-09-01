@@ -17,6 +17,7 @@ import com.jrblanco.boccantabria.data.source.local.BocDatabase
 import com.jrblanco.boccantabria.data.source.local.ConnectivityDataSource
 import com.jrblanco.boccantabria.data.source.local.FeedSyncStateDao
 import com.jrblanco.boccantabria.data.source.local.PublicationDao
+import com.jrblanco.boccantabria.data.source.local.PublicationSearchDao
 import com.jrblanco.boccantabria.data.source.local.SavedPublicationDao
 import com.jrblanco.boccantabria.data.source.remote.BocRssParser
 import com.jrblanco.boccantabria.data.source.remote.PublicationNormalizer
@@ -29,12 +30,16 @@ import com.jrblanco.boccantabria.domain.repository.ConnectivityRepository
 import com.jrblanco.boccantabria.domain.repository.DocumentRepository
 import com.jrblanco.boccantabria.domain.repository.PublicationRepository
 import com.jrblanco.boccantabria.domain.repository.SavedPublicationRepository
+import com.jrblanco.boccantabria.domain.repository.SearchRepository
 import com.jrblanco.boccantabria.domain.usecase.GetBocSectionsUseCase
 import com.jrblanco.boccantabria.domain.usecase.ObserveBulletinHeaderUseCase
 import com.jrblanco.boccantabria.domain.usecase.ObserveOfficialDocumentUseCase
 import com.jrblanco.boccantabria.domain.usecase.ObservePublicationUseCase
 import com.jrblanco.boccantabria.domain.usecase.ObservePublicationsUseCase
+import com.jrblanco.boccantabria.domain.usecase.FilterPublicationsUseCase
+import com.jrblanco.boccantabria.domain.usecase.GetSearchIssuersUseCase
 import com.jrblanco.boccantabria.domain.usecase.ObserveSavedKeysUseCase
+import com.jrblanco.boccantabria.domain.usecase.SearchPublicationsUseCase
 import com.jrblanco.boccantabria.domain.usecase.ObserveSavedPublicationsUseCase
 import com.jrblanco.boccantabria.domain.usecase.OpenOfficialDocumentUseCase
 import com.jrblanco.boccantabria.domain.usecase.PrepareStartupUseCase
@@ -45,6 +50,7 @@ import com.jrblanco.boccantabria.domain.usecase.ShareOfficialDocumentUseCase
 import com.jrblanco.boccantabria.ui.detail.PublicationDetailViewModel
 import com.jrblanco.boccantabria.ui.home.HomeViewModel
 import com.jrblanco.boccantabria.ui.saved.SavedViewModel
+import com.jrblanco.boccantabria.ui.search.SearchViewModel
 import com.jrblanco.boccantabria.ui.pdf.PdfDocumentLoader
 import com.jrblanco.boccantabria.ui.pdf.PdfViewerViewModel
 import com.jrblanco.boccantabria.ui.sections.SectionsViewModel
@@ -162,6 +168,16 @@ class KoinModulesTest {
         koin.get<ObserveSavedKeysUseCase>()
         koin.get<SetPublicationSavedUseCase>()
 
+        // Buscar (feature 006). El modelo de pantalla no se resuelve aquí: lee el término
+        // traspasado del `SavedStateHandle`, y un grafo sin pantalla no puede fabricarlo. Lo que sí
+        // depende del cableado es todo lo que arrastra, y eso es lo que se resuelve una por una;
+        // que la declaración existe lo comprueba verify().
+        koin.get<SearchRepository>()
+        koin.get<PublicationSearchDao>()
+        koin.get<SearchPublicationsUseCase>()
+        koin.get<GetSearchIssuersUseCase>()
+        koin.get<FilterPublicationsUseCase>()
+
         koin.get<DispatcherProvider>()
         koin.get<TimeProvider>()
         koin.get<RandomProvider>()
@@ -213,6 +229,12 @@ class KoinModulesTest {
             ObserveSavedKeysUseCase::class,
             SetPublicationSavedUseCase::class,
             SavedViewModel::class,
+            PublicationSearchDao::class,
+            SearchRepository::class,
+            SearchPublicationsUseCase::class,
+            GetSearchIssuersUseCase::class,
+            FilterPublicationsUseCase::class,
+            SearchViewModel::class,
         )
     }
 }

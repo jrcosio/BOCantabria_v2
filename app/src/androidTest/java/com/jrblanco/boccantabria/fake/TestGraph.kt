@@ -9,9 +9,11 @@ import com.jrblanco.boccantabria.core.telemetry.NoOpCrashReporter
 import com.jrblanco.boccantabria.data.repository.BocSectionRepositoryImpl
 import com.jrblanco.boccantabria.data.repository.PublicationRepositoryImpl
 import com.jrblanco.boccantabria.data.repository.SavedPublicationRepositoryImpl
+import com.jrblanco.boccantabria.data.repository.SearchRepositoryImpl
 import com.jrblanco.boccantabria.data.source.local.BocDatabase
 import com.jrblanco.boccantabria.data.source.local.FeedSyncStateDao
 import com.jrblanco.boccantabria.data.source.local.PublicationDao
+import com.jrblanco.boccantabria.data.source.local.PublicationSearchDao
 import com.jrblanco.boccantabria.data.source.local.SavedPublicationDao
 import com.jrblanco.boccantabria.data.source.remote.BocFeedCatalog
 import com.jrblanco.boccantabria.data.source.remote.PublicationNormalizer
@@ -24,6 +26,7 @@ import com.jrblanco.boccantabria.domain.model.Publication
 import com.jrblanco.boccantabria.domain.repository.DocumentRepository
 import com.jrblanco.boccantabria.domain.repository.PublicationRepository
 import com.jrblanco.boccantabria.domain.repository.SavedPublicationRepository
+import com.jrblanco.boccantabria.domain.repository.SearchRepository
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flowOf
 import org.koin.core.module.Module
@@ -58,6 +61,7 @@ fun testGraphOverrides(
         single<PublicationDao> { get<BocDatabase>().publicationDao() }
         single<FeedSyncStateDao> { get<BocDatabase>().feedSyncStateDao() }
         single<SavedPublicationDao> { get<BocDatabase>().savedPublicationDao() }
+        single<PublicationSearchDao> { get<BocDatabase>().publicationSearchDao() }
         single<PublicationRemoteDataSource> { remote }
         single<AnalyticsTracker> { NoOpAnalyticsTracker() }
         single<CrashReporter> { NoOpCrashReporter() }
@@ -72,6 +76,15 @@ fun testGraphOverrides(
                 time = get(),
                 dispatchers = get(),
                 analytics = get(),
+                crashReporter = get(),
+            )
+        }
+        // Buscar entra en la misma reconstrucción y por el mismo motivo que Guardados: es un
+        // `single`, y sin esto una prueba buscaría sobre la base que dejó la anterior.
+        single<SearchRepository> {
+            SearchRepositoryImpl(
+                searchDao = get(),
+                dispatchers = get(),
                 crashReporter = get(),
             )
         }

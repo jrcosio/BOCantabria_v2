@@ -1,6 +1,8 @@
 package com.jrblanco.boccantabria.core.di
 
+import com.jrblanco.boccantabria.domain.usecase.FilterPublicationsUseCase
 import com.jrblanco.boccantabria.domain.usecase.GetBocSectionsUseCase
+import com.jrblanco.boccantabria.domain.usecase.GetSearchIssuersUseCase
 import com.jrblanco.boccantabria.domain.usecase.ObserveBulletinHeaderUseCase
 import com.jrblanco.boccantabria.domain.usecase.ObserveOfficialDocumentUseCase
 import com.jrblanco.boccantabria.domain.usecase.ObservePublicationUseCase
@@ -10,6 +12,7 @@ import com.jrblanco.boccantabria.domain.usecase.ObserveSavedKeysUseCase
 import com.jrblanco.boccantabria.domain.usecase.ObserveSavedPublicationsUseCase
 import com.jrblanco.boccantabria.domain.usecase.PrepareStartupUseCase
 import com.jrblanco.boccantabria.domain.usecase.RefreshPublicationsUseCase
+import com.jrblanco.boccantabria.domain.usecase.SearchPublicationsUseCase
 import com.jrblanco.boccantabria.domain.usecase.ReleaseUnusedDocumentsUseCase
 import com.jrblanco.boccantabria.domain.usecase.SetPublicationSavedUseCase
 import com.jrblanco.boccantabria.domain.usecase.ShareOfficialDocumentUseCase
@@ -29,4 +32,10 @@ val domainModule = module {
     factory { ObserveSavedPublicationsUseCase(repository = get()) }
     factory { ObserveSavedKeysUseCase(repository = get()) }
     factory { SetPublicationSavedUseCase(repository = get()) }
+
+    // --- Buscar (feature 006) ---
+    factory { SearchPublicationsUseCase(repository = get()) }
+    factory { GetSearchIssuersUseCase(repository = get()) }
+    // Sin dependencias: es una regla de coincidencia, no una consulta.
+    factory { FilterPublicationsUseCase() }
 }
