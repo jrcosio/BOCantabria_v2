@@ -397,6 +397,15 @@ fichero de prueba. Si añades una clase de dominio sin test, la build falla.
   pantalla bloqueada fallan en bloque con `No compose hierarchies found in the app`: la actividad no
   llega a lanzarse. No es un fallo del código. O se desconecta, o se deja desbloqueado, o se fija el
   destino con `ANDROID_SERIAL=emulator-5554`.
+- **`padding(innerPadding)` reserva el sitio, pero no consume el margen de ventana**, y son dos cosas
+  distintas. `MainShell` aplica con `padding` el alto de la barra inferior —que ya incluye el margen
+  del sistema, porque `NavigationBar` se lo aplica por dentro—, pero el `Scaffold` de cada destino,
+  que no lleva barra inferior y toma los `systemBars` de por defecto, lo vuelve a aplicar por su
+  cuenta. El resultado era una franja muerta del alto exacto de la barra de navegación entre la lista
+  y la barra inferior, **en los tres destinos**. Se arregla con `consumeWindowInsets(innerPadding)`
+  junto al `padding`, y en un solo sitio: quien aplica el espacio es quien debe declararlo servido.
+  Lo fija `MainShellBottomInsetTest`, que sin el arreglo mide 63 px de franja y 63 px de margen del
+  sistema —el mismo número, que es la firma del problema—.
 - **Esa prueba solo muerde con navegación de tres botones.** Con gestos el margen puede ser cero.
   `adb shell settings put secure navigation_mode 0` antes de la tanda instrumentada.
 - **Una pestaña guardada se restaura por nombre, nunca con `valueOf`.** `Preguntar` fue pestaña y hoy

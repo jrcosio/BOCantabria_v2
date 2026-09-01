@@ -1,7 +1,8 @@
 package com.jrblanco.boccantabria.ui.search
 
 import androidx.compose.ui.test.assertIsDisplayed
-import androidx.compose.ui.test.assertTextContains
+import androidx.compose.ui.test.hasTestTag
+import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onAllNodesWithTag
 import androidx.compose.ui.test.onNodeWithTag
@@ -82,17 +83,35 @@ class SearchStateRestoredTest {
      * say less than it looks: a card this screen never drew would satisfy it. The result list's own
      * tag exists nowhere else.
      *
-     * And each step is asserted separately, because a `waitUntil` that runs out of time says
-     * nothing about **what** broke. If the results never arrive, the failure now names which of the
-     * three possible causes it was: the screen never appeared, the text never got in, or the search
-     * ran and came back with nothing.
+     * And each step is checked separately, because a `waitUntil` that runs out of time says nothing
+     * about **what** broke. If the results never arrive, the failure names which of the three
+     * possible causes it was: the screen never appeared, the text never got in, or the search ran
+     * and came back with nothing. That is not decoration — it is what turned this class's own
+     * failure from a mystery into a fact.
      */
     private fun searchFor(term: String) {
         composeRule.onNodeWithTag(TAG_BOTTOM_SEARCH).performClick()
         composeRule.onNodeWithTag(TAG_SEARCH_SCREEN).assertIsDisplayed()
 
         composeRule.onNodeWithTag(TAG_SEARCH_FIELD).performTextReplacement(term)
-        composeRule.onNodeWithTag(TAG_SEARCH_FIELD).assertTextContains(term)
+
+        // Y se **espera** a verlo escrito, en vez de afirmarlo en seco. El campo es un control
+        // gobernado por el estado del modelo de pantalla: lo tecleado sale por una devolución de
+        // llamada, atraviesa el modelo y vuelve por un `StateFlow` que cruza de hilo. Ese viaje no
+        // es instantáneo, y `waitForIdle` no lo ve, porque no es trabajo de composición. Afirmarlo
+        // sin esperar era pedirle a la prueba que adivinara cuándo había llegado —y con la suite
+        // llena, adivinaba mal—.
+        runCatching {
+            composeRule.waitUntil(timeoutMillis = TIMEOUT_MILLIS) {
+                composeRule.onAllNodes(hasTestTag(TAG_SEARCH_FIELD) and hasText(term))
+                    .fetchSemanticsNodes().isNotEmpty()
+            }
+        }.onFailure {
+            throw AssertionError(
+                "el texto «$term» no llegó al campo de Buscar en $TIMEOUT_MILLIS ms: se tecleó, " +
+                    "pero el estado del modelo de pantalla no lo devolvió.",
+            )
+        }
 
         runCatching {
             composeRule.waitUntil(timeoutMillis = TIMEOUT_MILLIS) {

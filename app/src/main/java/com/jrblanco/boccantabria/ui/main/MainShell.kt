@@ -1,6 +1,7 @@
 package com.jrblanco.boccantabria.ui.main
 
 import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.consumeWindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.DrawerValue
@@ -125,7 +126,14 @@ fun MainShell(
                 startDestination = Route.Home(),
                 modifier = Modifier
                     .fillMaxSize()
-                    .padding(innerPadding),
+                    .padding(innerPadding)
+                    // Reservar el sitio no es decir que el margen esté servido, y son dos cosas
+                    // distintas: `padding` no consume el inset. Sin esto, el Scaffold de cada
+                    // destino —que no lleva barra inferior y toma los `systemBars` de por defecto—
+                    // vuelve a aplicar el margen de abajo por su cuenta, y la lista termina una
+                    // barra de navegación por encima de la barra que ya estaba despejada. Es la
+                    // otra mitad de la política que explica el comentario de arriba.
+                    .consumeWindowInsets(innerPadding),
             ) {
                 composable<Route.Home> {
                     HomeScreen(
