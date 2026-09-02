@@ -109,8 +109,6 @@
     <string name="detail_missing_action">Volver al boletín</string>
 
     <!-- Pestañas aplazadas -->
-    <string name="detail_summary_label">Resumen generado por IA</string>
-    <string name="detail_summary_coming">Aquí verás un resumen del anuncio, con sus fuentes.</string>
     <string name="ask_title">Preguntar al BOC</string>
     <string name="detail_ask_label">Pregunta al BOC</string>
     <string name="detail_ask_coming">Aquí podrás preguntar sobre este documento.</string>
@@ -187,4 +185,69 @@
     <string name="home_no_results_title">Nada en esta edición</string>
     <string name="home_no_results_body">No hay publicaciones que coincidan con «%1$s» en lo que estás viendo.</string>
     <string name="home_search_globally">Buscar en todo el BOC</string>
+
+    <!-- Resumen IA (feature 007) -->
+    <string name="ai_summary_intro">Una explicación en lenguaje claro de lo que dice el documento oficial, con las páginas que respaldan cada dato.</string>
+    <string name="ai_summary_generate">Generar resumen</string>
+    <string name="ai_summary_regenerate">Volver a generar</string>
+    <string name="ai_summary_card_title">Resumen generado por IA</string>
+    <string name="ai_summary_disclaimer">Comprueba siempre el texto oficial</string>
+    <string name="ai_summary_disclaimer_accessible">Aviso importante: este resumen lo ha generado una inteligencia artificial y puede contener errores. Comprueba siempre el texto oficial.</string>
+    <string name="ai_summary_share_prefix">Resumen generado por inteligencia artificial. Puede contener errores. Consulta siempre el PDF oficial.</string>
+
+    <!-- Secciones de la ficha. Se ocultan cuando el documento no las sustenta. -->
+    <string name="ai_summary_section_key_points">Puntos clave</string>
+    <string name="ai_summary_section_affected">A quién afecta</string>
+    <string name="ai_summary_section_dates">Fechas y plazos</string>
+    <string name="ai_summary_section_amounts">Importes</string>
+    <string name="ai_summary_section_actions">Qué hay que hacer</string>
+    <string name="ai_summary_section_appeals">Recursos o alegaciones</string>
+    <string name="ai_summary_section_warnings">Advertencias</string>
+    <string name="ai_summary_sources">Fuentes del resumen</string>
+    <string name="ai_summary_page_chip">Página %1$d</string>
+    <string name="ai_summary_page_chip_accessible">Abrir en el documento oficial la página %1$d</string>
+
+    <!-- Fases del proceso. No hay respuesta progresiva, así que la espera tiene que contar algo. -->
+    <string name="ai_summary_phase_fetching">Obteniendo el documento oficial…</string>
+    <string name="ai_summary_phase_extracting">Leyendo el texto del documento…</string>
+    <string name="ai_summary_phase_generating">Generando el resumen…</string>
+    <string name="ai_summary_quota_wait">Se ha alcanzado el límite por minuto. Continuaremos en unos %1$d s.</string>
+
+    <!--
+      Cobertura parcial: se avisa antes de gastar la petición y se dice después.
+      En plural de verdad: «Se analizarán las 1 primeras» es lo que sale si no se hace, y es un caso
+      que ocurre —un documento largo del que solo cabe la primera página—.
+    -->
+    <plurals name="ai_summary_partial_before">
+        <item quantity="one">Documento de %1$d páginas. Se analizará solo la primera.</item>
+        <item quantity="other">Documento de %1$d páginas. Se analizarán las %2$d primeras.</item>
+    </plurals>
+    <plurals name="ai_summary_partial_after">
+        <item quantity="one">Se ha analizado la página %1$s de %2$d. El resumen no cubre el documento completo.</item>
+        <item quantity="other">Se han analizado las páginas %1$s de %2$d. El resumen no cubre el documento completo.</item>
+    </plurals>
+    <string name="ai_summary_stale">Este resumen se hizo con una versión anterior del documento.</string>
+
+    <!-- Acciones -->
+    <string name="ai_summary_copy">Copiar</string>
+    <string name="ai_summary_copied">Resumen copiado</string>
+    <string name="ai_summary_share">Compartir</string>
+
+    <!-- El aviso de la primera vez -->
+    <string name="ai_notice_title">El texto se envía a un servicio externo</string>
+    <string name="ai_notice_body">Para generar el resumen, la aplicación envía el texto de este documento oficial a un servicio de inteligencia artificial fuera del dispositivo. No se envía nada tuyo: ni lo que has guardado, ni lo que has leído.</string>
+    <string name="ai_notice_continue">Continuar</string>
+    <string name="ai_notice_cancel">Cancelar</string>
+
+    <!-- Mensajes de error. En lenguaje corriente y sin ningún código (FR-040). -->
+    <string name="ai_error_offline">No hay conexión. El resumen podrá generarse cuando vuelvas a estar conectado.</string>
+    <string name="ai_error_no_text">Este documento no contiene texto que la aplicación pueda analizar.</string>
+    <string name="ai_error_encrypted">El documento está protegido y no se puede leer su texto.</string>
+    <string name="ai_error_quota_minute">Se ha alcanzado temporalmente el límite de la función. Inténtalo dentro de unos segundos.</string>
+    <string name="ai_error_quota_day">Se ha alcanzado el límite de resúmenes de hoy. Inténtalo mañana.</string>
+    <string name="ai_error_not_configured">El servicio de resúmenes no está configurado en esta aplicación.</string>
+    <string name="ai_error_invalid">No se ha podido construir un resumen fiable. Puedes consultar el documento oficial.</string>
+    <string name="ai_error_unknown">No se ha podido generar el resumen. Inténtalo de nuevo.</string>
+    <string name="ai_summary_no_document">Esta publicación no tiene documento oficial que resumir.</string>
+    <string name="ai_summary_retry">Reintentar</string>
 </resources>

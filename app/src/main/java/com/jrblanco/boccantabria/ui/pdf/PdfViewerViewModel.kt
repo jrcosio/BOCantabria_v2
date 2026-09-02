@@ -4,6 +4,7 @@ import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import androidx.pdf.PdfDocument
+import com.jrblanco.boccantabria.core.telemetry.CrashReporter
 import com.jrblanco.boccantabria.domain.model.DocumentStatus
 import com.jrblanco.boccantabria.domain.model.DomainError
 import com.jrblanco.boccantabria.domain.model.Publication
@@ -33,7 +34,14 @@ class PdfViewerViewModel(
     observeDocument: ObserveOfficialDocumentUseCase,
     private val openDocument: OpenOfficialDocumentUseCase,
     private val loader: PdfDocumentLoader,
+    private val crashReporter: CrashReporter,
 ) : ViewModel() {
+
+    /**
+     * Where to open, 0-based. Comes from the route so a page reference in the AI summary can be
+     * followed all the way to the page it names (FR-021). Zero for every other caller.
+     */
+    val initialPage: Int = savedStateHandle.get<Int>(ARG_PAGE) ?: FIRST_PAGE
 
     private val externalKey: String = requireNotNull(savedStateHandle[ARG_EXTERNAL_KEY]) {
         "the viewer needs a publication key"
@@ -117,20 +125,31 @@ class PdfViewerViewModel(
                 // The bytes are ours and verified, so this is not a network problem: something
                 // about the file itself. Saying «check your connection» would send the reader
                 // looking in the wrong place.
+                crashReporter.log("viewer open failed: ${error.javaClass.simpleName}: ${error.message}")
                 unreadable.value = true
             }
         }
     }
 
+    /**
+     * Closing cannot take the application down.
+     *
+     * `onCleared()` runs on the main thread, and `close()` is a synchronous binder call into the
+     * sandboxed process. That process dies on its own — it is isolated and short-lived — so closing a
+     * document whose process has already gone throws `DeadObjectException`. Uncaught, in `onCleared`,
+     * that is a crash on the way out of a screen the reader has already left.
+     */
     private fun closeOpen() {
         openJob?.cancel()
         openJob = null
-        opened.value?.close()
+        runCatching { opened.value?.close() }
         opened.value = null
     }
 
     companion object {
         const val ARG_EXTERNAL_KEY: String = "externalKey"
+        const val ARG_PAGE: String = "page"
+        const val FIRST_PAGE: Int = 0
         private const val SUBSCRIPTION_TIMEOUT_MILLIS = 5_000L
     }
 }

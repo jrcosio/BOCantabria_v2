@@ -4,6 +4,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.State
 import androidx.compose.runtime.produceState
+import com.jrblanco.boccantabria.core.telemetry.CrashReporter
 import androidx.compose.ui.graphics.ImageBitmap
 import kotlinx.coroutines.CancellationException
 import org.koin.compose.koinInject
@@ -31,6 +32,7 @@ fun rememberFirstPage(
     localPath: String,
     targetWidthPx: Int,
     loader: PdfDocumentLoader = koinInject(),
+    crashReporter: CrashReporter = koinInject(),
 ): State<PagePreview> = produceState<PagePreview>(PagePreview.Loading, localPath, targetWidthPx) {
     value = PagePreview.Loading
     value = try {
@@ -38,6 +40,10 @@ fun rememberFirstPage(
     } catch (cancellation: CancellationException) {
         throw cancellation
     } catch (@Suppress("TooGenericExceptionCaught") error: Exception) {
+        // Said out loud. This used to swallow whatever the sandboxed process threw and write nothing
+        // anywhere, which made a dead process and an unreadable file look identical. The path is
+        // never logged: it is a cache file name, but the habit is what matters.
+        crashReporter.log("preview failed: ${error.javaClass.simpleName}: ${error.message}")
         PagePreview.Failed
     }
 }

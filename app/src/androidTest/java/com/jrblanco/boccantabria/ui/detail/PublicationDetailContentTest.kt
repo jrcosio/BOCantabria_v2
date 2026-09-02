@@ -9,7 +9,6 @@ import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.hasTestTag
 import androidx.compose.ui.test.performScrollToNode
-import com.jrblanco.boccantabria.ui.detail.component.TAG_COMING_SOON
 import com.jrblanco.boccantabria.core.ui.component.TAG_ERROR
 import com.jrblanco.boccantabria.core.ui.component.TAG_RETRY
 import com.jrblanco.boccantabria.core.ui.theme.BOCantabriaTheme
@@ -19,6 +18,8 @@ import com.jrblanco.boccantabria.domain.model.DocumentStatus
 import com.jrblanco.boccantabria.domain.model.DomainError
 import com.jrblanco.boccantabria.fake.publication
 import com.jrblanco.boccantabria.ui.detail.component.TAG_ACTION_ASK
+import com.jrblanco.boccantabria.ui.detail.component.TAG_AI_SUMMARY_GENERATE
+import com.jrblanco.boccantabria.ui.detail.component.TAG_AI_SUMMARY_TAB
 import com.jrblanco.boccantabria.ui.detail.component.TAG_ACTION_OPEN
 import com.jrblanco.boccantabria.ui.detail.component.TAG_DETAIL_METADATA
 import com.jrblanco.boccantabria.ui.detail.component.TAG_DETAIL_PREVIEW
@@ -67,10 +68,12 @@ class PublicationDetailContentTest {
     }
 
     @Test
-    fun the_summary_tab_says_what_is_coming_instead_of_looking_broken() {
+    fun the_summary_tab_offers_to_generate_and_has_not_generated_anything() {
         setContent(state(tab = DetailTab.AI_SUMMARY))
 
-        composeRule.onNodeWithTag(TAG_COMING_SOON).assertIsDisplayed()
+        // FR-002: the tab opens on an offer, not on a summary. Nothing has been asked for yet.
+        composeRule.onNodeWithTag(TAG_AI_SUMMARY_TAB).assertIsDisplayed()
+        composeRule.onNodeWithTag(TAG_AI_SUMMARY_GENERATE).assertIsDisplayed()
         // Asking is no longer a tab, but it is still an action: the button stays.
         composeRule.onNodeWithTag(TAG_ACTION_ASK).assertIsDisplayed()
     }
@@ -103,6 +106,11 @@ class PublicationDetailContentTest {
                     onOpenDocument = {},
                     onAsk = {},
                     onRetry = { retries++ },
+                    onGenerateSummary = {},
+                    onRegenerateSummary = {},
+                    onCopySummary = {},
+                    onShareSummary = {},
+                    onOpenPage = {},
                 )
             }
         }
@@ -225,6 +233,11 @@ class PublicationDetailContentTest {
                     onOpenDocument = {},
                     onAsk = {},
                     onRetry = onRetry,
+                    onGenerateSummary = {},
+                    onRegenerateSummary = {},
+                    onCopySummary = {},
+                    onShareSummary = {},
+                    onOpenPage = {},
                 )
             }
         }

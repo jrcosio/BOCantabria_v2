@@ -26,6 +26,7 @@ fun PdfViewerScreen(
 
     PdfViewerContent(
         state = state,
+        initialPage = viewModel.initialPage,
         onBack = onBack,
         onShare = {
             (state as? PdfViewerUiState.Ready)?.let { ready ->

@@ -8,6 +8,7 @@ import androidx.core.net.toUri
 import com.jrblanco.boccantabria.core.util.DispatcherProvider
 import androidx.pdf.PdfDocument
 import androidx.pdf.SandboxedPdfLoader
+import kotlinx.coroutines.withContext
 import java.io.File
 
 /**
@@ -38,7 +39,7 @@ interface PdfDocumentLoader {
 
 class SandboxedPdfDocumentLoader(
     private val context: Context,
-    dispatchers: DispatcherProvider,
+    private val dispatchers: DispatcherProvider,
 ) : PdfDocumentLoader {
 
     private val loader = SandboxedPdfLoader(context, dispatchers.io)
@@ -46,18 +47,25 @@ class SandboxedPdfDocumentLoader(
     override suspend fun open(localPath: String): PdfDocument =
         loader.openDocument(File(localPath).toUri())
 
-    override suspend fun renderFirstPage(localPath: String, targetWidthPx: Int): ImageBitmap {
-        val document = open(localPath)
-        // Closed whatever happens: the pages are rendered in another process, and leaking the
-        // handle would keep that process alive holding a file the cache may want to evict.
-        return document.use { open ->
-            val page = open.getPageInfo(FIRST_PAGE)
-            val height = (targetWidthPx.toFloat() * page.height / page.width).toInt()
-            open.getPageBitmapSource(FIRST_PAGE).use { source ->
-                source.getBitmap(Size(targetWidthPx, height)).asImageBitmap()
+    /**
+     * Explicitly on IO, and that is not belt-and-braces. `openDocument`, `getPageInfo` and `getBitmap`
+     * hop to a worker on their own, but **`close()` does not**: it is annotated `@WorkerThread` and
+     * makes a synchronous binder call. Called from `produceState`, that closing ran on the **main
+     * thread**, once for every entry into the detail screen.
+     */
+    override suspend fun renderFirstPage(localPath: String, targetWidthPx: Int): ImageBitmap =
+        withContext(dispatchers.io) {
+            val document = open(localPath)
+            // Closed whatever happens: the pages are rendered in another process, and leaking the
+            // handle would keep that process alive holding a file the cache may want to evict.
+            document.use { open ->
+                val page = open.getPageInfo(FIRST_PAGE)
+                val height = (targetWidthPx.toFloat() * page.height / page.width).toInt()
+                open.getPageBitmapSource(FIRST_PAGE).use { source ->
+                    source.getBitmap(Size(targetWidthPx, height)).asImageBitmap()
+                }
             }
         }
-    }
 
     private companion object {
         const val FIRST_PAGE = 0

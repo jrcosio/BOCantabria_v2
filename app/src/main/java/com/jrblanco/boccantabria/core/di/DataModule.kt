@@ -2,6 +2,7 @@ package com.jrblanco.boccantabria.core.di
 
 import com.jrblanco.boccantabria.core.telemetry.AnalyticsTracker
 import com.jrblanco.boccantabria.core.telemetry.CrashReporter
+import com.jrblanco.boccantabria.data.repository.AiSummaryRepositoryImpl
 import com.jrblanco.boccantabria.data.repository.AppConfigRepositoryImpl
 import com.jrblanco.boccantabria.data.repository.BocSectionRepositoryImpl
 import com.jrblanco.boccantabria.data.repository.DocumentRepositoryImpl
@@ -9,7 +10,13 @@ import com.jrblanco.boccantabria.data.repository.ConnectivityRepositoryImpl
 import com.jrblanco.boccantabria.data.repository.PublicationRepositoryImpl
 import com.jrblanco.boccantabria.data.repository.SavedPublicationRepositoryImpl
 import com.jrblanco.boccantabria.data.repository.SearchRepositoryImpl
+import com.jrblanco.boccantabria.data.source.local.AiPreferences
+import com.jrblanco.boccantabria.data.source.local.AiSummaryDao
 import com.jrblanco.boccantabria.data.source.local.AndroidConnectivityDataSource
+import com.jrblanco.boccantabria.data.source.local.PdfTextExtractor
+import com.jrblanco.boccantabria.data.source.local.PdfTextNormalizer
+import com.jrblanco.boccantabria.data.source.local.aiPreferences
+import com.jrblanco.boccantabria.data.source.local.pdfTextExtractor
 import com.jrblanco.boccantabria.data.source.local.BocDatabase
 import com.jrblanco.boccantabria.data.source.local.ConnectivityDataSource
 import com.jrblanco.boccantabria.data.source.local.DocumentCache
@@ -20,6 +27,13 @@ import com.jrblanco.boccantabria.data.source.local.PublicationSearchDao
 import com.jrblanco.boccantabria.data.source.local.SavedPublicationDao
 import com.jrblanco.boccantabria.data.source.local.bocDatabase
 import com.jrblanco.boccantabria.data.source.remote.BocFeedCatalog
+import com.jrblanco.boccantabria.data.source.remote.BuildConfigGroqApiKeyProvider
+import com.jrblanco.boccantabria.data.source.remote.GroqApiKeyProvider
+import com.jrblanco.boccantabria.data.source.remote.GroqRateLimitCoordinator
+import com.jrblanco.boccantabria.data.source.remote.GroqSummaryDataSource
+import com.jrblanco.boccantabria.data.source.remote.OkHttpGroqSummaryDataSource
+import com.jrblanco.boccantabria.data.source.remote.SummaryPromptFactory
+import com.jrblanco.boccantabria.data.source.remote.SummaryValidator
 import com.jrblanco.boccantabria.data.source.remote.BocRssParser
 import com.jrblanco.boccantabria.data.source.remote.DocumentDownloader
 import com.jrblanco.boccantabria.data.source.remote.OkHttpDocumentDownloader
@@ -31,6 +45,7 @@ import com.jrblanco.boccantabria.data.source.remote.bocHttpClient
 import com.jrblanco.boccantabria.data.source.remote.firebaseRemoteConfigDataSource
 import com.jrblanco.boccantabria.data.telemetry.firebaseAnalyticsTracker
 import com.jrblanco.boccantabria.data.telemetry.firebaseCrashReporter
+import com.jrblanco.boccantabria.domain.repository.AiSummaryRepository
 import com.jrblanco.boccantabria.domain.repository.AppConfigRepository
 import com.jrblanco.boccantabria.domain.repository.BocSectionRepository
 import com.jrblanco.boccantabria.domain.repository.ConnectivityRepository
@@ -58,6 +73,7 @@ val dataModule = module {
     single<FeedSyncStateDao> { get<BocDatabase>().feedSyncStateDao() }
     single<SavedPublicationDao> { get<BocDatabase>().savedPublicationDao() }
     single<PublicationSearchDao> { get<BocDatabase>().publicationSearchDao() }
+    single<AiSummaryDao> { get<BocDatabase>().aiSummaryDao() }
 
     // --- Red ---
     single<OkHttpClient> { bocHttpClient() }
@@ -83,6 +99,46 @@ val dataModule = module {
         DocumentRepositoryImpl(
             downloader = get(),
             cache = get(),
+            dispatchers = get(),
+            analytics = get(),
+            crashReporter = get(),
+        )
+    }
+
+    // --- Resumen IA (feature 007) ---
+    // El extractor y las preferencias entran por función fábrica desde su propio paquete: este
+    // módulo no puede nombrar `androidx.pdf` ni `SharedPreferences`.
+    single<PdfTextExtractor> {
+        pdfTextExtractor(androidContext(), dispatchers = get(), crashReporter = get())
+    }
+    single<AiPreferences> { aiPreferences(androidContext(), dispatchers = get()) }
+    single { PdfTextNormalizer() }
+    single { SummaryPromptFactory() }
+    single { SummaryValidator() }
+    single<GroqApiKeyProvider> { BuildConfigGroqApiKeyProvider() }
+    // Uno solo para toda la aplicación: es lo que serializa las peticiones y lo que recuerda lo que
+    // dijeron las cabeceras de la última respuesta.
+    single { GroqRateLimitCoordinator(time = get(), random = get()) }
+    single<GroqSummaryDataSource> {
+        OkHttpGroqSummaryDataSource(
+            client = get(),
+            apiKeys = get(),
+            coordinator = get(),
+            dispatchers = get(),
+            crashReporter = get(),
+        )
+    }
+    single<AiSummaryRepository> {
+        AiSummaryRepositoryImpl(
+            documents = get(),
+            extractor = get(),
+            normalizer = get(),
+            prompts = get(),
+            summaries = get(),
+            validator = get(),
+            dao = get(),
+            preferences = get(),
+            time = get(),
             dispatchers = get(),
             analytics = get(),
             crashReporter = get(),

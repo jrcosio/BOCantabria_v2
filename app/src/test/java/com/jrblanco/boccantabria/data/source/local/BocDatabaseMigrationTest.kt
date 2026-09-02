@@ -149,6 +149,69 @@ class BocDatabaseMigrationTest {
         }
     }
 
+    // ---------- Version 3 to version 4: the AI summaries ----------
+
+    /**
+     * The new table is empty, and that is the whole point: unlike version 3, there is nothing to
+     * backfill. Having no summary is the normal state of a publication.
+     */
+    @Test
+    fun `a version 3 database keeps everything and gains the summaries table`() = runTest {
+        writeVersionThreeDatabaseWithOnePublication()
+
+        val database = openWithRoom()
+        try {
+            val stored = database.publicationDao().observePublication("boc:1").first()
+
+            assertNotNull("la publicación de la versión 3 no sobrevivió a la migración", stored)
+            assertEquals("AYUNTAMIENTO DE PIÉLAGOS: Aprobación definitiva.", stored!!.title)
+            assertEquals(java.lang.Long.valueOf(9_000L), stored.savedAt)
+            assertEquals("ayuntamiento de pielagos aprobacion definitiva", stored.searchText)
+            // La tabla nueva existe y está vacía.
+            assertNull(database.aiSummaryDao().byExternalKey("boc:1"))
+        } finally {
+            database.close()
+        }
+    }
+
+    @Test
+    fun `a summary is writable right after the upgrade`() = runTest {
+        writeVersionThreeDatabaseWithOnePublication()
+
+        val database = openWithRoom()
+        try {
+            database.aiSummaryDao().upsert(summaryEntity())
+
+            assertEquals(
+                "a".repeat(64),
+                database.aiSummaryDao().byExternalKey("boc:1")?.pdfSha256,
+            )
+        } finally {
+            database.close()
+        }
+    }
+
+    /**
+     * Somebody who skipped two releases goes from 1 to 4 in one open, which is why the 1→2 and 2→3
+     * steps stay declared even though nothing writes those versions any more.
+     */
+    @Test
+    fun `a version 1 database can reach version 4 in one go`() = runTest {
+        writeVersionOneDatabaseWithOnePublication()
+
+        val database = openWithRoom()
+        try {
+            val stored = database.publicationDao().observePublication("boc:1").first()
+
+            assertNotNull("la publicación de la versión 1 no llegó a la versión 4", stored)
+            assertNull(stored!!.savedAt)
+            assertEquals("", stored.searchText)
+            assertNull(database.aiSummaryDao().byExternalKey("boc:1"))
+        } finally {
+            database.close()
+        }
+    }
+
     /**
      * Opens the stored file exactly as the application does: a bare builder, no `addMigrations`
      * —automatic migrations need none— and no destructive fallback. If the migration were missing,
@@ -226,6 +289,52 @@ class BocDatabaseMigrationTest {
         }
     }
 
+    /**
+     * A database exactly as the previous release left it: the version-3 schema, its identity row,
+     * `user_version = 3`, a saved mark **and** a filled searchable text — the state this migration
+     * has to leave untouched.
+     */
+    private fun writeVersionThreeDatabaseWithOnePublication() {
+        val database = SQLiteDatabase.openOrCreateDatabase(databaseFile, null)
+        try {
+            VERSION_THREE_STATEMENTS.forEach(database::execSQL)
+
+            database.execSQL(
+                """
+                INSERT INTO publications VALUES (
+                    'boc:1', '1', 'BLOB_ID', '6802081', '1', NULL,
+                    'AYUNTAMIENTO DE PIÉLAGOS: Aprobación definitiva.', 'Ayuntamiento de Piélagos',
+                    'Ayuntamiento de Piélagos', 'ORDINARY', '2026-08-27',
+                    'https://boc.cantabria.es/boces/verAnuncioAction.do?idAnuBlob=1',
+                    '1.Disposiciones Generales|Ayuntamiento de Piélagos|ORD', '',
+                    1000, 2000, 9000, 'ayuntamiento de pielagos aprobacion definitiva'
+                )
+                """.trimIndent(),
+            )
+            database.execSQL(
+                "INSERT INTO feed_sync_state VALUES ('6802081', 'hash-de-la-version-3', NULL, NULL, 1500, 0)",
+            )
+
+            database.version = 3
+        } finally {
+            database.close()
+        }
+    }
+
+    private fun summaryEntity() = AiSummaryEntity(
+        externalKey = "boc:1",
+        pdfSha256 = "a".repeat(64),
+        modelId = "un-modelo",
+        promptVersion = "v1",
+        schemaVersion = "v1",
+        summaryJson = """{"plainLanguageSummary":"algo"}""",
+        createdAtEpochMillis = 7_000L,
+        promptTokens = 100,
+        completionTokens = 200,
+        totalTokens = 300,
+        systemFingerprint = null,
+    )
+
     private companion object {
         const val DATABASE_NAME = "migration-boc.db"
 
@@ -298,6 +407,42 @@ class BocDatabaseMigrationTest {
             "CREATE TABLE IF NOT EXISTS room_master_table (id INTEGER PRIMARY KEY, identity_hash TEXT)",
             "INSERT OR REPLACE INTO room_master_table (id, identity_hash) " +
                 "VALUES(42, '1f93c864ff2220ed1bf0114ece8dfb40')",
+        )
+
+        /**
+         * The version-3 schema, transcribed **verbatim** from
+         * `app/schemas/com.jrblanco.boccantabria.data.source.local.BocDatabase/3.json`, with
+         * `${'$'}{TABLE_NAME}` resolved. That file is frozen, so these statements cannot drift.
+         */
+        val VERSION_THREE_STATEMENTS = listOf(
+            "CREATE TABLE IF NOT EXISTS `publications` (`external_key` TEXT NOT NULL, " +
+                "`blob_id` TEXT, `id_source` TEXT NOT NULL, `feed_id` TEXT NOT NULL, " +
+                "`section_code` TEXT NOT NULL, `subsection_code` TEXT, `title` TEXT NOT NULL, " +
+                "`issuer` TEXT, `organization_path` TEXT NOT NULL, `edition_type` TEXT NOT NULL, " +
+                "`publication_date` TEXT NOT NULL, `document_url` TEXT NOT NULL, " +
+                "`raw_categories` TEXT, `warnings` TEXT NOT NULL, `first_seen_at` INTEGER NOT NULL, " +
+                "`last_seen_at` INTEGER NOT NULL, `saved_at` INTEGER, " +
+                "`search_text` TEXT NOT NULL DEFAULT '', PRIMARY KEY(`external_key`))",
+            "CREATE UNIQUE INDEX IF NOT EXISTS `index_publications_blob_id` " +
+                "ON `publications` (`blob_id`)",
+            "CREATE INDEX IF NOT EXISTS `index_publications_publication_date` " +
+                "ON `publications` (`publication_date`)",
+            "CREATE INDEX IF NOT EXISTS `index_publications_section_code` " +
+                "ON `publications` (`section_code`)",
+            "CREATE INDEX IF NOT EXISTS `index_publications_subsection_code` " +
+                "ON `publications` (`subsection_code`)",
+            "CREATE INDEX IF NOT EXISTS `index_publications_edition_type` " +
+                "ON `publications` (`edition_type`)",
+            "CREATE INDEX IF NOT EXISTS `index_publications_saved_at` " +
+                "ON `publications` (`saved_at`)",
+            "CREATE INDEX IF NOT EXISTS `index_publications_feed_id_publication_date` " +
+                "ON `publications` (`feed_id`, `publication_date`)",
+            "CREATE TABLE IF NOT EXISTS `feed_sync_state` (`feed_id` TEXT NOT NULL, " +
+                "`body_hash` TEXT, `etag` TEXT, `last_modified` TEXT, `last_success_at` INTEGER, " +
+                "`consecutive_failures` INTEGER NOT NULL, PRIMARY KEY(`feed_id`))",
+            "CREATE TABLE IF NOT EXISTS room_master_table (id INTEGER PRIMARY KEY, identity_hash TEXT)",
+            "INSERT OR REPLACE INTO room_master_table (id, identity_hash) " +
+                "VALUES(42, '68d17e1f4ec1b819c008659604a0bacb')",
         )
     }
 }

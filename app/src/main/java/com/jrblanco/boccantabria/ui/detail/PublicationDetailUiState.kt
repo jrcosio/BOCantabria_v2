@@ -1,5 +1,6 @@
 package com.jrblanco.boccantabria.ui.detail
 
+import com.jrblanco.boccantabria.domain.model.AiSummaryStatus
 import com.jrblanco.boccantabria.domain.model.BocSection
 import com.jrblanco.boccantabria.domain.model.DetailTab
 import com.jrblanco.boccantabria.domain.model.DocumentStatus
@@ -25,6 +26,16 @@ data class PublicationDetailUiState(
     val isSaved: Boolean = false,
     /** One-shot: the screen says so and clears it (FR-009). */
     val saveFailed: Boolean = false,
+    /** How far along the AI summary of this publication is (feature 007). */
+    val summary: AiSummaryStatus = AiSummaryStatus.Idle,
+    /** Whether this installation has already been told the document text leaves the device. */
+    val aiNoticeAccepted: Boolean = false,
+    /**
+     * The notice sheet is open, waiting for a decision. Told apart from [aiNoticeAccepted] because
+     * they are different things: one is what the installation knows, the other is what is happening
+     * right now.
+     */
+    val aiNoticePending: Boolean = false,
 ) {
     /** Still reading the stored copy: neither found nor known to be gone. */
     val isLoading: Boolean get() = publication == null && !isMissing

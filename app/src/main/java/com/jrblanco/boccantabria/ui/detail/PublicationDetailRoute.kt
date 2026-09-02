@@ -5,7 +5,11 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.AnnotatedString
+import com.jrblanco.boccantabria.ui.detail.component.AiNoticeSheet
+import com.jrblanco.boccantabria.ui.share.shareText
 import androidx.compose.ui.res.stringResource
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.jrblanco.boccantabria.R
@@ -26,6 +30,7 @@ import org.koin.androidx.compose.koinViewModel
 fun PublicationDetailScreen(
     onBack: () -> Unit,
     onOpenDocument: (String) -> Unit,
+    onOpenDocumentAtPage: (String, Int) -> Unit,
     onAsk: (String) -> Unit,
     modifier: Modifier = Modifier,
     viewModel: PublicationDetailViewModel = koinViewModel(),
@@ -33,6 +38,9 @@ fun PublicationDetailScreen(
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     val context = LocalContext.current
     val linkFallback = stringResource(R.string.share_link_fallback)
+    val aiDisclaimer = stringResource(R.string.ai_summary_share_prefix)
+    val copiedMessage = stringResource(R.string.ai_summary_copied)
+    val clipboard = LocalClipboardManager.current
 
     SaveFailureToast(failed = state.saveFailed, onConsumed = viewModel::onSaveFailureConsumed)
 
@@ -56,6 +64,14 @@ fun PublicationDetailScreen(
         viewModel.onShareConsumed()
     }
 
+    // Shown once per installation, before any document text leaves the device (FR-043).
+    if (state.aiNoticePending) {
+        AiNoticeSheet(
+            onContinue = viewModel::onAiNoticeAccepted,
+            onDismiss = viewModel::onAiNoticeDismissed,
+        )
+    }
+
     PublicationDetailContent(
         state = state,
         onBack = onBack,
@@ -65,6 +81,28 @@ fun PublicationDetailScreen(
         onOpenDocument = { state.publication?.let { onOpenDocument(it.externalKey) } },
         onAsk = { state.publication?.let { onAsk(it.externalKey) } },
         onRetry = viewModel::onRetry,
+        onGenerateSummary = viewModel::onGenerateSummary,
+        onRegenerateSummary = viewModel::onRegenerateSummary,
+        onCopySummary = {
+            viewModel.summaryAsSharableText(aiDisclaimer)?.let { text ->
+                clipboard.setText(AnnotatedString(text))
+                Toast.makeText(context, copiedMessage, Toast.LENGTH_SHORT).show()
+            }
+        },
+        onShareSummary = {
+            viewModel.summaryAsSharableText(aiDisclaimer)?.let { text ->
+                // Shared as text, not as the document: what travels is the summary, and the warning
+                // travels inside it.
+                context.shareText(text, state.publication?.titleWithoutIssuer.orEmpty())
+            }
+        },
+        // A page reference that can be followed. The viewer already knows how to land on a page.
+        onOpenPage = { page ->
+            state.publication?.let { onOpenDocumentAtPage(it.externalKey, page - PAGE_OFFSET) }
+        },
         modifier = modifier,
     )
 }
+
+/** The summary numbers pages from 1; the viewer counts from 0. */
+private const val PAGE_OFFSET = 1

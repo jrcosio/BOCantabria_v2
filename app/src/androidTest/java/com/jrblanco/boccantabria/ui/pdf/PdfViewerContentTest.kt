@@ -62,6 +62,7 @@ class PdfViewerContentTest {
             BOCantabriaTheme {
                 PdfViewerContent(
                     state = state,
+                    initialPage = 0,
                     onBack = {},
                     onShare = onShare,
                     onRetry = onRetry,

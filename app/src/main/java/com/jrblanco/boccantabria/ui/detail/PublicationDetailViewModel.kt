@@ -6,10 +6,15 @@ import androidx.lifecycle.viewModelScope
 import com.jrblanco.boccantabria.core.telemetry.AnalyticsEvent
 import com.jrblanco.boccantabria.core.telemetry.AnalyticsTracker
 import com.jrblanco.boccantabria.domain.model.AppResult
+import com.jrblanco.boccantabria.domain.model.AiSummaryStatus
 import com.jrblanco.boccantabria.domain.model.DetailTab
 import com.jrblanco.boccantabria.domain.model.Publication
 import com.jrblanco.boccantabria.domain.usecase.GetBocSectionsUseCase
 import com.jrblanco.boccantabria.domain.usecase.ObserveOfficialDocumentUseCase
+import com.jrblanco.boccantabria.domain.usecase.AcceptAiNoticeUseCase
+import com.jrblanco.boccantabria.domain.usecase.GenerateAiSummaryUseCase
+import com.jrblanco.boccantabria.domain.usecase.ObserveAiNoticeAcceptedUseCase
+import com.jrblanco.boccantabria.domain.usecase.ObserveAiSummaryUseCase
 import com.jrblanco.boccantabria.domain.usecase.ObservePublicationUseCase
 import com.jrblanco.boccantabria.domain.usecase.ObserveSavedKeysUseCase
 import com.jrblanco.boccantabria.domain.usecase.OpenOfficialDocumentUseCase
@@ -17,6 +22,7 @@ import com.jrblanco.boccantabria.domain.usecase.SetPublicationSavedUseCase
 import com.jrblanco.boccantabria.domain.usecase.ShareOfficialDocumentUseCase
 import com.jrblanco.boccantabria.ui.share.ShareState
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -44,6 +50,10 @@ class PublicationDetailViewModel(
     private val shareDocument: ShareOfficialDocumentUseCase,
     private val observeSavedKeys: ObserveSavedKeysUseCase,
     private val setPublicationSaved: SetPublicationSavedUseCase,
+    private val observeAiSummary: ObserveAiSummaryUseCase,
+    private val generateAiSummary: GenerateAiSummaryUseCase,
+    private val observeAiNoticeAccepted: ObserveAiNoticeAcceptedUseCase,
+    private val acceptAiNotice: AcceptAiNoticeUseCase,
     getSections: GetBocSectionsUseCase,
     private val analytics: AnalyticsTracker,
 ) : ViewModel() {
@@ -56,8 +66,10 @@ class PublicationDetailViewModel(
     private val selectedTab = MutableStateFlow(restoredTab(savedStateHandle))
     private val shareState = MutableStateFlow<ShareState>(ShareState.Idle)
     private val saveFailed = MutableStateFlow(false)
+    private val noticePending = MutableStateFlow(false)
 
     private var openJob: Job? = null
+    private var summaryJob: Job? = null
     private var shareJob: Job? = null
     private var saveJob: Job? = null
 
@@ -68,8 +80,12 @@ class PublicationDetailViewModel(
         shareState,
         // `isSaved` se **deriva** del conjunto de claves: un flujo propio para un booleano sería un
         // método de repositorio, un caso de uso y una prueba más para lo mismo (research.md D-004).
-        observeSavedKeys().combine(saveFailed) { keys, failed -> (externalKey in keys) to failed },
-    ) { publication, document, tab, share, saved ->
+        // Quinta fuente: todo lo que la persona ha decidido sobre esta publicación. Va agrupado
+        // porque `combine` con seis argumentos cae en la sobrecarga de `vararg`, que exige que
+        // todos los flujos tengan el mismo tipo y devuelve `Array<Any?>`. Un tipo propio conserva
+        // los tipos y dice qué es cada cosa.
+        personalState(),
+    ) { publication, document, tab, share, personal ->
         PublicationDetailUiState(
             publication = publication,
             section = publication?.let { sectionOf(it) },
@@ -77,13 +93,47 @@ class PublicationDetailViewModel(
             selectedTab = tab,
             document = document,
             share = share,
-            isSaved = saved.first,
-            saveFailed = saved.second,
+            isSaved = personal.isSaved,
+            saveFailed = personal.saveFailed,
+            summary = personal.summary,
+            aiNoticeAccepted = personal.noticeAccepted,
+            aiNoticePending = personal.noticePending,
         )
     }.stateIn(
         scope = viewModelScope,
         started = SharingStarted.WhileSubscribed(SUBSCRIPTION_TIMEOUT_MILLIS),
         initialValue = PublicationDetailUiState(),
+    )
+
+    /**
+     * The saved mark, the summary and the notice, folded into one flow.
+     *
+     * `isSaved` is **derived** from the set of keys rather than observed on its own: a dedicated
+     * flow for one boolean would be another repository method, another use case and another test
+     * for the same fact (research.md D-004).
+     */
+    private fun personalState(): Flow<PersonalState> = combine(
+        observeSavedKeys(),
+        saveFailed,
+        observeAiSummary(externalKey),
+        observeAiNoticeAccepted(),
+        noticePending,
+    ) { keys, failed, summary, accepted, pending ->
+        PersonalState(
+            isSaved = externalKey in keys,
+            saveFailed = failed,
+            summary = summary,
+            noticeAccepted = accepted,
+            noticePending = pending,
+        )
+    }
+
+    private data class PersonalState(
+        val isSaved: Boolean,
+        val saveFailed: Boolean,
+        val summary: AiSummaryStatus,
+        val noticeAccepted: Boolean,
+        val noticePending: Boolean,
     )
 
     /**
@@ -115,6 +165,74 @@ class PublicationDetailViewModel(
     fun onTabSelected(tab: DetailTab) {
         selectedTab.value = tab
         if (tab == DetailTab.DOCUMENT) onDocumentTabShown()
+    }
+
+    // ---------- Resumen IA (feature 007) ----------
+
+    /**
+     * **There is deliberately no `onSummaryTabShown()`.** Showing the tab generates nothing: the
+     * allowance is shared and daily, and spending it on publications nobody asked about would empty
+     * it in an afternoon (FR-002, SC-004). Opening the tab only observes what is already stored.
+     *
+     * The first time, this opens the notice instead of working: the text of the document leaves the
+     * device, and finding that out afterwards is finding out too late (FR-043).
+     */
+    fun onGenerateSummary() {
+        if (!uiState.value.aiNoticeAccepted) {
+            noticePending.value = true
+            return
+        }
+        generate(force = false)
+    }
+
+    /** Regenerating is always explicit, and always costs a request (FR-034). */
+    fun onRegenerateSummary() = generate(force = true)
+
+    fun onAiNoticeAccepted() {
+        noticePending.value = false
+        viewModelScope.launch {
+            acceptAiNotice()
+            generate(force = false)
+        }
+    }
+
+    /** Cancelling sends nothing at all (FR-044). */
+    fun onAiNoticeDismissed() {
+        noticePending.value = false
+    }
+
+    /**
+     * The summary as plain text, **with the warning in front of it**.
+     *
+     * A summary that leaves the application loses its frame: it arrives in a chat without the card,
+     * without the mark and without the screen around it. If the warning is not inside the text, it
+     * is not there at all (FR-025).
+     *
+     * Returns `null` when there is no summary to hand over, so the screen does nothing rather than
+     * copying an empty string.
+     */
+    fun summaryAsSharableText(disclaimer: String): String? {
+        val ready = uiState.value.summary as? AiSummaryStatus.Ready ?: return null
+        val summary = ready.summary
+
+        return buildString {
+            appendLine(disclaimer)
+            appendLine()
+            uiState.value.publication?.let { appendLine(it.titleWithoutIssuer); appendLine() }
+            appendLine(summary.plainLanguageSummary)
+            if (summary.keyPoints.isNotEmpty()) {
+                appendLine()
+                summary.keyPoints.forEach { point -> appendLine("- ${point.text}") }
+            }
+        }.trimEnd()
+    }
+
+    private fun generate(force: Boolean) {
+        val publication = uiState.value.publication ?: return
+        // A second tap while one is running is the same operation. The repository would share the
+        // request anyway; not launching a second job keeps the cancellation story simple (FR-005).
+        if (summaryJob?.isActive == true) return
+        summaryJob = viewModelScope.launch { generateAiSummary(publication, force) }
     }
 
     /** Called when the document tab appears. Fetching twice is safe: one download is shared. */
