@@ -1,8 +1,6 @@
 package com.jrblanco.boccantabria.domain.model
 
 import org.junit.Assert.assertEquals
-import org.junit.Assert.assertFalse
-import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class DetailTabTest {
@@ -14,9 +12,14 @@ class DetailTabTest {
         assertEquals(listOf(DetailTab.DOCUMENT, DetailTab.AI_SUMMARY), DetailTab.entries)
     }
 
+    /**
+     * A saved tab is restored **by name**, never with `valueOf`. Asking was a tab once; a stored
+     * name that no longer exists would take down the detail screen on the one path nobody walks by
+     * hand — coming back from process death.
+     */
     @Test
-    fun `only the document tab has content in this feature`() {
-        assertFalse(DetailTab.DOCUMENT.isComingSoon)
-        assertTrue(DetailTab.AI_SUMMARY.isComingSoon)
+    fun `a tab name that no longer exists does not resolve`() {
+        assertEquals(null, DetailTab.entries.firstOrNull { it.name == "ASK" })
+        assertEquals(DetailTab.AI_SUMMARY, DetailTab.entries.firstOrNull { it.name == "AI_SUMMARY" })
     }
 }

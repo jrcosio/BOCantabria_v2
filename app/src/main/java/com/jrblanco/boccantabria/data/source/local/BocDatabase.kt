@@ -25,12 +25,20 @@ import androidx.room.TypeConverters
  * stored come out of the migration with it empty, and a synchronisation only refreshes each
  * source's last hundred announcements. Filling them is the repository's job, and it is the failure
  * of this feature that a clean install cannot reveal.
+ *
+ * Version 4 adds the AI summaries table. A **new table** is the easiest case an automatic migration
+ * resolves, and unlike version 3 there is nothing to backfill: a new table starts empty by
+ * definition, and having no summary is the normal state of a publication.
  */
 @Database(
-    entities = [PublicationEntity::class, FeedSyncStateEntity::class],
-    version = 3,
+    entities = [PublicationEntity::class, FeedSyncStateEntity::class, AiSummaryEntity::class],
+    version = 4,
     exportSchema = true,
-    autoMigrations = [AutoMigration(from = 1, to = 2), AutoMigration(from = 2, to = 3)],
+    autoMigrations = [
+        AutoMigration(from = 1, to = 2),
+        AutoMigration(from = 2, to = 3),
+        AutoMigration(from = 3, to = 4),
+    ],
 )
 @TypeConverters(Converters::class)
 abstract class BocDatabase : RoomDatabase() {
@@ -38,6 +46,8 @@ abstract class BocDatabase : RoomDatabase() {
     abstract fun publicationDao(): PublicationDao
 
     abstract fun feedSyncStateDao(): FeedSyncStateDao
+
+    abstract fun aiSummaryDao(): AiSummaryDao
 
     abstract fun savedPublicationDao(): SavedPublicationDao
 

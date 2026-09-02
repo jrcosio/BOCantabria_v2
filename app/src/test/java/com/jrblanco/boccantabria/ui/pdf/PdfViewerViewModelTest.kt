@@ -1,6 +1,7 @@
 package com.jrblanco.boccantabria.ui.pdf
 
 import androidx.lifecycle.SavedStateHandle
+import androidx.pdf.PdfDocument
 import app.cash.turbine.test
 import com.jrblanco.boccantabria.domain.model.AppResult
 import com.jrblanco.boccantabria.domain.model.DocumentStatus
@@ -12,7 +13,10 @@ import com.jrblanco.boccantabria.fake.FakeDocumentRepository
 import com.jrblanco.boccantabria.fake.FakePdfDocumentLoader
 import com.jrblanco.boccantabria.fake.FakePublicationRepository
 import com.jrblanco.boccantabria.fake.officialDocument
+import com.jrblanco.boccantabria.fake.RecordingCrashReporter
 import com.jrblanco.boccantabria.fake.publication
+import io.mockk.every
+import io.mockk.mockk
 import io.mockk.verify
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -30,6 +34,7 @@ import org.junit.Test
 @OptIn(ExperimentalCoroutinesApi::class)
 class PdfViewerViewModelTest {
 
+    private val crashReporter = RecordingCrashReporter()
     private val dispatcher = StandardTestDispatcher()
     private val documents = FakeDocumentRepository()
     private val loader = FakePdfDocumentLoader()
@@ -188,18 +193,73 @@ class PdfViewerViewModelTest {
             .invoke(this)
     }
 
+    // ---------- Cerrar no puede tumbar la app ----------
+
+    /**
+     * **Regresión.** `onCleared()` corre en el hilo principal y `close()` es una llamada binder
+     * síncrona al proceso aislado del PDF. Ese proceso es efímero y muere por su cuenta, así que
+     * cerrar un documento cuyo proceso ya no está lanza `DeadObjectException`. Sin capturar, dentro de
+     * `onCleared`, eso es un cierre de la aplicación al salir de una pantalla que la persona ya había
+     * abandonado.
+     *
+     * `onCleared()` es `protected`, así que se invoca por reflexión sobre la superclase; en producción
+     * quien lo llama es el framework.
+     */
+    @Test
+    fun `a document whose process already died does not take the screen down on the way out`() =
+        runTest(dispatcher) {
+            val exploding = mockk<PdfDocument>(relaxed = true)
+            every { exploding.close() } throws IllegalStateException("el proceso aislado ya no está")
+            loader.document = exploding
+
+            // El documento tiene que llegar a abrirse: si no, no hay nada que cerrar y la prueba
+            // pasaría por el motivo equivocado.
+            documents.emit(DocumentStatus.Available(officialDocument()))
+            val viewModel = viewModel()
+            viewModel.uiState.test {
+                advanceUntilIdle()
+                assertEquals(1, loader.opened.size)
+                cancelAndIgnoreRemainingEvents()
+            }
+
+            // No lanza. Sin el arreglo, esta línea propagaba la excepción.
+            viewModel.callOnCleared()
+        }
+
+    // ---------- La página inicial (feature 007) ----------
+
+    /**
+     * FR-021. A page reference in an AI summary has to land on the page it names, or it is not a
+     * reference at all. The argument travelling from the route to here is the fragile half of that:
+     * in feature 006 a route argument was swallowed in silence by `restoreState`.
+     */
+    @Test
+    fun `the page carried by the route is where the viewer opens`() {
+        assertEquals(2, viewModel(page = 2).initialPage)
+    }
+
+    @Test
+    fun `without a page the viewer opens at the first one`() {
+        assertEquals(0, viewModel().initialPage)
+    }
+
     private fun viewModel(
         stored: List<com.jrblanco.boccantabria.domain.model.Publication> = listOf(publication("boc:439765")),
+        page: Int? = null,
     ): PdfViewerViewModel {
         val publications = FakePublicationRepository(stored)
         return PdfViewerViewModel(
             savedStateHandle = SavedStateHandle(
-                mapOf(PdfViewerViewModel.ARG_EXTERNAL_KEY to "boc:439765"),
+                buildMap {
+                    put(PdfViewerViewModel.ARG_EXTERNAL_KEY, "boc:439765")
+                    page?.let { put(PdfViewerViewModel.ARG_PAGE, it) }
+                },
             ),
             observePublication = ObservePublicationUseCase(publications),
             observeDocument = ObserveOfficialDocumentUseCase(documents),
             openDocument = OpenOfficialDocumentUseCase(documents),
             loader = loader,
+            crashReporter = crashReporter,
         )
     }
 }

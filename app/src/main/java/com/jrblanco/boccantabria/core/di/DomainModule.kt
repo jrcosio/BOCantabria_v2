@@ -14,6 +14,10 @@ import com.jrblanco.boccantabria.domain.usecase.PrepareStartupUseCase
 import com.jrblanco.boccantabria.domain.usecase.RefreshPublicationsUseCase
 import com.jrblanco.boccantabria.domain.usecase.SearchPublicationsUseCase
 import com.jrblanco.boccantabria.domain.usecase.ReleaseUnusedDocumentsUseCase
+import com.jrblanco.boccantabria.domain.usecase.AcceptAiNoticeUseCase
+import com.jrblanco.boccantabria.domain.usecase.GenerateAiSummaryUseCase
+import com.jrblanco.boccantabria.domain.usecase.ObserveAiNoticeAcceptedUseCase
+import com.jrblanco.boccantabria.domain.usecase.ObserveAiSummaryUseCase
 import com.jrblanco.boccantabria.domain.usecase.SetPublicationSavedUseCase
 import com.jrblanco.boccantabria.domain.usecase.ShareOfficialDocumentUseCase
 import org.koin.dsl.module
@@ -38,4 +42,10 @@ val domainModule = module {
     factory { GetSearchIssuersUseCase(repository = get()) }
     // Sin dependencias: es una regla de coincidencia, no una consulta.
     factory { FilterPublicationsUseCase() }
+
+    // --- Resumen IA (feature 007) ---
+    factory { ObserveAiSummaryUseCase(repository = get()) }
+    factory { GenerateAiSummaryUseCase(repository = get()) }
+    factory { ObserveAiNoticeAcceptedUseCase(repository = get()) }
+    factory { AcceptAiNoticeUseCase(repository = get()) }
 }

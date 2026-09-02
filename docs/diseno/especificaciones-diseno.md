@@ -1058,6 +1058,29 @@ Si se muestra texto extraído:
 
 ## 20. Pestaña Resumen IA
 
+> **Enmienda del 2 de septiembre de 2026 (feature 007).** El apartado se escribió cuando la pestaña era
+> un marcador de posición, y se implementó con cuatro decisiones que no estaban previstas aquí:
+>
+> - **La ficha es completa, no solo viñetas.** Bajo la tarjeta van, en este orden y ocultando las
+>   vacías: puntos clave, a quién afecta, fechas y plazos, importes, qué hay que hacer, recursos o
+>   alegaciones y advertencias. Una sección sin contenido **se oculta**; no se rellena con «no consta».
+> - **Cobertura parcial.** Un documento que no cabe en una consulta se resume en parte. Se dice dos
+>   veces: en el estado de generación —«Documento de 14 páginas. Se analizarán las 6 primeras»— y en el
+>   resultado, con una banda que enumera las páginas analizadas.
+> - **Aviso de envío externo.** La primera vez que se pulsa «Generar resumen», una hoja inferior explica
+>   que el texto del documento sale del dispositivo, con Continuar y Cancelar. No vuelve a salir.
+> - **Acciones y estado obsoleto.** Bajo la ficha van Copiar, Compartir y Volver a generar. Si el
+>   resumen ya no corresponde al documento actual, se marca y se sigue mostrando: no se borra.
+>
+> Se añade además que la advertencia del apartado 20.3 lleva **descripción accesible propia**: se
+> anuncia por lector de pantalla y no depende del color ni del icono para percibirse. Y que la
+> advertencia se antepone al texto al copiar o compartir, para que un resumen no circule fuera de la
+> aplicación como si fuera el boletín.
+>
+> El rótulo de 20.4 es **«Fuentes del resumen»**, en plural, que es lo que dice este documento. La
+> imagen de referencia `Datos_modelo/resumenIA.png` lo escribe en singular; manda el documento.
+
+
 ## 20.1. Identidad visual
 
 La IA debe reconocerse sin dominar el diseño.

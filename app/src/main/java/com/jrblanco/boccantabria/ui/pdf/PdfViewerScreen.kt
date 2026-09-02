@@ -50,6 +50,8 @@ const val TAG_PDF_VIEWER_SHARE: String = "pdf_viewer_share"
 @Composable
 fun PdfViewerContent(
     state: PdfViewerUiState,
+    /** Where to open, 0-based. Required rather than defaulted: every caller knows which page. */
+    initialPage: Int,
     onBack: () -> Unit,
     onShare: () -> Unit,
     onRetry: () -> Unit,
@@ -107,7 +109,7 @@ fun PdfViewerContent(
             when (state) {
                 PdfViewerUiState.Loading -> Loading()
                 is PdfViewerUiState.Error -> Failure(state.error, onRetry)
-                is PdfViewerUiState.Ready -> Document(state)
+                is PdfViewerUiState.Ready -> Document(state, initialPage)
             }
         }
     }
@@ -115,13 +117,18 @@ fun PdfViewerContent(
 
 @OptIn(ExperimentalPdfApi::class)
 @Composable
-private fun Document(state: PdfViewerUiState.Ready) {
+private fun Document(state: PdfViewerUiState.Ready, initialPage: Int) {
     val viewerState = rememberPdfViewerState()
 
     // The viewer's own state is not saveable, so the page is remembered by hand and restored on
     // the way back. Rotating the phone and landing on page one of a forty-page bulletin would
     // undo the reader's work (research.md D-010).
-    var savedPage by rememberSaveable { mutableIntStateOf(0) }
+    //
+    // Seeded with [initialPage] rather than always zero: the same mechanism that restores a page
+    // after a rotation is what lands on the page an AI summary cited. Seeding the saveable — rather
+    // than scrolling separately — means a rotation afterwards keeps wherever the reader has got to,
+    // instead of snapping back to the cited page.
+    var savedPage by rememberSaveable { mutableIntStateOf(initialPage) }
 
     LaunchedEffect(viewerState) {
         if (savedPage > 0) viewerState.scrollToPage(savedPage)

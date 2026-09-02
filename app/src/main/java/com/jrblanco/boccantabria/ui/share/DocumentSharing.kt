@@ -32,6 +32,22 @@ fun Context.share(target: ShareTarget, subject: String) {
     startActivity(Intent.createChooser(intent, getString(R.string.publication_share_chooser)))
 }
 
+/**
+ * Hands plain text to the share sheet.
+ *
+ * Used by the AI summary, which travels as text and not as the document. The warning that a machine
+ * wrote it is already **inside** [text]: outside the application the summary loses the card, the
+ * mark and the screen around it, so if the warning is not in the text it is not anywhere (FR-025).
+ */
+fun Context.shareText(text: String, subject: String) {
+    val intent = Intent(Intent.ACTION_SEND).apply {
+        type = TEXT_MIME
+        putExtra(Intent.EXTRA_SUBJECT, subject)
+        putExtra(Intent.EXTRA_TEXT, text)
+    }
+    startActivity(Intent.createChooser(intent, getString(R.string.publication_share_chooser)))
+}
+
 private fun Context.documentUri(localPath: String) =
     FileProvider.getUriForFile(this, "$packageName.documents", File(localPath))
 

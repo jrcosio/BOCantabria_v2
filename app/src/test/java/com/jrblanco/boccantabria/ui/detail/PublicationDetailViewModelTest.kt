@@ -4,6 +4,7 @@ import androidx.lifecycle.SavedStateHandle
 import app.cash.turbine.test
 import com.jrblanco.boccantabria.data.repository.BocSectionRepositoryImpl
 import com.jrblanco.boccantabria.domain.model.AppResult
+import com.jrblanco.boccantabria.domain.model.AiSummaryStatus
 import com.jrblanco.boccantabria.domain.model.DetailTab
 import com.jrblanco.boccantabria.domain.model.DocumentStatus
 import com.jrblanco.boccantabria.domain.model.DomainError
@@ -11,6 +12,10 @@ import com.jrblanco.boccantabria.domain.model.ShareTarget
 import com.jrblanco.boccantabria.domain.repository.ConnectivityRepository
 import com.jrblanco.boccantabria.domain.usecase.GetBocSectionsUseCase
 import com.jrblanco.boccantabria.domain.usecase.ObserveOfficialDocumentUseCase
+import com.jrblanco.boccantabria.domain.usecase.AcceptAiNoticeUseCase
+import com.jrblanco.boccantabria.domain.usecase.GenerateAiSummaryUseCase
+import com.jrblanco.boccantabria.domain.usecase.ObserveAiNoticeAcceptedUseCase
+import com.jrblanco.boccantabria.domain.usecase.ObserveAiSummaryUseCase
 import com.jrblanco.boccantabria.domain.usecase.ObservePublicationUseCase
 import com.jrblanco.boccantabria.domain.usecase.ObserveSavedKeysUseCase
 import com.jrblanco.boccantabria.domain.usecase.OpenOfficialDocumentUseCase
@@ -19,9 +24,11 @@ import com.jrblanco.boccantabria.domain.usecase.ShareOfficialDocumentUseCase
 import com.jrblanco.boccantabria.fake.FakeDocumentRepository
 import com.jrblanco.boccantabria.ui.share.ShareState
 import com.jrblanco.boccantabria.fake.FakePublicationRepository
+import com.jrblanco.boccantabria.fake.FakeAiSummaryRepository
 import com.jrblanco.boccantabria.fake.FakeSavedPublicationRepository
 import com.jrblanco.boccantabria.fake.RecordingAnalyticsTracker
 import com.jrblanco.boccantabria.fake.officialDocument
+import com.jrblanco.boccantabria.fake.aiSummary
 import com.jrblanco.boccantabria.fake.publication
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.Dispatchers
@@ -34,6 +41,7 @@ import kotlinx.coroutines.test.setMain
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
@@ -46,6 +54,7 @@ class PublicationDetailViewModelTest {
     private val documents = FakeDocumentRepository()
     private var online = true
     private val savedRepository = FakeSavedPublicationRepository()
+    private var aiSummaries = FakeAiSummaryRepository(noticeAccepted = true)
 
     @Before
     fun setUp() = Dispatchers.setMain(dispatcher)
@@ -374,11 +383,187 @@ class PublicationDetailViewModelTest {
         }
     }
 
+    // ---------- Resumen IA (feature 007) ----------
+
+    /** FR-002 and SC-004: showing the tab costs nothing. */
+    @Test
+    fun `opening the summary tab does not generate anything`() = runTest(dispatcher) {
+        val viewModel = viewModel()
+
+        viewModel.uiState.test {
+            advanceUntilIdle()
+            viewModel.onTabSelected(DetailTab.AI_SUMMARY)
+            advanceUntilIdle()
+
+            assertEquals(DetailTab.AI_SUMMARY, expectMostRecentItem().selectedTab)
+            assertEquals(0, aiSummaries.calls)
+            cancelAndIgnoreRemainingEvents()
+        }
+    }
+
+    @Test
+    fun `pressing generate asks for the summary`() = runTest(dispatcher) {
+        val viewModel = viewModel()
+
+        viewModel.uiState.test {
+            advanceUntilIdle()
+            viewModel.onGenerateSummary()
+            advanceUntilIdle()
+
+            assertEquals(1, aiSummaries.calls)
+            cancelAndIgnoreRemainingEvents()
+        }
+    }
+
+    /** FR-034: regenerating is always explicit, and always forces. */
+    @Test
+    fun `regenerating forces a new request`() = runTest(dispatcher) {
+        val viewModel = viewModel()
+
+        viewModel.uiState.test {
+            advanceUntilIdle()
+            viewModel.onRegenerateSummary()
+            advanceUntilIdle()
+
+            assertEquals(1, aiSummaries.forcedCalls)
+            cancelAndIgnoreRemainingEvents()
+        }
+    }
+
+    /** FR-005: a second tap while one is running is the same operation. */
+    @Test
+    fun `two taps while one is running are one request`() = runTest(dispatcher) {
+        aiSummaries.gate = CompletableDeferred()
+        val viewModel = viewModel()
+
+        viewModel.uiState.test {
+            advanceUntilIdle()
+            viewModel.onGenerateSummary()
+            viewModel.onGenerateSummary()
+            advanceUntilIdle()
+            aiSummaries.gate!!.complete(Unit)
+            advanceUntilIdle()
+
+            assertEquals(1, aiSummaries.calls)
+            cancelAndIgnoreRemainingEvents()
+        }
+    }
+
+    // ---------- El aviso de la primera vez ----------
+
+    /** FR-043: nothing leaves the device before the person has been told. */
+    @Test
+    fun `the first generate opens the notice instead of asking`() = runTest(dispatcher) {
+        val viewModel = viewModel(noticeAccepted = false)
+
+        viewModel.uiState.test {
+            advanceUntilIdle()
+            viewModel.onGenerateSummary()
+            advanceUntilIdle()
+
+            assertTrue(expectMostRecentItem().aiNoticePending)
+            assertEquals("no puede haber salido nada", 0, aiSummaries.calls)
+            cancelAndIgnoreRemainingEvents()
+        }
+    }
+
+    /** FR-044: cancelling sends nothing at all. */
+    @Test
+    fun `cancelling the notice sends nothing`() = runTest(dispatcher) {
+        val viewModel = viewModel(noticeAccepted = false)
+
+        viewModel.uiState.test {
+            advanceUntilIdle()
+            viewModel.onGenerateSummary()
+            advanceUntilIdle()
+            viewModel.onAiNoticeDismissed()
+            advanceUntilIdle()
+
+            assertFalse(expectMostRecentItem().aiNoticePending)
+            assertEquals(0, aiSummaries.calls)
+            cancelAndIgnoreRemainingEvents()
+        }
+    }
+
+    /** FR-045: told once. Accepting continues with the generation that was asked for. */
+    @Test
+    fun `accepting the notice remembers it and carries on`() = runTest(dispatcher) {
+        val viewModel = viewModel(noticeAccepted = false)
+
+        viewModel.uiState.test {
+            advanceUntilIdle()
+            viewModel.onGenerateSummary()
+            advanceUntilIdle()
+            viewModel.onAiNoticeAccepted()
+            advanceUntilIdle()
+
+            val state = expectMostRecentItem()
+            assertFalse(state.aiNoticePending)
+            assertTrue(state.aiNoticeAccepted)
+            assertEquals(1, aiSummaries.calls)
+            cancelAndIgnoreRemainingEvents()
+        }
+    }
+
+    @Test
+    fun `once accepted the notice does not come back`() = runTest(dispatcher) {
+        val viewModel = viewModel(noticeAccepted = false)
+
+        viewModel.uiState.test {
+            advanceUntilIdle()
+            viewModel.onGenerateSummary()
+            viewModel.onAiNoticeAccepted()
+            advanceUntilIdle()
+
+            viewModel.onGenerateSummary()
+            advanceUntilIdle()
+
+            assertFalse("no debe volver a preguntarlo", expectMostRecentItem().aiNoticePending)
+            cancelAndIgnoreRemainingEvents()
+        }
+    }
+
+    // ---------- La advertencia viaja con el texto ----------
+
+    /**
+     * FR-025. Outside the application the summary loses the card, the mark and the screen around
+     * it. If the warning is not inside the text, it is not anywhere.
+     */
+    @Test
+    fun `the shareable text begins with the warning`() = runTest(dispatcher) {
+        aiSummaries.emit(
+            AiSummaryStatus.Ready(aiSummary(), generatedAtEpochMillis = 1_000L, isStale = false),
+        )
+        val viewModel = viewModel()
+
+        viewModel.uiState.test {
+            advanceUntilIdle()
+            val text = viewModel.summaryAsSharableText("Generado por IA. Consulta el PDF oficial.")
+
+            assertTrue(text!!.startsWith("Generado por IA. Consulta el PDF oficial."))
+            assertTrue(text.contains("Se aprueba definitivamente la modificacion de la ordenanza."))
+            cancelAndIgnoreRemainingEvents()
+        }
+    }
+
+    @Test
+    fun `without a summary there is nothing to copy`() = runTest(dispatcher) {
+        val viewModel = viewModel()
+
+        viewModel.uiState.test {
+            advanceUntilIdle()
+            assertNull(viewModel.summaryAsSharableText("aviso"))
+            cancelAndIgnoreRemainingEvents()
+        }
+    }
+
     private fun viewModel(
         stored: List<com.jrblanco.boccantabria.domain.model.Publication> = listOf(publication("boc:439765")),
         key: String = "boc:439765",
         savedTab: String? = null,
+        noticeAccepted: Boolean = true,
     ): PublicationDetailViewModel {
+        if (!noticeAccepted) aiSummaries = FakeAiSummaryRepository(noticeAccepted = false)
         val publications = FakePublicationRepository(stored)
         val connectivity = object : ConnectivityRepository {
             override fun isOnline(): Boolean = online
@@ -396,6 +581,10 @@ class PublicationDetailViewModelTest {
             shareDocument = ShareOfficialDocumentUseCase(documents, connectivity),
             observeSavedKeys = ObserveSavedKeysUseCase(savedRepository),
             setPublicationSaved = SetPublicationSavedUseCase(savedRepository),
+            observeAiSummary = ObserveAiSummaryUseCase(aiSummaries),
+            generateAiSummary = GenerateAiSummaryUseCase(aiSummaries),
+            observeAiNoticeAccepted = ObserveAiNoticeAcceptedUseCase(aiSummaries),
+            acceptAiNotice = AcceptAiNoticeUseCase(aiSummaries),
             getSections = GetBocSectionsUseCase(BocSectionRepositoryImpl()),
             analytics = analytics,
         )

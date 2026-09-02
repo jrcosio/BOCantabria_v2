@@ -52,9 +52,15 @@ sealed interface Route {
     @Serializable
     data class Detail(val externalKey: String) : Route
 
-    /** The official document, full screen. Reached from the detail screen. */
+    /**
+     * The official document, full screen. Reached from the detail screen.
+     *
+     * @param page where to open, 0-based. Defaults to the first so the existing callers — the
+     *   detail action bar — keep working untouched. It exists so a page reference in the AI summary
+     *   can be **followed**: a reference nobody can check is not a reference (FR-021).
+     */
     @Serializable
-    data class PdfViewer(val externalKey: String) : Route
+    data class PdfViewer(val externalKey: String, val page: Int = 0) : Route
 
     /**
      * Asking about the document.

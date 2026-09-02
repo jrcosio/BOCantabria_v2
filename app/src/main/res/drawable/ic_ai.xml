@@ -1,17 +1,21 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!--
-  Material Symbols Outlined, tomado de google/material-design-icons sin modificar el trazado.
-  El conjunto usa un viewBox con origen en -960, así que el grupo lo traslada para encajarlo en
-  el lienzo de 960 que espera un VectorDrawable (research.md D-005 de la feature 003).
+  Material Symbols Outlined («auto_awesome»), tomado de google/material-design-icons sin modificar el
+  trazado. §20.1 del documento de diseño pide este símbolo para la identidad de la IA.
+
+  **Lienzo de 24, no de 960, y a propósito.** El repositorio de origen mezcla convenciones: la mayoría
+  de los símbolos vienen con `viewBox="0 -960 960 960"`, pero este llega en escala 24 y sin `viewBox`.
+  Estuvo escrito con el envoltorio de 960 y el grupo trasladado, y el resultado era un trazado de 24
+  unidades empujado fuera del lienzo: **el icono no se dibujaba en ninguno de sus cuatro usos** —la
+  pestaña, la tarjeta y los dos botones— y nada fallaba, simplemente no había nada. El lienzo tiene
+  que coincidir con la escala del trazado.
 -->
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
     android:width="24dp"
     android:height="24dp"
-    android:viewportWidth="960"
-    android:viewportHeight="960">
-    <group android:translateY="960">
-        <path
-            android:fillColor="#FF000000"
-            android:pathData="m19 9-1.25-2.75L15 5l2.75-1.25L19 1l1.25 2.75L23 5l-2.75 1.25Zm0 14-1.25-2.75L15 19l2.75-1.25L19 15l1.25 2.75L23 19l-2.75 1.25ZM9 20l-2.5-5.5L1 12l5.5-2.5L9 4l2.5 5.5L17 12l-5.5 2.5Zm0-4.85L10 13l2.15-1L10 11 9 8.85 8 11l-2.15 1L8 13ZM9 12Z" />
-    </group>
+    android:viewportWidth="24"
+    android:viewportHeight="24">
+    <path
+        android:fillColor="#FF000000"
+        android:pathData="m19 9-1.25-2.75L15 5l2.75-1.25L19 1l1.25 2.75L23 5l-2.75 1.25Zm0 14-1.25-2.75L15 19l2.75-1.25L19 15l1.25 2.75L23 19l-2.75 1.25ZM9 20l-2.5-5.5L1 12l5.5-2.5L9 4l2.5 5.5L17 12l-5.5 2.5Zm0-4.85L10 13l2.15-1L10 11 9 8.85 8 11l-2.15 1L8 13ZM9 12Z" />
 </vector>

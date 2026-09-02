@@ -222,14 +222,17 @@ Composable → ViewModel → UseCase → Repository (interfaz en domain)
   deriva de la fuente, incluido el relleno; `SavedPublicationDao` escribe lo de la persona; y el de
   búsqueda solo lee. Lleva **dos** sentencias, una por sentido de ordenación, porque Room no
   parametriza la dirección de un `ORDER BY`.
-- **La base de datos está en la versión 3**, con `AutoMigration(1, 2)` y `AutoMigration(2, 3)` contra
-  los esquemas exportados. La 1→2 se conserva: quien se salte una versión tiene que poder llegar de la
-  1 a la 3 de una vez.
+- **La base de datos está en la versión 4**, con `AutoMigration(1, 2)`, `(2, 3)` y `(3, 4)` contra los
+  esquemas exportados. Las anteriores se conservan: quien se salte dos versiones tiene que poder llegar
+  de la 1 a la 4 de una vez. La 3→4 añade la tabla `ai_summaries`, y a diferencia de la 3 **no tiene
+  relleno**: una tabla nueva nace vacía y no tener resumen es el estado normal de una publicación.
   `bocDatabase()` es un `.build()` limpio a propósito: las migraciones automáticas no necesitan
   `addMigrations`, y `fallbackToDestructiveMigration()` no entra aquí ni como último recurso —pasaría
   la puerta de compilación y vaciaría el boletín de quien ya tiene la aplicación instalada—. Los
   esquemas de `app/schemas/` **se versionan**: son el material de la migración siguiente.
-- **Sigue sin haber ninguna sentencia de borrado en el proyecto**, en ninguno de los tres DAO.
+- **Sigue sin haber ninguna sentencia de borrado en el proyecto**, en ninguno de los **cuatro** DAO.
+  `AiSummaryDao` solo lee y hace `upsert`: regenerar un resumen sustituye la fila, no la borra y la
+  vuelve a insertar, porque entre las dos operaciones no habría resumen ninguno.
 - **La sección la manda la fuente**, no el campo `categorias`, que se guarda en crudo y solo sirve
   para enriquecer y verificar. Razón: el feed 4.3 trae entradas con los componentes permutados.
 - `java.time` es **nativo**: desde la enmienda 1.1.0 de la constitución `minSdk` es 28. El azucarado
@@ -249,7 +252,12 @@ Composable → ViewModel → UseCase → Repository (interfaz en domain)
 
 ### El documento oficial
 
-- **`ui/pdf` es la única frontera con `androidx.pdf`.** La biblioteca está en **beta** y su API
+- **`androidx.pdf` se toca en exactamente dos sitios**, y desde la feature 007 ya no en uno solo:
+  `ui/pdf` para **dibujar** el documento y `data/source/local/AndroidxPdfTextExtractor` para **extraer su
+  texto**. Extraer texto es una fuente de datos, no presentación; ponerlo en `ui` obligaría al modelo de
+  pantalla a orquestar la tubería entera y eso incumple el principio III. La interfaz
+  `PdfDocumentLoader` **se queda en `ui/pdf`**: moverla a `data` rompería la regla Konsist «ui no
+  depende de data», porque el visor y la vista previa la importan. La biblioteca está en **beta** y su API
   puede cambiar: fuera de ese paquete nadie la nombra. `PdfDocumentLoader` es el seam —abrir un
   fichero y dibujar su primera página— y devuelve tipos de Compose, no de la biblioteca.
   `PdfViewer` y `rememberPdfViewerState` exigen `@OptIn(ExperimentalPdfApi::class)`.
@@ -266,6 +274,46 @@ Composable → ViewModel → UseCase → Repository (interfaz en domain)
   Buscar consulta todo lo almacenado, con filtros y orden. Lo único que comparten es
   `core/util/SearchText`. Entre las dos hay un puente: sin coincidencias en la edición, se ofrece la
   misma consulta en el buscador global, que la recibe por el argumento de `Route.Search`.
+- **Resumen IA existe desde la feature 007, y su regla número uno es que no se genera solo.** Solo al
+  pulsar el botón: la cuota del servicio es gratuita, compartida por toda la organización y diaria, y
+  resumir lo que nadie ha pedido la vaciaría en una tarde. Tres cosas más que conviene no deshacer sin
+  pensarlo: el texto del PDF **no se almacena** —regenerar vuelve a extraerlo, que es local y gratis, y
+  guardarlo crecería sin tope y exigiría la primera sentencia de borrado del proyecto—; un documento sin
+  texto utilizable **no llega nunca** al servicio, y eso se decide contando caracteres, no esperando una
+  excepción; y la advertencia «Comprueba siempre el texto oficial» va **dentro** del texto al copiar o
+  compartir, porque fuera de la aplicación el resumen pierde la tarjeta, el icono y la pantalla que lo
+  enmarcaba.
+- **El presupuesto de tokens está medido, no estimado, y las dos mitades importan.** 4.500 de documento
+  contra 1.800 de respuesta. El proveedor cobra `entrada + max_completion_tokens` **al pedir**, se gaste
+  o no —su propio 429 lo dice: «Limit 8000, Used 7346, Requested 6475»—, así que subir el techo de la
+  respuesta sin bajar el del documento acerca el límite. Y 1.200 se quedaba corto: un resumen real llegó
+  a 1.625 tokens, y pasado el techo el JSON llega cortado, no parsea, y el lector lee «no se ha podido
+  construir un resumen fiable» — un problema nuestro disfrazado de fallo del servicio.
+- **Cuando un prompt enumera qué rellenar, lo que no está en la lista es lo que se pierde.** La versión
+  v2 decía que un análisis parcial «no exime de rellenar **los campos estructurados**». El modelo
+  obedeció al pie de la letra: rellenó los estructurados y dejó **el resumen** en blanco, con
+  `finish_reason=stop` —no se quedó sin sitio, terminó por su cuenta—. Desde v3, `plainLanguageSummary`
+  se declara obligatorio siempre, y lo que falte va en `coverage` y `warnings`, nunca en un campo vacío.
+- **El texto que sale de pdfium se sanea antes de viajar.** Un sustituto UTF-16 sin pareja no es un
+  carácter: produce UTF-8 inválido en el cuerpo JSON y el servicio rechaza la petición entera con un
+  400, siempre para el mismo documento. `PdfTextNormalizer` los elimina junto a los caracteres de
+  control.
+- **Un arreglo que convierte un error en otro es peor que no arreglar nada.** El reintento automático de
+  un resumen vacío salía disparado, chocaba con la cuota del mismo minuto y el lector acababa leyendo
+  «se ha alcanzado el límite». Ahora se consulta al coordinador antes de reintentar y, si no hay margen,
+  se devuelve el rechazo original.
+- **La credencial del servicio de IA se lee de `local.properties` y se expone por `BuildConfig`.** Con
+  API de proveedor de Gradle (`providers.fileContents`), no con `File.readText`: la caché de
+  configuración está activada y leer un fichero a pelo en tiempo de configuración es una entrada no
+  declarada. **Si la clave falta, la build sigue en verde** y el valor es cadena vacía, que la pantalla
+  traduce en «no configurado»; es lo que permite compilar y pasar las pruebas sin secretos. Se asume, con
+  conocimiento del propietario, que una credencial dentro de un APK distribuido es recuperable. Nunca en
+  Logcat, ni en Crashlytics, ni en analítica: ni la clave ni el contenido del documento. **Nunca un
+  interceptor de registro a nivel de cuerpo en el cliente de IA.**
+- **El modelo del servicio está en Preview, no en producción.** Por eso su identificador vive en
+  `AiSummaryConstants` y el acceso va detrás de `GroqSummaryDataSource`: cuando lo retiren, es una línea
+  y una implementación nueva. Esas tres constantes —modelo, versión de prompt, versión de esquema— se
+  guardan con cada resumen; si alguna deja de coincidir, lo guardado queda **obsoleto, no borrado**.
 - **Guardados existe desde la feature 005, pero solo marca: no conserva el documento.** Esta guía
   prometía que guardar para leer sin conexión sería la funcionalidad de Guardados, y esa mitad queda
   **aplazada** por decisión del propietario, no olvidada: el requisito FR-024 de
@@ -318,6 +366,15 @@ capas, que solo `data` toque Firebase, que solo `core/ui/theme` importe `Color`,
 del tema del sistema, y que toda clase de dominio de nivel superior y todo `ViewModel` tenga su
 fichero de prueba. Si añades una clase de dominio sin test, la build falla.
 
+> **Lo que las pruebas de esta casa no pueden ver, y cómo se ve.** Los dos defectos que de verdad
+> rompían el Resumen IA en un móvil —el modelo dejando el resumen vacío, y el techo de salida cortando
+> el JSON— **no los podía encontrar ninguna prueba automática**, porque todas usan dobles en la frontera
+> con el servicio y el defecto estaba justo al otro lado. Los encontró el registro en un dispositivo
+> real, y solo después de instrumentar seis `catch` que tragaban en silencio. La conclusión no es
+> escribir menos pruebas: es que **una frontera con un servicio ajeno hay que atravesarla de verdad al
+> menos una vez**, y dejar registrado lo suficiente para saber qué pasó cuando falle. Está en
+> `quickstart.md` §3 bis y en `research.md` D-034.
+
 **Trampas conocidas al escribir tests** — estas costaron tiempo, no las repitas:
 
 - Los tests instrumentados **comparten proceso** y el grafo es de `single`. Una caché o un
@@ -348,6 +405,14 @@ fichero de prueba. Si añades una clase de dominio sin test, la build falla.
 - **Comparar un `Long?` con `assertEquals` y un literal sin `L` nunca coincide**: el literal se
   autoboxea a `Integer` y `assertEquals(Object, Object)` falla. Con tipos no nulos no pasa, porque
   ahí resuelve la sobrecarga primitiva.
+- **El repositorio de Material Symbols mezcla dos convenciones de lienzo, y copiar la equivocada no
+  falla: simplemente no dibuja nada.** La mayoría de los símbolos vienen con
+  `viewBox="0 -960 960 960"` y coordenadas negativas, que es lo que espera el envoltorio con
+  `viewportWidth="960"` y el grupo trasladado. Pero otros —`auto_awesome`, por ejemplo— siguen llegando
+  en escala 24 y **sin `viewBox`**. `ic_ai` estuvo desde la feature 004 con un trazado de 24 dentro de
+  la plantilla de 960: se dibujaba en una esquina diminuta y el traslado lo mandaba fuera del lienzo.
+  **No se vio nunca**, en ninguno de sus cuatro usos, y nada falló. Antes de usar el envoltorio de 960,
+  comprueba que el trazado lleve coordenadas negativas.
 - **El conjunto básico de iconos de Material no está en el classpath** con este BOM: no existe
   `androidx.compose.material.icons`. Los diecinueve iconos son vectores propios en `RES/drawable`,
   con el trazado tomado de Material Symbols sin modificar. El `android:fillColor` de un vector es
@@ -438,8 +503,63 @@ fichero de prueba. Si añades una clase de dominio sin test, la build falla.
   pestaña gana al argumento con el que se navega. El puente de Inicio a Buscar navega **sin**
   restauración por eso; con ella, el término traspasado se perdía sin error, llegando a Buscar con el
   campo vacío. Lo fija `SearchHandoffTest`.
+- **En una respuesta con esquema estricto, el orden de las propiedades es el orden de generación.** No
+  es cosmético: con `plainLanguageSummary` en cuarta posición, la prosa se cortaba en 1024 caracteres y
+  **todo lo declarado después venía vacío** —una convocatoria con plazos e importes salía en blanco—.
+  Va la última, acotada con `maxLength`. El orden de la pantalla es otro y no depende de este: la
+  tarjeta sigue mostrando la prosa arriba. Si alguien ordena esas propiedades alfabéticamente, la ficha
+  se vacía otra vez; lo vigila `GroqSummarySchemaTest`.
+- **Un `catch` que no escribe nada convierte un fallo en un misterio.** Los tres sitios que abren un PDF
+  se tragaban la excepción sin dejar rastro, así que un proceso aislado muerto y un fichero ilegible se
+  veían igual: nada en pantalla y nada en el registro. Ahora informan por `CrashReporter.log`, y
+  `FirebaseCrashReporter` **también escribe en logcat cuando `BuildConfig.DEBUG`**, con etiqueta `BOC`.
+  Nunca el contenido del documento ni la clave: solo el tipo de fallo y de dónde viene.
+- **El proceso aislado del PDF nace y muere en cada documento, y eso es normal.** `androidx.pdf` genera
+  un `Intent` con identificador único por documento, así que cada `openDocument()` arranca su propio
+  proceso; al cerrar, muere. En Logcat sale como `PROCESS STARTED`/`PROCESS ENDED` **con el nombre de
+  paquete de la app**, porque lo comparte. No es un cierre inesperado. Y
+  `AconfigStorageReadException: android.graphics.pdf.flags` es ruido de la plataforma, capturado dentro
+  de la librería.
+- **`close()` de un `PdfDocument` es `@WorkerThread` y hace una llamada binder síncrona.** Cerrarlo
+  desde `produceState` lo ejecutaba en el hilo principal; y cerrarlo en `onCleared()` sin capturar es un
+  cierre de la aplicación en cuanto el proceso aislado ya haya muerto por su cuenta, que es lo normal.
+  Va en `withContext(dispatchers.io)` y dentro de `runCatching`.
+- **`trimIndent()` se aplica DESPUÉS de interpolar, y eso rompió el prompt.** Un valor multilínea que
+  entra en la plantilla sin sangría arrastra el indent común a cero, así que no se recorta nada y el
+  mensaje entero sale con ocho espacios en cada línea, pagados de la cuota de tokens. `SummaryPromptFactory`
+  recorta primero y sustituye después, y hay una prueba que lo afirma.
+- **kotlinx-serialization omite por defecto los valores iguales al default.** Sin `encodeDefaults = true`,
+  `stream: false` y `reasoning_effort: "none"` no se enviaban, y el valor por defecto del proveedor para
+  ese modelo es razonamiento **activo**: tokens de la misma cuota que nadie llega a ver.
+- **`combine` con seis flujos cae en la sobrecarga de `vararg`**, que exige que todos tengan el mismo
+  tipo y devuelve `Array<Any?>`. `PublicationDetailViewModel` agrupa lo de la persona en un tipo propio
+  y se queda en cinco.
 - **`onCleared()` es `protected`.** Para comprobar que el visor cierra el documento, la prueba lo
   invoca por reflexión sobre la superclase; en producción quien lo llama es el framework.
+
+**Cómo se mira cuando el Resumen IA falla en un móvil.** La pantalla nunca dice códigos, a propósito
+(FR-040), así que el registro es el único sitio donde se distingue qué pasó:
+
+```bash
+adb -s <serie> logcat -s BOC:V
+```
+
+Las líneas van en inglés y dicen la fase, el tamaño de lo enviado y el motivo exacto del fallo:
+
+```
+summary: document ready, extracting
+summary: sending pages 4/9, 15582 chars, ~4870 tokens
+groq: HTTP 400: <lo que conteste el servicio>
+groq: blank summary: plainLanguageSummary=0 keyPoints=6 …, finish_reason=stop
+extraction failed: DeadObjectException
+summary failed: Unknown
+```
+
+**Nunca la credencial ni el contenido del documento**: de una respuesta se registra su *forma* —nombres
+de campo y tamaños—, y del servicio su `error.message`, que habla de nuestra petición. Tres pruebas lo
+vigilan. Y **`AiSummaryError.Unknown` cubre cuatro situaciones distintas** —documento que no se descarga,
+extracción rota, código HTTP sin mejor sitio, y cualquier excepción del camino—: en pantalla son la
+misma frase y en el registro no pueden serlo.
 
 **Intermitencia conocida** — `SplashRestorationTest` falló una vez en cinco ejecuciones con
 `Activity never becomes requested state "[DESTROYED]"`. Es un tiempo de espera agotado dentro de

@@ -14,11 +14,16 @@ import com.jrblanco.boccantabria.domain.usecase.GetBocSectionsUseCase
 import com.jrblanco.boccantabria.data.repository.BocSectionRepositoryImpl
 import com.jrblanco.boccantabria.domain.usecase.ObserveOfficialDocumentUseCase
 import com.jrblanco.boccantabria.domain.usecase.ObservePublicationUseCase
+import com.jrblanco.boccantabria.domain.usecase.AcceptAiNoticeUseCase
+import com.jrblanco.boccantabria.domain.usecase.GenerateAiSummaryUseCase
+import com.jrblanco.boccantabria.domain.usecase.ObserveAiNoticeAcceptedUseCase
+import com.jrblanco.boccantabria.domain.usecase.ObserveAiSummaryUseCase
 import com.jrblanco.boccantabria.domain.usecase.ObserveSavedKeysUseCase
 import com.jrblanco.boccantabria.domain.usecase.OpenOfficialDocumentUseCase
 import com.jrblanco.boccantabria.domain.usecase.SetPublicationSavedUseCase
 import com.jrblanco.boccantabria.domain.usecase.ShareOfficialDocumentUseCase
 import com.jrblanco.boccantabria.fake.FakePublicationRepository
+import com.jrblanco.boccantabria.fake.FakeAiSummaryRepository
 import com.jrblanco.boccantabria.fake.FakeSavedPublicationRepository
 import com.jrblanco.boccantabria.fake.RecordingAnalyticsTracker
 import com.jrblanco.boccantabria.fake.TestDispatcherProvider
@@ -181,6 +186,11 @@ class DocumentFlowIntegrationTest {
             // Lo guardado tiene su propia prueba de integración; aquí solo hace falta que exista.
             observeSavedKeys = ObserveSavedKeysUseCase(FakeSavedPublicationRepository()),
             setPublicationSaved = SetPublicationSavedUseCase(FakeSavedPublicationRepository()),
+            // El resumen tiene su propia prueba de integración; aquí solo hace falta que exista.
+            observeAiSummary = ObserveAiSummaryUseCase(FakeAiSummaryRepository()),
+            generateAiSummary = GenerateAiSummaryUseCase(FakeAiSummaryRepository()),
+            observeAiNoticeAccepted = ObserveAiNoticeAcceptedUseCase(FakeAiSummaryRepository()),
+            acceptAiNotice = AcceptAiNoticeUseCase(FakeAiSummaryRepository()),
             getSections = GetBocSectionsUseCase(BocSectionRepositoryImpl()),
             analytics = RecordingAnalyticsTracker(),
         )

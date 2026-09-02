@@ -70,6 +70,12 @@ fun BOCantabriaNavHost(
                 onOpenDocument = { externalKey ->
                     navController.navigate(Route.PdfViewer(externalKey))
                 },
+                // A page reference in the AI summary, followed. Navigated **without**
+                // `restoreState`: saved state wins over a route argument, and in feature 006 that
+                // swallowed a handed-over search term without any error at all.
+                onOpenDocumentAtPage = { externalKey, page ->
+                    navController.navigate(Route.PdfViewer(externalKey, page))
+                },
                 onAsk = { externalKey ->
                     navController.navigate(Route.Ask(externalKey))
                 },

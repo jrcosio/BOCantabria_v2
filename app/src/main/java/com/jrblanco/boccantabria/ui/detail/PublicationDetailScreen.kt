@@ -28,7 +28,7 @@ import androidx.compose.ui.unit.dp
 import com.jrblanco.boccantabria.R
 import com.jrblanco.boccantabria.core.ui.theme.BocTheme
 import com.jrblanco.boccantabria.domain.model.DetailTab
-import com.jrblanco.boccantabria.ui.detail.component.ComingSoonTab
+import com.jrblanco.boccantabria.ui.detail.component.AiSummaryTab
 import com.jrblanco.boccantabria.ui.detail.component.DetailActionBar
 import com.jrblanco.boccantabria.ui.detail.component.DetailTabs
 import com.jrblanco.boccantabria.ui.detail.component.DocumentHeader
@@ -62,6 +62,11 @@ fun PublicationDetailContent(
     onOpenDocument: () -> Unit,
     onAsk: () -> Unit,
     onRetry: () -> Unit,
+    onGenerateSummary: () -> Unit,
+    onRegenerateSummary: () -> Unit,
+    onCopySummary: () -> Unit,
+    onShareSummary: () -> Unit,
+    onOpenPage: (Int) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     Scaffold(
@@ -170,10 +175,16 @@ fun PublicationDetailContent(
                                 onRetry = onRetry,
                             )
 
-                            DetailTab.AI_SUMMARY -> ComingSoonTab(
-                                iconRes = R.drawable.ic_ai,
-                                label = stringResource(R.string.detail_summary_label),
-                                description = stringResource(R.string.detail_summary_coming),
+                            DetailTab.AI_SUMMARY -> AiSummaryTab(
+                                status = state.summary,
+                                hasDocument = publication.documentUrl.isNotBlank(),
+                                onGenerate = onGenerateSummary,
+                                onRegenerate = onRegenerateSummary,
+                                onRetry = onGenerateSummary,
+                                onOpenPage = onOpenPage,
+                                onOpenDocument = onOpenDocument,
+                                onCopy = onCopySummary,
+                                onShare = onShareSummary,
                             )
                         }
                     }
