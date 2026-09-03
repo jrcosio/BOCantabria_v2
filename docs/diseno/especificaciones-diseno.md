@@ -1120,6 +1120,9 @@ Debajo de la tarjeta:
 - Texto `Página 1`, `Página 2`, etc.
 - Altura mínima: 48 dp.
 - Color principal azul, no violeta.
+- Los chips que no caben en el ancho **envuelven** a la línea siguiente. Nunca se comprimen: un
+  chip aplastado parte su texto por caracteres, triplica su altura y deja de recibir la pulsación.
+  Vale para las dos filas de chips, la de fuentes y la que acompaña a cada dato.
 
 ## 20.5. Estado visual de carga
 

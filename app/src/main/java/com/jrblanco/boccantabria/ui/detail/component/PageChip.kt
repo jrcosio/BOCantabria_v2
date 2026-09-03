@@ -1,9 +1,9 @@
 package com.jrblanco.boccantabria.ui.detail.component
 
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.defaultMinSize
-import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.size
 import androidx.compose.material3.AssistChip
 import androidx.compose.material3.AssistChipDefaults
@@ -11,7 +11,6 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.painterResource
@@ -78,14 +77,23 @@ fun PageChip(
     )
 }
 
-/** The pages a single element of the summary rests on. */
+/**
+ * The pages a single element of the summary rests on.
+ *
+ * A `FlowRow` and not a `Row`, because a `Row` measures each child against the width left over and
+ * hands the one that does not fit almost none of it. With four pages, «Página 4» broke to one glyph
+ * per line, grew to three times the height of its neighbours, and ended up outside the clip, where
+ * a tap never reached it: a reference that cannot be followed is not a reference (FR-021). Wrapping
+ * is also what the sources row of the summary has always done — the same chip in two rows behaving
+ * differently was the whole defect.
+ */
 @Composable
 fun PageChips(pages: List<Int>, onOpenPage: (Int) -> Unit, modifier: Modifier = Modifier) {
     if (pages.isEmpty()) return
-    Row(
-        modifier = modifier,
+    FlowRow(
+        modifier = modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.spacedBy(BocTheme.spacing.space2),
-        verticalAlignment = Alignment.CenterVertically,
+        verticalArrangement = Arrangement.spacedBy(BocTheme.spacing.space2),
     ) {
         pages.forEach { page -> PageChip(page = page, onOpenPage = onOpenPage) }
     }
