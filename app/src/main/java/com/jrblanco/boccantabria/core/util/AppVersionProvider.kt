@@ -1,7 +1,7 @@
 package com.jrblanco.boccantabria.core.util
 
 /**
- * The version code of the installed application.
+ * The code and public name of the installed application version.
  *
  * An interface rather than a direct read so the "installed version is below the minimum supported"
  * branch can be exercised from a plain unit test. Reading it statically at the point of use would
@@ -9,4 +9,5 @@ package com.jrblanco.boccantabria.core.util
  */
 interface AppVersionProvider {
     val versionCode: Int
+    val versionName: String
 }

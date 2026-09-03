@@ -118,7 +118,9 @@ class PrepareStartupUseCaseTest {
         override suspend fun loadConfig(): AppResult<AppConfig> = failure
     }
 
-    private class FixedVersion(override val versionCode: Int) : AppVersionProvider
+    private class FixedVersion(override val versionCode: Int) : AppVersionProvider {
+        override val versionName: String = "test"
+    }
 
     private companion object {
         const val INSTALLED_VERSION = 4

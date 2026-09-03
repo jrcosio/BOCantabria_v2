@@ -1359,12 +1359,21 @@ Este documento solo define su presentación; el contenido exacto puede adaptarse
 
 ## 25.3. Acerca de
 
-- Escudo pequeño.
-- Nombre `BOC Cantabria`.
-- Versión.
-- Texto `Diseñada y desarrollada por José Ramón Blanco Gutiérrez`.
-- Enlaces en color `Secondary`.
-- Sin retrato ni elementos decorativos adicionales.
+> **Enmienda — feature 008 (3 de septiembre de 2026):** este contenido se implementa como
+> pantalla secundaria desde el botón Información de la barra superior de Inicio, no como una fila
+> futura dentro de Ajustes.
+
+- Barra superior `Primary` con Atrás y título `Acerca de`; no muestra la barra inferior.
+- Superficie desplazable y centrada, con el rótulo `BOC CANTABRIA` y una tarjeta de perfil.
+- La tarjeta muestra el retrato circular de José Ramón Blanco, sus roles `Tech Lead I+D · AI
+  Engineer` y `AI-Driven Developer`.
+- Dos acciones de ancho completo: `Ver perfil en LinkedIn` como botón principal y `Ver proyecto
+  en GitHub` como botón contorneado. Ambas se delegan en la aplicación o navegador disponible del
+  sistema.
+- Dos bloques narrativos con icono: `Tecnología con propósito` y `Compartir, aprender y aportar`.
+- Tarjeta azul clara `Mi ámbito de trabajo`, con IA y LLMs, móvil y backend.
+- Tarjeta final discreta con el carácter independiente/no oficial de la aplicación, fuente de las
+  publicaciones y versión instalada.
 
 ---
 

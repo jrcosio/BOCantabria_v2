@@ -39,8 +39,8 @@ tests que fallan si alguien la rompe.**
 | | |
 |---|---|
 | **Versión** | 2.0.0 |
-| **Fase** | La publicación se abre y se lee: detalle del anuncio y visor del PDF oficial dentro de la aplicación |
-| **Pruebas** | 356 sin dispositivo + 68 de interfaz |
+| **Fase** | Consulta, búsqueda, guardados, lectura del PDF oficial, resumen IA y pantalla Acerca de |
+| **Pruebas** | Suite unitaria y de interfaz automatizada |
 | **Arranque** | 648 ms medidos *(objetivo: < 3 s)* |
 | **Orientación** | Solo vertical en teléfonos |
 | **Capa de datos** | Room como única fuente de verdad, OkHttp para las diecinueve fuentes. Decidido y justificado en `specs/003-boletin-del-dia/research.md` |
@@ -54,7 +54,7 @@ tests que fallan si alguien la rompe.**
 
 - **Android Studio** (aporta el JDK 21 que usa el proyecto)
 - **Android SDK** con la plataforma **API 37**
-- Un emulador o dispositivo con **Android 7.0** (API 24) o superior
+- Un emulador o dispositivo con **Android 9** (API 28) o superior
 
 ### Arrancar
 

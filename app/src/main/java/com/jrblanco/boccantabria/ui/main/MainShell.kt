@@ -48,6 +48,7 @@ import org.koin.compose.koinInject
 fun MainShell(
     navController: NavHostController,
     onOpenPublication: (String) -> Unit,
+    onOpenInfo: () -> Unit = {},
     modifier: Modifier = Modifier,
     sectionsViewModel: SectionsViewModel = koinViewModel(),
     getSections: GetBocSectionsUseCase = koinInject(),
@@ -143,7 +144,7 @@ fun MainShell(
                             openSection(sections.firstOrNull { it.code == code })
                         },
                         onSearchGlobally = ::searchGlobally,
-                        onInfo = {},
+                        onInfo = onOpenInfo,
                         onOpenPublication = { publication ->
                             onOpenPublication(publication.externalKey)
                         },
