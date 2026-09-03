@@ -186,6 +186,31 @@
     <string name="home_no_results_body">No hay publicaciones que coincidan con «%1$s» en lo que estás viendo.</string>
     <string name="home_search_globally">Buscar en todo el BOC</string>
 
+    <!-- ===== Feature 008: Acerca de ===== -->
+
+    <string name="info_title">Acerca de</string>
+    <string name="info_back">Volver</string>
+    <string name="info_brand">BOC CANTABRIA</string>
+    <string name="info_author_name">José Ramón Blanco</string>
+    <string name="info_author_role">Tech Lead I+D · AI Engineer</string>
+    <string name="info_author_tagline">AI-Driven Developer</string>
+    <string name="info_linkedin">Ver perfil en LinkedIn</string>
+    <string name="info_github">Ver proyecto en GitHub</string>
+    <string name="info_open_external">Abrir enlace externo</string>
+    <string name="info_purpose_title">Tecnología con propósito</string>
+    <string name="info_purpose_first">Desarrollo aplicaciones móviles y soluciones de inteligencia artificial para convertir la tecnología en herramientas útiles y accesibles.</string>
+    <string name="info_purpose_second">Con BOC Cantabria quiero facilitar el acceso a la información pública de nuestra tierra.</string>
+    <string name="info_community_title">Compartir, aprender y aportar</string>
+    <string name="info_community_body">Creo en el Open Source y en el conocimiento compartido.\nColaboro con iniciativas sociales y educativas.\nSoy de Cosío - Valle del Nansa.</string>
+    <string name="info_work_title">Mi ámbito de trabajo</string>
+    <string name="info_work_ai">IA y LLMs</string>
+    <string name="info_work_mobile">Móvil · Flutter, Kotlin y Jetpack Compose</string>
+    <string name="info_work_backend">Backend · Python y Java</string>
+    <string name="info_independent">Aplicación independiente y no oficial.\nNo está vinculada al Gobierno de Cantabria.</string>
+    <string name="info_source">Fuente de las publicaciones: Boletín Oficial de Cantabria.</string>
+    <string name="info_version">Versión %1$s</string>
+    <string name="info_link_error">No hay ninguna aplicación disponible para abrir este enlace.</string>
+
     <!-- Resumen IA (feature 007) -->
     <string name="ai_summary_intro">Una explicación en lenguaje claro de lo que dice el documento oficial, con las páginas que respaldan cada dato.</string>
     <string name="ai_summary_generate">Generar resumen</string>

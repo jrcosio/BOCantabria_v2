@@ -266,7 +266,9 @@ class SplashViewModelTest {
         }
     }
 
-    private class FixedVersion(override val versionCode: Int) : AppVersionProvider
+    private class FixedVersion(override val versionCode: Int) : AppVersionProvider {
+        override val versionName: String = "test"
+    }
 
     private class RecordingCrashReporter : CrashReporter {
         val nonFatals = mutableListOf<Throwable>()

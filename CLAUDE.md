@@ -92,6 +92,7 @@ ui/
   splash/         Arranque: SplashScreen + SplashViewModel + SplashUiState
   main/           MainShell: panel lateral + barra inferior alrededor del NavHost interno
   home/           Inicio: HomeScreen + HomeViewModel + HomeUiState + component/
+  info/           Acerca de: InfoScreen + InfoViewModel + InfoUiState; enlaces HTTPS delegados al sistema
   sections/       Panel lateral de secciones del BOC
   detail/         Detalle de la publicación + component/ (cabecera, pestañas, ficha)
   pdf/            Visor del documento. ÚNICO sitio que toca androidx.pdf
@@ -274,6 +275,10 @@ Composable → ViewModel → UseCase → Repository (interfaz en domain)
   Buscar consulta todo lo almacenado, con filtros y orden. Lo único que comparten es
   `core/util/SearchText`. Entre las dos hay un puente: sin coincidencias en la edición, se ofrece la
   misma consulta en el buscador global, que la recibe por el argumento de `Route.Search`.
+- **Acerca de existe desde la feature 008 y es un destino exterior.** `Route.Info` queda fuera de
+  `MainShell`, no muestra navegación inferior y vuelve con Atrás. Sus URL públicas se abren con el
+  `UriHandler` de Compose: Android decide entre la aplicación asociada y el navegador. Solo se
+  registra el destino enumerado (`linkedin` o `github`), nunca la URL ni datos personales.
 - **Resumen IA existe desde la feature 007, y su regla número uno es que no se genera solo.** Solo al
   pulsar el botón: la cuota del servicio es gratuita, compartida por toda la organización y diaria, y
   resumir lo que nadie ha pedido la vaciaría en una tarde. Tres cosas más que conviene no deshacer sin

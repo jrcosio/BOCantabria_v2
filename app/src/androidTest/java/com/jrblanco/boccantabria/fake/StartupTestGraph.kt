@@ -31,7 +31,10 @@ class FakeRemoteConfigDataSource(
     }
 }
 
-class FixedAppVersionProvider(override val versionCode: Int = 4) : AppVersionProvider
+class FixedAppVersionProvider(
+    override val versionCode: Int = 4,
+    override val versionName: String = "2.0.0-test",
+) : AppVersionProvider
 
 /**
  * Gives one instrumented test its own startup chain.

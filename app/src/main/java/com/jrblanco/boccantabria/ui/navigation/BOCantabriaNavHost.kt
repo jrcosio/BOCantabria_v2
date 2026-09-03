@@ -9,6 +9,7 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import com.jrblanco.boccantabria.ui.ask.AskScreen
 import com.jrblanco.boccantabria.ui.detail.PublicationDetailScreen
+import com.jrblanco.boccantabria.ui.info.InfoScreen
 import com.jrblanco.boccantabria.ui.main.MainShell
 import com.jrblanco.boccantabria.ui.pdf.PdfViewerScreen
 import com.jrblanco.boccantabria.ui.splash.SplashScreen
@@ -62,7 +63,11 @@ fun BOCantabriaNavHost(
                 onOpenPublication = { externalKey ->
                     navController.navigate(Route.Detail(externalKey))
                 },
+                onOpenInfo = { navController.navigate(Route.Info) },
             )
+        }
+        composable<Route.Info> {
+            InfoScreen(onBack = navController::popBackStack)
         }
         composable<Route.Detail> {
             PublicationDetailScreen(

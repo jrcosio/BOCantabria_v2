@@ -38,6 +38,10 @@ sealed interface Route {
     @Serializable
     data object Saved : Route
 
+    /** Static application and author information, reached from the bulletin's top bar. */
+    @Serializable
+    data object Info : Route
+
     /**
      * One publication in full.
      *

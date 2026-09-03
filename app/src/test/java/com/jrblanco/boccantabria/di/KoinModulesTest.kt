@@ -63,6 +63,7 @@ import com.jrblanco.boccantabria.domain.usecase.SetPublicationSavedUseCase
 import com.jrblanco.boccantabria.domain.usecase.ShareOfficialDocumentUseCase
 import com.jrblanco.boccantabria.ui.detail.PublicationDetailViewModel
 import com.jrblanco.boccantabria.ui.home.HomeViewModel
+import com.jrblanco.boccantabria.ui.info.InfoViewModel
 import com.jrblanco.boccantabria.ui.saved.SavedViewModel
 import com.jrblanco.boccantabria.ui.search.SearchViewModel
 import com.jrblanco.boccantabria.ui.pdf.PdfDocumentLoader
@@ -146,6 +147,7 @@ class KoinModulesTest {
         koin.get<ConnectivityRepository>()
         koin.get<ConnectivityDataSource>()
         koin.get<AppVersionProvider>()
+        koin.get<InfoViewModel>()
 
         koin.get<SectionsViewModel>()
         koin.get<PublicationRepository>()
@@ -245,6 +247,7 @@ class KoinModulesTest {
             AppVersionProvider::class,
             PrepareStartupUseCase::class,
             HomeViewModel::class,
+            InfoViewModel::class,
             DocumentRepository::class,
             ObservePublicationUseCase::class,
             ObserveOfficialDocumentUseCase::class,
