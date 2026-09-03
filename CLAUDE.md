@@ -231,7 +231,7 @@ Composable → ViewModel → UseCase → Repository (interfaz en domain)
   `addMigrations`, y `fallbackToDestructiveMigration()` no entra aquí ni como último recurso —pasaría
   la puerta de compilación y vaciaría el boletín de quien ya tiene la aplicación instalada—. Los
   esquemas de `app/schemas/` **se versionan**: son el material de la migración siguiente.
-- **Sigue sin haber ninguna sentencia de borrado en el proyecto**, en ninguno de los **cuatro** DAO.
+- **Sigue sin haber ninguna sentencia de borrado en el proyecto**, en ninguno de los **cinco** DAO.
   `AiSummaryDao` solo lee y hace `upsert`: regenerar un resumen sustituye la fila, no la borra y la
   vuelve a insertar, porque entre las dos operaciones no habría resumen ninguno.
 - **La sección la manda la fuente**, no el campo `categorias`, que se guarda en crudo y solo sirve
@@ -419,7 +419,7 @@ fichero de prueba. Si añades una clase de dominio sin test, la build falla.
   **No se vio nunca**, en ninguno de sus cuatro usos, y nada falló. Antes de usar el envoltorio de 960,
   comprueba que el trazado lleve coordenadas negativas.
 - **El conjunto básico de iconos de Material no está en el classpath** con este BOM: no existe
-  `androidx.compose.material.icons`. Los diecinueve iconos son vectores propios en `RES/drawable`,
+  `androidx.compose.material.icons`. Los cuarenta iconos son vectores propios en `RES/drawable`,
   con el trazado tomado de Material Symbols sin modificar. El `android:fillColor` de un vector es
   un marcador de posición que Compose tiñe en el punto de uso; no cuenta como color literal.
 - **`ksp { }` es una extensión de proyecto, no de `android { }`.** Ponerla dentro no compila.
