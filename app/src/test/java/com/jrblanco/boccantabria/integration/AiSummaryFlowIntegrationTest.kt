@@ -19,7 +19,7 @@ import com.jrblanco.boccantabria.domain.repository.AiSummaryRepository
 import com.jrblanco.boccantabria.domain.usecase.GenerateAiSummaryUseCase
 import com.jrblanco.boccantabria.domain.usecase.ObserveAiSummaryUseCase
 import com.jrblanco.boccantabria.fake.FakeDocumentRepository
-import com.jrblanco.boccantabria.fake.FakeGroqSummaryDataSource
+import com.jrblanco.boccantabria.fake.FakeGeminiSummaryDataSource
 import com.jrblanco.boccantabria.fake.FakePdfTextExtractor
 import com.jrblanco.boccantabria.fake.TestDispatcherProvider
 import com.jrblanco.boccantabria.fake.officialDocument
@@ -54,7 +54,7 @@ class AiSummaryFlowIntegrationTest {
     private val dispatcher = StandardTestDispatcher()
     private val documents = FakeDocumentRepository(DocumentStatus.Available(officialDocument()))
     private val extractor = FakePdfTextExtractor()
-    private val service = FakeGroqSummaryDataSource()
+    private val service = FakeGeminiSummaryDataSource()
 
     private lateinit var database: BocDatabase
 
@@ -110,7 +110,7 @@ class AiSummaryFlowIntegrationTest {
     /** What the summary shows is the **corrected** answer, not what the service originally claimed. */
     @Test
     fun `what is stored is the corrected coverage, not the one the service claimed`() = runTest(dispatcher) {
-        service.result = com.jrblanco.boccantabria.data.source.remote.GroqSummaryResult.Success(
+        service.result = com.jrblanco.boccantabria.data.source.remote.GeminiSummaryResult.Success(
             payload = com.jrblanco.boccantabria.fake.summaryPayload(
                 coverage = com.jrblanco.boccantabria.data.source.remote.CoverageDto(
                     pagesAnalyzed = listOf(1, 2, 3, 4, 5),
@@ -118,7 +118,7 @@ class AiSummaryFlowIntegrationTest {
                     complete = true,
                 ),
             ),
-            usage = com.jrblanco.boccantabria.data.source.remote.GroqUsage(),
+            usage = com.jrblanco.boccantabria.data.source.remote.GeminiUsage(),
             systemFingerprint = null,
         )
 

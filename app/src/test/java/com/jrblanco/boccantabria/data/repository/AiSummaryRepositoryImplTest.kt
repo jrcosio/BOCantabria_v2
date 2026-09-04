@@ -5,11 +5,12 @@ import androidx.room.Room
 import androidx.test.core.app.ApplicationProvider
 import com.jrblanco.boccantabria.core.util.TimeProvider
 import com.jrblanco.boccantabria.data.source.local.AiPreferences
+import com.jrblanco.boccantabria.data.source.local.AiSummaryEntity
 import com.jrblanco.boccantabria.data.source.local.BocDatabase
 import com.jrblanco.boccantabria.data.source.local.PdfExtractionResult
 import com.jrblanco.boccantabria.data.source.local.PdfTextNormalizer
-import com.jrblanco.boccantabria.data.source.remote.GroqRefusal
-import com.jrblanco.boccantabria.data.source.remote.GroqSummaryResult
+import com.jrblanco.boccantabria.data.source.remote.GeminiRefusal
+import com.jrblanco.boccantabria.data.source.remote.GeminiSummaryResult
 import com.jrblanco.boccantabria.data.source.remote.SummaryPromptFactory
 import com.jrblanco.boccantabria.data.source.remote.SummaryValidator
 import com.jrblanco.boccantabria.di.ROBOLECTRIC_SDK
@@ -19,7 +20,7 @@ import com.jrblanco.boccantabria.domain.model.AiSummaryStatus
 import com.jrblanco.boccantabria.domain.model.AppResult
 import com.jrblanco.boccantabria.domain.model.DocumentStatus
 import com.jrblanco.boccantabria.fake.FakeDocumentRepository
-import com.jrblanco.boccantabria.fake.FakeGroqSummaryDataSource
+import com.jrblanco.boccantabria.fake.FakeGeminiSummaryDataSource
 import com.jrblanco.boccantabria.fake.FakePdfTextExtractor
 import com.jrblanco.boccantabria.fake.RecordingAnalyticsTracker
 import com.jrblanco.boccantabria.fake.RecordingCrashReporter
@@ -36,6 +37,7 @@ import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.runTest
 import org.junit.After
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertTrue
 import org.junit.Before
@@ -56,7 +58,7 @@ class AiSummaryRepositoryImplTest {
     private val dispatcher = StandardTestDispatcher()
     private val documents = FakeDocumentRepository(DocumentStatus.Available(officialDocument()))
     private val extractor = FakePdfTextExtractor()
-    private val service = FakeGroqSummaryDataSource()
+    private val service = FakeGeminiSummaryDataSource()
     private val analytics = RecordingAnalyticsTracker()
     private val crashReporter = RecordingCrashReporter()
     private val preferences = FakePreferences()
@@ -119,7 +121,9 @@ class AiSummaryRepositoryImplTest {
         assertEquals(AiSummaryConstants.SCHEMA_VERSION, stored.schemaVersion)
         assertEquals(officialDocument().checksum, stored.pdfSha256)
         assertEquals(6_800, stored.totalTokens)
-        assertEquals("fp_abc", stored.systemFingerprint)
+        // Desde la feature 009 llega siempre nula: este servicio no tiene huella de configuración.
+        // La columna se conserva porque ya era nullable y porque el próximo proveedor puede tenerla.
+        assertNull(stored.systemFingerprint)
     }
 
     // ---------- What must never cost a request ----------
@@ -228,24 +232,73 @@ class AiSummaryRepositoryImplTest {
         assertTrue(!(status as AiSummaryStatus.Ready).isStale)
     }
 
+    /**
+     * 009 FR-008, FR-009 and FR-010, and the whole point of D-114.
+     *
+     * A row written by the previous provider — a different `model_id` — must come back **shown and
+     * marked**, not gone. Nothing regenerates it on its own: that would spend a shared allowance on
+     * publications nobody asked about.
+     */
+    @Test
+    fun `a summary made by the previous provider is marked stale and kept`() = runTest(dispatcher) {
+        database.aiSummaryDao().upsert(rowFromPreviousProvider())
+
+        val repository = repository()
+        val status = repository.observeSummary("boc:439765").first()
+
+        assertTrue(status is AiSummaryStatus.Ready)
+        assertTrue("debe marcarse como obsoleto", (status as AiSummaryStatus.Ready).isStale)
+        assertNotNull("y no debe borrarse", database.aiSummaryDao().byExternalKey("boc:439765"))
+        assertEquals("y observar no consulta el servicio", 0, service.calls)
+    }
+
+    /**
+     * **Regresión, 009 research.md D-111.** `SummaryPayload` es lo que se serializa en la columna
+     * `summary_json`, y kotlinx serializa **por nombre de propiedad**. Renombrar la clase es inocuo;
+     * renombrar un campo dejaría ilegible todo lo guardado por versiones anteriores, y la pantalla lo
+     * trataría como ausente sin decir por qué.
+     *
+     * El JSON de esta prueba está escrito a mano con los nombres exactos que escribió la versión
+     * anterior. Si alguien toca uno, esto se pone rojo.
+     */
+    @Test
+    fun `a summary json written by the previous version is still readable`() = runTest(dispatcher) {
+        database.aiSummaryDao().upsert(rowFromPreviousProvider())
+
+        val status = repository().observeSummary("boc:439765").first()
+
+        val summary = (status as AiSummaryStatus.Ready).summary
+        assertEquals("Se aprueba la modificacion de la ordenanza.", summary.plainLanguageSummary)
+        assertEquals("Aprobacion definitiva", summary.documentTitle)
+        assertEquals("Anuncio", summary.documentType)
+        assertEquals("Ayuntamiento de Pielagos", summary.issuingBody)
+        assertEquals(1, summary.keyPoints.size)
+        assertEquals(listOf(1), summary.keyPoints.single().pages)
+        assertEquals("15 dias habiles", summary.datesAndDeadlines.single().dateOrPeriod)
+        assertEquals("1.000 euros", summary.amounts.single().amount)
+        assertEquals("Presentar solicitud", summary.requiredActions.single().action)
+        assertEquals(listOf(1), summary.coverage.pagesAnalyzed)
+        assertTrue(summary.coverage.complete)
+    }
+
     // ---------- Failures ----------
 
     @Test
     fun `each refusal becomes the error the screen can explain`() = runTest(dispatcher) {
-        assertFailure(GroqRefusal.NotConfigured, AiSummaryError.NotConfigured)
-        assertFailure(GroqRefusal.Network, AiSummaryError.Offline)
-        assertFailure(GroqRefusal.Malformed, AiSummaryError.InvalidResponse)
-        assertFailure(GroqRefusal.QuotaDay, AiSummaryError.QuotaDay)
-        assertFailure(GroqRefusal.QuotaMinute(42), AiSummaryError.QuotaMinute(42))
-        assertFailure(GroqRefusal.HttpError(500), AiSummaryError.Unknown)
+        assertFailure(GeminiRefusal.NotConfigured, AiSummaryError.NotConfigured)
+        assertFailure(GeminiRefusal.Network, AiSummaryError.Offline)
+        assertFailure(GeminiRefusal.Malformed, AiSummaryError.InvalidResponse)
+        assertFailure(GeminiRefusal.QuotaDay, AiSummaryError.QuotaDay)
+        assertFailure(GeminiRefusal.QuotaMinute(42), AiSummaryError.QuotaMinute(42))
+        assertFailure(GeminiRefusal.HttpError(500), AiSummaryError.Unknown)
     }
 
     /** FR-036: an unusable answer is neither shown nor stored. */
     @Test
     fun `an answer that does not survive validation is not stored`() = runTest(dispatcher) {
-        service.result = GroqSummaryResult.Success(
+        service.result = GeminiSummaryResult.Success(
             payload = com.jrblanco.boccantabria.fake.summaryPayload(plainLanguageSummary = "  "),
-            usage = com.jrblanco.boccantabria.data.source.remote.GroqUsage(),
+            usage = com.jrblanco.boccantabria.data.source.remote.GeminiUsage(),
             systemFingerprint = null,
         )
         val repository = repository()
@@ -289,8 +342,8 @@ class AiSummaryRepositoryImplTest {
         assertEquals(true, repository.observeNoticeAccepted().first())
     }
 
-    private suspend fun assertFailure(refusal: GroqRefusal, expected: AiSummaryError) {
-        val service = FakeGroqSummaryDataSource(GroqSummaryResult.Rejected(refusal))
+    private suspend fun assertFailure(refusal: GeminiRefusal, expected: AiSummaryError) {
+        val service = FakeGeminiSummaryDataSource(GeminiSummaryResult.Rejected(refusal))
         val repository = repository(service = service)
 
         repository.generate(publication("boc:439765"), force = true)
@@ -301,7 +354,25 @@ class AiSummaryRepositoryImplTest {
         )
     }
 
-    private fun repository(service: FakeGroqSummaryDataSource = this.service) = AiSummaryRepositoryImpl(
+    /**
+     * Una fila tal y como la escribió la versión anterior: otro modelo, otras versiones de prompt y
+     * de esquema, y el `summary_json` con los nombres de campo literales.
+     */
+    private fun rowFromPreviousProvider() = AiSummaryEntity(
+        externalKey = "boc:439765",
+        pdfSha256 = officialDocument().checksum,
+        modelId = "qwen/qwen3.8-27b",
+        promptVersion = "boc-summary-es-v3",
+        schemaVersion = "boc-summary-schema-v2",
+        summaryJson = PREVIOUS_SUMMARY_JSON,
+        createdAtEpochMillis = 1_700_000_000_000L,
+        promptTokens = 5_600,
+        completionTokens = 1_200,
+        totalTokens = 6_800,
+        systemFingerprint = "fp_abc",
+    )
+
+    private fun repository(service: FakeGeminiSummaryDataSource = this.service) = AiSummaryRepositoryImpl(
         documents = documents,
         extractor = extractor,
         normalizer = PdfTextNormalizer(),
@@ -324,5 +395,28 @@ class AiSummaryRepositoryImplTest {
         private val accepted = MutableStateFlow(false)
         override fun observeNoticeAccepted() = accepted
         override suspend fun acceptNotice() { accepted.value = true }
+    }
+
+    private companion object {
+        /**
+         * Escrito a mano, con los nombres de campo exactos de la versión anterior. **No se genera
+         * serializando `SummaryPayload`**: si se hiciera, renombrar un campo cambiaría a la vez el
+         * dato y la expectativa, y la prueba no comprobaría nada.
+         */
+        val PREVIOUS_SUMMARY_JSON = """
+            {"documentTitle":"Aprobacion definitiva","documentType":"Anuncio",
+             "issuingBody":"Ayuntamiento de Pielagos",
+             "plainLanguageSummary":"Se aprueba la modificacion de la ordenanza.",
+             "keyPoints":[{"text":"Se aprueba la ordenanza","pages":[1]}],
+             "affectedParties":[{"text":"Vecinos del municipio","pages":[1]}],
+             "datesAndDeadlines":[{"dateOrPeriod":"15 dias habiles",
+                                   "description":"Plazo de alegaciones","pages":[1]}],
+             "amounts":[{"amount":"1.000 euros","concept":"Tasa","pages":[1]}],
+             "requiredActions":[{"action":"Presentar solicitud",
+                                 "deadline":"15 dias habiles","pages":[1]}],
+             "appealsOrClaims":[{"text":"Recurso de reposicion","pages":[1]}],
+             "warnings":[],
+             "coverage":{"pagesAnalyzed":[1],"totalPages":1,"complete":true}}
+        """.trimIndent().replace("\n", "")
     }
 }

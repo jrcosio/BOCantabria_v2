@@ -30,12 +30,23 @@ import java.util.Locale
  * structured fields — two deadlines, four warnings — and left the **summary itself** blank instead.
  * It obeyed exactly what it was told. `plainLanguageSummary` is now stated as always mandatory, and
  * the place to say a reading was partial is `coverage` and `warnings`, never an empty field.
+ *
+ * Feature 009 changed two things. A partial reading is now the **exception** rather than the norm,
+ * because the whole document goes in; the clause about it stays, worded as an edge case, because the
+ * guardrail keeps that path alive. And there is a new instruction about section size: with the whole
+ * document going in, a thirty-page budget can support dozens of key points, so the model is asked to
+ * pick the most relevant ten and say in `warnings` that it left some out. Discarding twenty-eight of
+ * thirty-eight key points of an official bulletin in silence would be the same half-truth this
+ * feature exists to remove (009 FR-007, 009 research.md D-104, D-112).
+ *
+ * The document arrives **already rendered** with page markers by `DocumentText.render()`. This class
+ * substitutes it into a slot; it does not render (009 contracts §1.5).
  */
 class SummaryPromptFactory {
 
     fun systemMessage(): String = SYSTEM
 
-    fun userMessage(publication: Publication, selected: SelectedText, totalPages: Int): String =
+    fun userMessage(publication: Publication, document: RenderedDocument, totalPages: Int): String =
         // The document is substituted **after** trimIndent, not interpolated into it. A template
         // string is interpolated first and trimmed second, so a multi-line value sitting at column
         // zero drags the common indent to zero and nothing gets trimmed: the whole prompt would go
@@ -46,7 +57,7 @@ class SummaryPromptFactory {
             .replace(SLOT_DATE, publication.publicationDate.format(SPANISH_DATE))
             .replace(SLOT_SECTION, publication.classificationCode.orNotAvailable())
             .replace(SLOT_TOTAL_PAGES, totalPages.toString())
-            .replace(SLOT_DOCUMENT, selected.text)
+            .replace(SLOT_DOCUMENT, document.text)
 
     /**
      * Never the literal `null`. An absent field goes in as «No disponible», because concatenating a
@@ -90,13 +101,18 @@ class SummaryPromptFactory {
             8. warnings: ambigüedades, texto incompleto o datos que deban comprobarse en el original.
             9. coverage: indica exactamente qué páginas han sido analizadas.
 
+            EXTENSIÓN DE CADA SECCIÓN
+            Ninguna lista puede pasar de 10 elementos. Si el documento sustenta más, elige los 10 más
+            relevantes para quien lee —lo que le obliga, lo que le cuesta y lo que tiene plazo— y di en
+            warnings que has dejado elementos fuera de esa sección. No los descartes en silencio.
+
             SI EL DOCUMENTO LLEGA INCOMPLETO
-            Es normal recibir solo una parte del documento, y no es motivo para dejar nada vacío.
-            plainLanguageSummary es SIEMPRE obligatorio: resume lo que has leído, aunque sean unas
-            pocas páginas. Rellena también los campos estructurados con todo lo que sí consta en esas
-            páginas —fechas, importes, actuaciones, recursos—, y di en warnings qué queda fuera y en
-            coverage hasta dónde has llegado. Un resumen parcial que dice hasta dónde llega es útil;
-            un campo vacío no informa de nada.
+            Lo normal es recibir el documento entero, pero puede llegar solo una parte, y eso no es
+            motivo para dejar nada vacío. plainLanguageSummary es SIEMPRE obligatorio: resume lo que
+            has leído, aunque sean unas pocas páginas. Rellena también los campos estructurados con
+            todo lo que sí consta en esas páginas —fechas, importes, actuaciones, recursos—, y di en
+            warnings qué queda fuera y en coverage hasta dónde has llegado. Un resumen parcial que
+            dice hasta dónde llega es útil; un campo vacío no informa de nada.
 
             CONTENIDO DEL PDF
             <documento_boc>

@@ -1,6 +1,5 @@
 package com.jrblanco.boccantabria.data.source.remote
 
-import com.jrblanco.boccantabria.domain.model.PdfCorpus
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
@@ -21,8 +20,8 @@ class SummaryValidatorTest {
     fun `a page the document does not have is dropped from the reference`() {
         val corrected = validator.validate(
             raw = payload(keyPoints = listOf(ReferencedTextDto("Se aprueba", listOf(1, 40)))),
-            corpus = corpus(pages = 3),
-            sentPages = listOf(1, 2, 3),
+            document = sent(listOf(1, 2, 3)),
+            totalPages = 3,
         )
 
         assertEquals(listOf(1), corrected!!.keyPoints.single().pages)
@@ -33,8 +32,8 @@ class SummaryValidatorTest {
     fun `a real page that was not sent is dropped too`() {
         val corrected = validator.validate(
             raw = payload(keyPoints = listOf(ReferencedTextDto("Se aprueba", listOf(1, 3)))),
-            corpus = corpus(pages = 3),
-            sentPages = listOf(1, 2),
+            document = sent(listOf(1, 2)),
+            totalPages = 3,
         )
 
         assertEquals(listOf(1), corrected!!.keyPoints.single().pages)
@@ -48,8 +47,8 @@ class SummaryValidatorTest {
     fun `an element left without any reference keeps its text`() {
         val corrected = validator.validate(
             raw = payload(keyPoints = listOf(ReferencedTextDto("Se aprueba", listOf(40)))),
-            corpus = corpus(pages = 3),
-            sentPages = listOf(1, 2, 3),
+            document = sent(listOf(1, 2, 3)),
+            totalPages = 3,
         )
 
         assertEquals("Se aprueba", corrected!!.keyPoints.single().text)
@@ -60,8 +59,8 @@ class SummaryValidatorTest {
     fun `references are deduplicated and ordered`() {
         val corrected = validator.validate(
             raw = payload(keyPoints = listOf(ReferencedTextDto("Se aprueba", listOf(3, 1, 3, 2)))),
-            corpus = corpus(pages = 3),
-            sentPages = listOf(1, 2, 3),
+            document = sent(listOf(1, 2, 3)),
+            totalPages = 3,
         )
 
         assertEquals(listOf(1, 2, 3), corrected!!.keyPoints.single().pages)
@@ -78,8 +77,8 @@ class SummaryValidatorTest {
                 requiredActions = listOf(RequiredActionDto("solicitar", "15 dias", listOf(9))),
                 appealsOrClaims = listOf(ReferencedTextDto("recurso", listOf(9))),
             ),
-            corpus = corpus(pages = 2),
-            sentPages = listOf(1, 2),
+            document = sent(listOf(1, 2)),
+            totalPages = 2,
         )!!
 
         assertTrue(corrected.keyPoints.single().pages.isEmpty())
@@ -109,8 +108,8 @@ class SummaryValidatorTest {
                     ReferencedAmountDto(amount = "1.200,00 euros", concept = "Beca", pages = listOf(1)),
                 ),
             ),
-            corpus = corpus(pages = 1),
-            sentPages = listOf(1),
+            document = sent(listOf(1)),
+            totalPages = 1,
         )!!
 
         assertEquals(1, corrected.amounts.size)
@@ -128,8 +127,8 @@ class SummaryValidatorTest {
                 affectedParties = listOf(ReferencedTextDto("   ", listOf(1))),
                 appealsOrClaims = listOf(ReferencedTextDto("", listOf(1))),
             ),
-            corpus = corpus(pages = 1),
-            sentPages = listOf(1),
+            document = sent(listOf(1)),
+            totalPages = 1,
         )!!
 
         assertEquals(1, corrected.keyPoints.size)
@@ -147,8 +146,8 @@ class SummaryValidatorTest {
                 ),
                 requiredActions = listOf(RequiredActionDto("", "15 días", listOf(1))),
             ),
-            corpus = corpus(pages = 1),
-            sentPages = listOf(1),
+            document = sent(listOf(1)),
+            totalPages = 1,
         )!!
 
         assertEquals(1, corrected.datesAndDeadlines.size)
@@ -162,8 +161,8 @@ class SummaryValidatorTest {
             raw = payload(
                 amounts = listOf(ReferencedAmountDto("12.000 euros", concept = "", pages = listOf(1))),
             ),
-            corpus = corpus(pages = 1),
-            sentPages = listOf(1),
+            document = sent(listOf(1)),
+            totalPages = 1,
         )!!
 
         assertEquals("12.000 euros", corrected.amounts.single().amount)
@@ -176,8 +175,8 @@ class SummaryValidatorTest {
     fun `coverage is replaced by what was actually sent`() {
         val corrected = validator.validate(
             raw = payload(coverage = CoverageDto(listOf(1, 2, 3, 4, 5), totalPages = 5, complete = true)),
-            corpus = corpus(pages = 14),
-            sentPages = listOf(1, 2, 3),
+            document = sent(listOf(1, 2, 3)),
+            totalPages = 14,
         )
 
         assertEquals(listOf(1, 2, 3), corrected!!.coverage.pagesAnalyzed)
@@ -189,8 +188,8 @@ class SummaryValidatorTest {
     fun `a partial summary is never allowed to call itself complete`() {
         val corrected = validator.validate(
             raw = payload(coverage = CoverageDto(listOf(1), totalPages = 14, complete = true)),
-            corpus = corpus(pages = 14),
-            sentPages = listOf(1, 2, 3, 4, 5, 6),
+            document = sent(listOf(1, 2, 3, 4, 5, 6)),
+            totalPages = 14,
         )
 
         assertFalse(corrected!!.coverage.complete)
@@ -200,8 +199,8 @@ class SummaryValidatorTest {
     fun `a summary of the whole document is complete`() {
         val corrected = validator.validate(
             raw = payload(coverage = CoverageDto(emptyList(), totalPages = 0, complete = false)),
-            corpus = corpus(pages = 2),
-            sentPages = listOf(1, 2),
+            document = sent(listOf(1, 2)),
+            totalPages = 2,
         )
 
         assertTrue(corrected!!.coverage.complete)
@@ -223,8 +222,8 @@ class SummaryValidatorTest {
     fun `an answer claiming complete coverage over no pages is corrected, not trusted`() {
         val corrected = validator.validate(
             raw = payload(coverage = CoverageDto(pagesAnalyzed = emptyList(), totalPages = 1, complete = true)),
-            corpus = corpus(pages = 1),
-            sentPages = listOf(1),
+            document = sent(listOf(1)),
+            totalPages = 1,
         )!!
 
         assertEquals(listOf(1), corrected.coverage.pagesAnalyzed)
@@ -238,8 +237,8 @@ class SummaryValidatorTest {
     fun `the same claim over a partial reading is corrected to partial`() {
         val corrected = validator.validate(
             raw = payload(coverage = CoverageDto(pagesAnalyzed = emptyList(), totalPages = 9, complete = true)),
-            corpus = corpus(pages = 9),
-            sentPages = listOf(1, 2),
+            document = sent(listOf(1, 2)),
+            totalPages = 9,
         )!!
 
         assertEquals(listOf(1, 2), corrected.coverage.pagesAnalyzed)
@@ -260,8 +259,8 @@ class SummaryValidatorTest {
             raw = payload(
                 plain = "El Ayuntamiento aprueba la ordenanza. El documento detalla los requisitos de nacionalidad,",
             ),
-            corpus = corpus(pages = 1),
-            sentPages = listOf(1),
+            document = sent(listOf(1)),
+            totalPages = 1,
         )!!
 
         assertEquals(
@@ -275,8 +274,8 @@ class SummaryValidatorTest {
     fun `trimming the prose is reported in the warnings`() {
         val corrected = validator.validate(
             raw = payload(plain = "Se aprueba la ordenanza. Y el credito asciende a"),
-            corpus = corpus(pages = 1),
-            sentPages = listOf(1),
+            document = sent(listOf(1)),
+            totalPages = 1,
         )!!
 
         assertTrue(corrected.warnings.any { it.contains("incompleto") })
@@ -285,7 +284,7 @@ class SummaryValidatorTest {
     @Test
     fun `prose that ends properly is left alone`() {
         val whole = "Se aprueba definitivamente la modificacion de la ordenanza."
-        val corrected = validator.validate(payload(plain = whole), corpus(pages = 1), listOf(1))!!
+        val corrected = validator.validate(payload(plain = whole), sent(listOf(1)), 1)!!
 
         assertEquals(whole, corrected.plainLanguageSummary)
         assertTrue(corrected.warnings.isEmpty())
@@ -294,7 +293,7 @@ class SummaryValidatorTest {
     @Test
     fun `a question or an ellipsis also count as a finished sentence`() {
         listOf("¿Que se aprueba? Esto.", "Se aprueba lo siguiente…").forEach { whole ->
-            val corrected = validator.validate(payload(plain = whole), corpus(pages = 1), listOf(1))!!
+            val corrected = validator.validate(payload(plain = whole), sent(listOf(1)), 1)!!
             assertEquals(whole, corrected.plainLanguageSummary)
         }
     }
@@ -306,10 +305,60 @@ class SummaryValidatorTest {
     @Test
     fun `prose with no complete sentence at all is kept rather than emptied`() {
         val fragment = "El Ayuntamiento de Pielagos aprueba definitivamente la modificacion de"
-        val corrected = validator.validate(payload(plain = fragment), corpus(pages = 1), listOf(1))!!
+        val corrected = validator.validate(payload(plain = fragment), sent(listOf(1)), 1)!!
 
         assertEquals(fragment, corrected.plainLanguageSummary)
         assertTrue(corrected.warnings.any { it.contains("incompleto") })
+    }
+
+    // ---------- The cap per section ----------
+
+    /**
+     * 009 FR-007 and SC-013. The schema asks for the same cap, but **a schema is a request and this
+     * is a guarantee**: the service can exceed it, and the card of §20 of the design document is not
+     * sized for a hundred and thirty items.
+     */
+    @Test
+    fun `a section with more than ten items is cut down to ten`() {
+        val thirteen = (1..13).map { ReferencedTextDto("Punto numero $it", listOf(1)) }
+
+        val corrected = validator.validate(
+            raw = payload(keyPoints = thirteen),
+            document = sent(listOf(1)),
+            totalPages = 1,
+        )!!
+
+        assertEquals(SummaryValidator.MAX_ITEMS_PER_SECTION, corrected.keyPoints.size)
+        assertEquals("debe conservar los primeros, no unos cualesquiera", "Punto numero 1", corrected.keyPoints.first().text)
+    }
+
+    /** Discarding in silence is what this refuses to do. */
+    @Test
+    fun `a section that was cut down says so in the warnings`() {
+        val thirteen = (1..13).map { ReferencedTextDto("Punto numero $it", listOf(1)) }
+
+        val corrected = validator.validate(
+            raw = payload(keyPoints = thirteen),
+            document = sent(listOf(1)),
+            totalPages = 1,
+        )!!
+
+        assertTrue(
+            corrected.warnings.toString(),
+            corrected.warnings.any { it.contains("puntos clave") },
+        )
+    }
+
+    @Test
+    fun `a section within the cap says nothing`() {
+        val corrected = validator.validate(
+            raw = payload(keyPoints = (1..10).map { ReferencedTextDto("Punto $it", listOf(1)) }),
+            document = sent(listOf(1)),
+            totalPages = 1,
+        )!!
+
+        assertEquals(10, corrected.keyPoints.size)
+        assertTrue(corrected.warnings.isEmpty())
     }
 
     // ---------- Nothing worth showing ----------
@@ -318,13 +367,13 @@ class SummaryValidatorTest {
     @Test
     fun `a blank plain language summary is refused`() {
         assertNull(
-            validator.validate(payload(plain = "   "), corpus(pages = 1), listOf(1)),
+            validator.validate(payload(plain = "   "), sent(listOf(1)), 1),
         )
     }
 
     @Test
     fun `an empty answer is refused`() {
-        assertNull(validator.validate(GroqSummaryPayload(), corpus(pages = 1), listOf(1)))
+        assertNull(validator.validate(SummaryPayload(), sent(listOf(1)), 1))
     }
 
     /** The corrected payload maps to a domain summary without tripping any of its own checks. */
@@ -335,8 +384,8 @@ class SummaryValidatorTest {
                 keyPoints = listOf(ReferencedTextDto("Se aprueba", listOf(1, 99))),
                 coverage = CoverageDto(listOf(1, 2, 3), totalPages = 3, complete = true),
             ),
-            corpus = corpus(pages = 5),
-            sentPages = listOf(1, 2),
+            document = sent(listOf(1, 2)),
+            totalPages = 5,
         )!!
 
         val summary = corrected.toDomain()
@@ -356,7 +405,7 @@ class SummaryValidatorTest {
         requiredActions: List<RequiredActionDto> = emptyList(),
         appealsOrClaims: List<ReferencedTextDto> = emptyList(),
         coverage: CoverageDto = CoverageDto(listOf(1), totalPages = 1, complete = true),
-    ) = GroqSummaryPayload(
+    ) = SummaryPayload(
         documentTitle = "Aprobacion definitiva",
         documentType = "Anuncio",
         issuingBody = "Ayuntamiento de Pielagos",
@@ -371,10 +420,13 @@ class SummaryValidatorTest {
         coverage = coverage,
     )
 
-    private fun corpus(pages: Int) = PdfCorpus(
-        externalKey = "boc:439765",
-        pdfSha256 = "a".repeat(64),
-        totalPages = pages,
-        pages = (1..pages).map { PdfCorpus.PdfPageText(it, "Contenido de la pagina $it.".repeat(10)) },
+    /**
+     * Exactly what went out, which is the only evidence of what was analysed. The corpus alone could
+     * not say, because the guardrail can cut a document short.
+     */
+    private fun sent(pages: List<Int>) = RenderedDocument(
+        text = pages.joinToString("\n\n") { "[PÁGINA $it]\nContenido de la pagina $it." },
+        pages = pages,
+        isPartial = false,
     )
 }

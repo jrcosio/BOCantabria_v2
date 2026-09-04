@@ -48,6 +48,28 @@ class AiPreferencesTest {
         assertTrue(preferences().observeNoticeAccepted().first())
     }
 
+    /**
+     * **Regresión, 009 FR-031a y D-113.** El aviso amplía su texto —ahora dice que el servicio puede
+     * usar el texto de ese documento público para mejorar sus modelos— y quien ya lo había aceptado
+     * nunca leyó esa frase. La clave se versiona para que vuelva a verlo **una sola vez**.
+     *
+     * Esta prueba escribe la clave antigua a mano y exige que no se lea. Falla antes del cambio, que
+     * es exactamente para lo que está: sin ella, versionar la clave sería un cambio sin comprobar.
+     */
+    @Test
+    fun `an acceptance stored under the previous key is not read`() = runTest(dispatcher) {
+        val context = ApplicationProvider.getApplicationContext<Application>()
+        context.getSharedPreferences("boc_ai", Application.MODE_PRIVATE)
+            .edit()
+            .putBoolean("ai_notice_accepted", true)
+            .commit()
+
+        assertFalse(
+            "el aviso debe volver a mostrarse una vez, porque su texto cambió",
+            preferences().observeNoticeAccepted().first(),
+        )
+    }
+
     private fun preferences() = aiPreferences(
         context = ApplicationProvider.getApplicationContext<Application>(),
         dispatchers = TestDispatcherProvider(dispatcher),

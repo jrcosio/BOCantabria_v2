@@ -1,69 +1,34 @@
 package com.jrblanco.boccantabria.data.source.remote
 
 import com.jrblanco.boccantabria.domain.model.AiSummary
-import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
-import kotlinx.serialization.json.JsonElement
 
 /**
- * What travels to and from the summarising service.
+ * The summary itself, in the shape our own schema guarantees.
  *
- * Data-layer types: they never cross to `ui`. [GroqSummaryPayload] is mapped to [AiSummary] after
- * the validator has corrected it, and the **corrected** payload is what gets stored, so what is on
- * disk always matches the documented schema.
+ * **This file describes our format, not the provider's**, and that is why nothing here is named
+ * after whoever generates it. It was split out of the previous provider's DTO file in feature 009
+ * because the two halves have very different lives: the wire types die with the provider, and these
+ * do not (009 research.md D-111).
+ *
+ * ### The untouchable rule of this file
+ *
+ * **Not one property name may change.** [SummaryPayload] is what gets serialised into the
+ * `summary_json` column of `ai_summaries` and read back in `AiSummaryEntity.decode()`. kotlinx
+ * serialises by property name, so renaming the *class* is harmless and renaming a *field* would make
+ * every row written by an earlier version unreadable. There is a regression test for exactly that.
+ *
+ * The field order here does **not** match the schema's, and that is deliberate too:
+ * `plainLanguageSummary` is fourth here because it is the first thing read on screen, and twelfth in
+ * the schema because it is the last thing worth generating. Two orders, two reasons, neither should
+ * be aligned with the other.
+ *
+ * Every field has a default although the schema marks all of them required. They are here so that a
+ * truncated or unexpected body fails at **validation**, with a reason that can be logged, rather
+ * than at deserialisation with a stack trace.
  */
 @Serializable
-data class GroqMessage(val role: String, val content: String)
-
-@Serializable
-data class GroqChatRequest(
-    val model: String,
-    val messages: List<GroqMessage>,
-    val temperature: Double,
-    @SerialName("max_completion_tokens") val maxCompletionTokens: Int,
-    val stream: Boolean = false,
-    @SerialName("reasoning_effort") val reasoningEffort: String = "none",
-    @SerialName("response_format") val responseFormat: JsonElement,
-)
-
-@Serializable
-data class GroqChatResponse(
-    val id: String? = null,
-    val model: String? = null,
-    val choices: List<GroqChoice> = emptyList(),
-    val usage: GroqUsage? = null,
-    @SerialName("system_fingerprint") val systemFingerprint: String? = null,
-)
-
-@Serializable
-data class GroqChoice(
-    val index: Int = 0,
-    val message: GroqMessage,
-    /**
-     * `"stop"` when the model finished on its own, `"length"` when it ran into
-     * `max_completion_tokens`. The second means the JSON arrived **cut**, which is indistinguishable
-     * from a malformed body once it fails to parse — and telling them apart is the difference between
-     * «the service misbehaved» and «our own limit is too low».
-     */
-    @SerialName("finish_reason") val finishReason: String? = null,
-)
-
-@Serializable
-data class GroqUsage(
-    @SerialName("prompt_tokens") val promptTokens: Int = 0,
-    @SerialName("completion_tokens") val completionTokens: Int = 0,
-    @SerialName("total_tokens") val totalTokens: Int = 0,
-)
-
-/**
- * The summary itself, in the shape the strict schema guarantees.
- *
- * Every field is required by the schema, so no default here would ever be used against a real
- * answer. They are present anyway so that a truncated or malformed body fails at validation with a
- * clear reason rather than at deserialisation with a stack trace.
- */
-@Serializable
-data class GroqSummaryPayload(
+data class SummaryPayload(
     val documentTitle: String = "",
     val documentType: String = "",
     val issuingBody: String = "",
@@ -114,9 +79,9 @@ data class CoverageDto(
  *
  * Only ever called on the output of `SummaryValidator`, which is what guarantees the domain's own
  * `require` checks cannot fire here: pages are already in range and coverage already tells the
- * truth (FR-022, FR-030).
+ * truth (FR-017, FR-006).
  */
-fun GroqSummaryPayload.toDomain(): AiSummary = AiSummary(
+fun SummaryPayload.toDomain(): AiSummary = AiSummary(
     documentTitle = documentTitle,
     documentType = documentType,
     issuingBody = issuingBody,

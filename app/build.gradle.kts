@@ -8,28 +8,33 @@ plugins {
 }
 
 /**
- * The Groq credential, read at configuration time.
+ * The Gemini credential, read at configuration time.
  *
  * `providers.fileContents` and `providers.environmentVariable` and not `File.readText`: this build
  * has the configuration cache on (`gradle.properties`), and reading a file directly at configuration
  * time is an undeclared input. Both of these are provider APIs, so Gradle tracks them.
  *
  * When the key is absent the build **stays green** and the field is an empty string, which the app
- * reports as "not configured". That is what lets CI compile and test without secrets (research.md
- * D-017, FR-042). `local.properties` is git-ignored; the value must never reach the repository.
+ * reports as "not configured". That is what lets CI compile and test without secrets (009
+ * research.md D-102, FR-029, FR-033). `local.properties` is git-ignored; the value must never reach
+ * the repository.
+ *
+ * Gemini keys come in **two** formats and neither is the previous provider's `gsk_`: the classic one
+ * begins with `AIza`, the one issued today with `AQ.`. Grepping for only one of them is how a leak
+ * gets declared clean — checked against a real key on 4 September 2026.
  */
-val groqApiKey: Provider<String> = providers
+val geminiApiKey: Provider<String> = providers
     .fileContents(rootProject.layout.projectDirectory.file("local.properties"))
     .asText
     .map { contents ->
         contents.lineSequence()
             .map(String::trim)
-            .firstOrNull { it.startsWith("GROQ_API_KEY=") }
+            .firstOrNull { it.startsWith("GEMINI_API_KEY=") }
             ?.substringAfter('=')
             ?.trim()
             .orEmpty()
     }
-    .orElse(providers.environmentVariable("GROQ_API_KEY"))
+    .orElse(providers.environmentVariable("GEMINI_API_KEY"))
     .orElse("")
 
 android {
@@ -48,7 +53,7 @@ android {
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
 
         // Entrecomillado a mano porque buildConfigField emite el literal tal cual.
-        buildConfigField("String", "GROQ_API_KEY", "\"${groqApiKey.get()}\"")
+        buildConfigField("String", "GEMINI_API_KEY", "\"${geminiApiKey.get()}\"")
     }
 
     buildTypes {
@@ -64,8 +69,8 @@ android {
     }
     buildFeatures {
         compose = true
-        // BOCantabriaApp usa BuildConfig.DEBUG para el nivel de log de Koin, y la feature 007
-        // necesita BuildConfig.GROQ_API_KEY.
+        // BOCantabriaApp usa BuildConfig.DEBUG para el nivel de log de Koin, y la feature 009
+        // necesita BuildConfig.GEMINI_API_KEY.
         buildConfig = true
     }
     testOptions {

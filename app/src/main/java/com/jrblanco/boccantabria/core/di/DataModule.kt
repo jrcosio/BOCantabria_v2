@@ -27,11 +27,11 @@ import com.jrblanco.boccantabria.data.source.local.PublicationSearchDao
 import com.jrblanco.boccantabria.data.source.local.SavedPublicationDao
 import com.jrblanco.boccantabria.data.source.local.bocDatabase
 import com.jrblanco.boccantabria.data.source.remote.BocFeedCatalog
-import com.jrblanco.boccantabria.data.source.remote.BuildConfigGroqApiKeyProvider
-import com.jrblanco.boccantabria.data.source.remote.GroqApiKeyProvider
-import com.jrblanco.boccantabria.data.source.remote.GroqRateLimitCoordinator
-import com.jrblanco.boccantabria.data.source.remote.GroqSummaryDataSource
-import com.jrblanco.boccantabria.data.source.remote.OkHttpGroqSummaryDataSource
+import com.jrblanco.boccantabria.data.source.remote.BuildConfigGeminiApiKeyProvider
+import com.jrblanco.boccantabria.data.source.remote.GeminiApiKeyProvider
+import com.jrblanco.boccantabria.data.source.remote.GeminiRateLimitCoordinator
+import com.jrblanco.boccantabria.data.source.remote.GeminiSummaryDataSource
+import com.jrblanco.boccantabria.data.source.remote.OkHttpGeminiSummaryDataSource
 import com.jrblanco.boccantabria.data.source.remote.SummaryPromptFactory
 import com.jrblanco.boccantabria.data.source.remote.SummaryValidator
 import com.jrblanco.boccantabria.data.source.remote.BocRssParser
@@ -105,7 +105,7 @@ val dataModule = module {
         )
     }
 
-    // --- Resumen IA (feature 007) ---
+    // --- Resumen IA (features 007 y 009) ---
     // El extractor y las preferencias entran por función fábrica desde su propio paquete: este
     // módulo no puede nombrar `androidx.pdf` ni `SharedPreferences`.
     single<PdfTextExtractor> {
@@ -115,12 +115,12 @@ val dataModule = module {
     single { PdfTextNormalizer() }
     single { SummaryPromptFactory() }
     single { SummaryValidator() }
-    single<GroqApiKeyProvider> { BuildConfigGroqApiKeyProvider() }
-    // Uno solo para toda la aplicación: es lo que serializa las peticiones y lo que recuerda lo que
-    // dijeron las cabeceras de la última respuesta.
-    single { GroqRateLimitCoordinator(time = get(), random = get()) }
-    single<GroqSummaryDataSource> {
-        OkHttpGroqSummaryDataSource(
+    single<GeminiApiKeyProvider> { BuildConfigGeminiApiKeyProvider() }
+    // Uno solo para toda la aplicación: es lo que serializa las peticiones y, desde la feature 009,
+    // lo que lleva la cuenta del consumo, porque este servicio no manda cabeceras de cuota.
+    single { GeminiRateLimitCoordinator(time = get(), random = get()) }
+    single<GeminiSummaryDataSource> {
+        OkHttpGeminiSummaryDataSource(
             client = get(),
             apiKeys = get(),
             coordinator = get(),

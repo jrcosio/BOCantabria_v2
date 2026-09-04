@@ -1,72 +1,108 @@
 package com.jrblanco.boccantabria.data.source.remote
 
-import com.jrblanco.boccantabria.domain.model.PdfCorpus
-
 /**
  * The last gate before anything is shown or stored.
  *
  * The strict schema guarantees the **shape** of the answer, not its **truth**. FR-022, FR-030 and
- * SC-012 cannot depend on the model behaving; coverage is the sharpest case, because a partial
+ * SC-002 cannot depend on the model behaving; coverage is the sharpest case, because a partial
  * summary that calls itself complete invites trust it has not earned (research.md D-018).
  *
  * What it does **not** do is check each claim by looking for it in the text. A summary is a
  * paraphrase, and that check would produce constant false negatives. The guarantee is the prompt,
  * the provenance by page, and being able to open the original.
+ *
+ * Feature 009 gave it one more job: capping each list at [MAX_ITEMS_PER_SECTION] and saying so. The
+ * schema asks for the same cap, but **a schema is a request and this is a guarantee** — and putting
+ * it here is what makes it testable without a service (009 FR-007, 009 research.md D-112).
  */
 class SummaryValidator {
 
     /**
-     * @param sentPages exactly the pages that went out, from `SummaryBudget`.
+     * @param document exactly what went out, from [DocumentText.render]. Its `pages` are the only
+     *   evidence of what was analysed; the corpus alone could not say, because the guardrail can cut
+     *   a document short.
+     * @param totalPages how many pages the document has, from the corpus.
      * @return the corrected payload, or `null` when there is nothing worth showing — which the
-     *   caller turns into `InvalidResponse`, and neither shows nor stores (FR-036).
+     *   caller turns into `InvalidResponse`, and neither shows nor stores (FR-019).
      */
     fun validate(
-        raw: GroqSummaryPayload,
-        corpus: PdfCorpus,
-        sentPages: List<Int>,
-    ): GroqSummaryPayload? {
+        raw: SummaryPayload,
+        document: RenderedDocument,
+        totalPages: Int,
+    ): SummaryPayload? {
         if (raw.plainLanguageSummary.isBlank()) return null
 
+        val sentPages = document.pages
         val allowed = sentPages.toSet()
         val prose = raw.plainLanguageSummary.trim()
         // The warning follows the *cause*, not the repair: prose with no finished sentence at all is
         // trimmed to nothing and kept as it came, and that case needs saying just as much.
         val arrivedCut = prose.last() !in SENTENCE_ENDINGS
 
+        // Every list is filtered before it is mapped: an entry whose own value is missing would be
+        // drawn as a bullet with a blank in it. An empty list already means «the document does not
+        // say», and that is the honest thing for it to mean here too.
+        val keyPoints = raw.keyPoints
+            .filter { it.text.isNotBlank() }
+            .map { it.copy(pages = it.pages.keepOnly(allowed)) }
+        val affectedParties = raw.affectedParties
+            .filter { it.text.isNotBlank() }
+            .map { it.copy(pages = it.pages.keepOnly(allowed)) }
+        val datesAndDeadlines = raw.datesAndDeadlines
+            .filter { it.dateOrPeriod.isNotBlank() }
+            .map { it.copy(pages = it.pages.keepOnly(allowed)) }
+        val amounts = raw.amounts
+            .filter { it.amount.isNotBlank() }
+            .map { it.copy(pages = it.pages.keepOnly(allowed)) }
+        val requiredActions = raw.requiredActions
+            .filter { it.action.isNotBlank() }
+            .map { it.copy(pages = it.pages.keepOnly(allowed)) }
+        val appealsOrClaims = raw.appealsOrClaims
+            .filter { it.text.isNotBlank() }
+            .map { it.copy(pages = it.pages.keepOnly(allowed)) }
+
+        // Which sections ran past the cap, so the reader is told rather than quietly shortchanged.
+        // Discarding twenty-eight of thirty-eight key points of an official bulletin in silence
+        // would be the same half-truth this validator exists to prevent (009 FR-007).
+        val capped = listOf(
+            SECTION_KEY_POINTS to keyPoints.size,
+            SECTION_AFFECTED to affectedParties.size,
+            SECTION_DATES to datesAndDeadlines.size,
+            SECTION_AMOUNTS to amounts.size,
+            SECTION_ACTIONS to requiredActions.size,
+            SECTION_APPEALS to appealsOrClaims.size,
+        ).filter { (_, size) -> size > MAX_ITEMS_PER_SECTION }.map { (name, _) -> name }
+
+        val notices = buildList {
+            addAll(raw.warnings)
+            if (arrivedCut) add(TRUNCATED_WARNING)
+            if (capped.isNotEmpty()) add(cappedWarning(capped))
+        }
+
         return raw.copy(
             plainLanguageSummary = trimToLastCompleteSentence(prose),
-            warnings = if (arrivedCut) raw.warnings + TRUNCATED_WARNING else raw.warnings,
-            // Every list is filtered before it is mapped: an entry whose own value is missing would
-            // be drawn as a bullet with a blank in it. An empty list already means «the document does
-            // not say», and that is the honest thing for it to mean here too.
-            keyPoints = raw.keyPoints
-                .filter { it.text.isNotBlank() }
-                .map { it.copy(pages = it.pages.keepOnly(allowed)) },
-            affectedParties = raw.affectedParties
-                .filter { it.text.isNotBlank() }
-                .map { it.copy(pages = it.pages.keepOnly(allowed)) },
-            datesAndDeadlines = raw.datesAndDeadlines
-                .filter { it.dateOrPeriod.isNotBlank() }
-                .map { it.copy(pages = it.pages.keepOnly(allowed)) },
-            amounts = raw.amounts
-                .filter { it.amount.isNotBlank() }
-                .map { it.copy(pages = it.pages.keepOnly(allowed)) },
-            requiredActions = raw.requiredActions
-                .filter { it.action.isNotBlank() }
-                .map { it.copy(pages = it.pages.keepOnly(allowed)) },
-            appealsOrClaims = raw.appealsOrClaims
-                .filter { it.text.isNotBlank() }
-                .map { it.copy(pages = it.pages.keepOnly(allowed)) },
+            warnings = notices,
+            keyPoints = keyPoints.take(MAX_ITEMS_PER_SECTION),
+            affectedParties = affectedParties.take(MAX_ITEMS_PER_SECTION),
+            datesAndDeadlines = datesAndDeadlines.take(MAX_ITEMS_PER_SECTION),
+            amounts = amounts.take(MAX_ITEMS_PER_SECTION),
+            requiredActions = requiredActions.take(MAX_ITEMS_PER_SECTION),
+            appealsOrClaims = appealsOrClaims.take(MAX_ITEMS_PER_SECTION),
             coverage = CoverageDto(
                 // Replaced, not checked: what was analysed is what was sent, and the service's
                 // opinion about it is not evidence.
                 pagesAnalyzed = sentPages,
-                totalPages = corpus.totalPages,
+                totalPages = totalPages,
                 // Corrected to false when pages are missing, whatever the answer claimed.
-                complete = sentPages.size == corpus.totalPages,
+                complete = sentPages.size == totalPages,
             ),
         )
     }
+
+    private fun cappedWarning(sections: List<String>): String =
+        "El documento sustenta más elementos de los que caben en el resumen. Se han conservado los " +
+            "$MAX_ITEMS_PER_SECTION más relevantes de: ${sections.joinToString(", ")}. " +
+            "Consulta el documento oficial para el resto."
 
     /**
      * Prose that stops mid-word reads as broken, and it happened on three of the first four real
@@ -92,10 +128,26 @@ class SummaryValidator {
     private fun List<Int>.keepOnly(allowed: Set<Int>): List<Int> =
         filter { it in allowed }.distinct().sorted()
 
-    private companion object {
-        val SENTENCE_ENDINGS = charArrayOf('.', '!', '?', '\u2026', '"', '\u00BB')
+    companion object {
+        /**
+         * Ten per section.
+         *
+         * A problem feature 009 created: until then only the first pages that fit were sent, so no
+         * card could grow much. The figure sizes the card of §20 of the design document onto a
+         * reasonable scroll; it is not a measurement, and raising it is one changed number.
+         */
+        const val MAX_ITEMS_PER_SECTION: Int = 10
 
-        const val TRUNCATED_WARNING =
+        private const val SECTION_KEY_POINTS = "puntos clave"
+        private const val SECTION_AFFECTED = "a quién afecta"
+        private const val SECTION_DATES = "fechas y plazos"
+        private const val SECTION_AMOUNTS = "importes"
+        private const val SECTION_ACTIONS = "actuaciones exigidas"
+        private const val SECTION_APPEALS = "recursos"
+
+        private val SENTENCE_ENDINGS = charArrayOf('.', '!', '?', '\u2026', '"', '\u00BB')
+
+        private const val TRUNCATED_WARNING =
             "El resumen llegó incompleto del servicio y se ha recortado hasta la última frase " +
                 "terminada. Consulta el documento oficial para el texto completo."
     }

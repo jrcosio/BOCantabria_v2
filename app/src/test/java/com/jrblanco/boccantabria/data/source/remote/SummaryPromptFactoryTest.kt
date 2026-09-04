@@ -39,7 +39,7 @@ class SummaryPromptFactoryTest {
     fun `an absent field never reaches the model as the word null`() {
         val message = factory.userMessage(
             publication = withoutBlobId(),
-            selected = SummaryBudget.select(corpus(listOf("Contenido"))),
+            document = DocumentText.render(corpus(listOf("Contenido"))),
             totalPages = 1,
         )
 
@@ -135,12 +135,32 @@ class SummaryPromptFactoryTest {
     fun `a partial reading is told the summary itself is never optional`() {
         val message = userMessage()
 
-        assertTrue(message.contains("plainLanguageSummary es SIEMPRE obligatorio"))
-        // Fragmentos que no cruzan salto de línea: la plantilla va recortada y envuelta.
-        assertTrue(message.contains("resume lo que has leído"))
-        assertTrue(message.contains("no es motivo para dejar nada vacío"))
-        assertTrue("y también los estructurados", message.contains("campos estructurados"))
-        assertTrue("y dónde va lo que falta", message.contains("warnings"))
+        // Se compara sobre el mensaje con los espacios colapsados. La plantilla va envuelta a 100
+        // columnas, así que cualquier frase de más de unas palabras cruza un salto de línea, y una
+        // aserción que dependa de dónde cae ese salto se rompe al reformatear sin que nada esté mal.
+        val said = message.replace(Regex("\\s+"), " ")
+
+        assertTrue(said.contains("plainLanguageSummary es SIEMPRE obligatorio"))
+        assertTrue(said.contains("resume lo que has leído"))
+        assertTrue(said.contains("no es motivo para dejar nada vacío"))
+        assertTrue("y también los estructurados", said.contains("campos estructurados"))
+        assertTrue("y dónde va lo que falta", said.contains("warnings"))
+    }
+
+    /**
+     * 009 FR-007. A problem the feature created: with the whole document going in, a thirty-page
+     * budget can support dozens of key points. The model is asked to pick and to **say so**, because
+     * discarding twenty-eight of thirty-eight in silence would be the same half-truth the feature
+     * exists to remove.
+     */
+    @Test
+    fun `the model is told to pick the most relevant when a section runs past ten`() {
+        val said = userMessage().replace(Regex("\\s+"), " ")
+
+        assertTrue(said, said.contains("Ninguna lista puede pasar de 10 elementos"))
+        assertTrue("debe pedir que elija, no que corte", said.contains("elige los 10 más relevantes"))
+        assertTrue("y que lo diga", said.contains("di en warnings que has dejado elementos fuera"))
+        assertTrue(said, said.contains("No los descartes en silencio"))
     }
 
     // ---------- Privacy ----------
@@ -176,7 +196,7 @@ class SummaryPromptFactoryTest {
 
     private fun userMessage(pages: List<String> = listOf("Contenido")) = factory.userMessage(
         publication = publication(key = "boc:439765"),
-        selected = SummaryBudget.select(corpus(pages)),
+        document = DocumentText.render(corpus(pages)),
         totalPages = pages.size,
     )
 
