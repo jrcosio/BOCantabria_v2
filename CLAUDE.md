@@ -288,12 +288,36 @@ Composable → ViewModel → UseCase → Repository (interfaz en domain)
   excepción; y la advertencia «Comprueba siempre el texto oficial» va **dentro** del texto al copiar o
   compartir, porque fuera de la aplicación el resumen pierde la tarjeta, el icono y la pantalla que lo
   enmarcaba.
-- **El presupuesto de tokens está medido, no estimado, y las dos mitades importan.** 4.500 de documento
-  contra 1.800 de respuesta. El proveedor cobra `entrada + max_completion_tokens` **al pedir**, se gaste
-  o no —su propio 429 lo dice: «Limit 8000, Used 7346, Requested 6475»—, así que subir el techo de la
-  respuesta sin bajar el del documento acerca el límite. Y 1.200 se quedaba corto: un resumen real llegó
-  a 1.625 tokens, y pasado el techo el JSON llega cortado, no parsea, y el lector lee «no se ha podido
-  construir un resumen fiable» — un problema nuestro disfrazado de fallo del servicio.
+- **Ya no hay presupuesto de tokens, y por qué había uno es la mitad de la historia de esta
+  funcionalidad.** Hasta la feature 009 el proveedor daba 8.000 tokens por minuto compartidos, y de ahí
+  salía todo: 4.500 de documento contra 1.800 de respuesta, un troceado que elegía qué páginas caben, y
+  tres defectos —JSON cortado, resúmenes en blanco, reintentos que chocaban con la cuota del mismo
+  minuto—. Ese techo cobraba `entrada + max_completion_tokens` **al pedir**, se gastara o no; su propio
+  429 lo decía: «Limit 8000, Used 7346, Requested 6475». Con **1.048.576 tokens de entrada** cualquier
+  publicación del BOC entra completa, así que se retiraron `SummaryBudget`, la estimación a 3,2
+  caracteres por token y el reparto entero. Queda **un solo tope duro**: `DocumentText.MAX_CHARACTERS =
+  480_000`, unas ciento noventa páginas, que en uso normal no se alcanza nunca y solo existe para que
+  una publicación patológica no tire la petición.
+- **El techo de salida sube a 8.000 y ahora eso es gratis, porque el proveedor nuevo cobra la salida
+  usada y no la reservada.** Es al revés que el anterior, y es lo que cierra para siempre la familia de
+  fallos en la que el JSON llegaba cortado, no parseaba, y el lector leía «no se ha podido construir un
+  resumen fiable» — un problema nuestro disfrazado de fallo del servicio. No se pone en 65.536 a
+  propósito: si una respuesta llegara a tocar 8.000, es que algo va mal en el prompt y conviene que se
+  note.
+- **Los dos valores por defecto del servicio nuevo que hay que apagar a mano, y ninguno se ve.**
+  `thinking_level` vale `medium` y el razonamiento **se factura**: es exactamente la lección de
+  `reasoning_effort` con otro nombre. Y `store` vale `true`: el servicio conserva la interacción, un día
+  en cuenta gratuita. Los dos se envían explícitamente, y los dos **dependen de `encodeDefaults = true`**
+  porque coinciden con su valor por defecto de Kotlin. Sin esa bandera no viajan y el proveedor aplica
+  los suyos, que son los contrarios.
+- **Gemini no manda cabeceras de cuota**, y el anterior sí. `GeminiRateLimitCoordinator` lleva la cuenta
+  él mismo con dos ventanas deslizantes en memoria —sesenta segundos y veinticuatro horas—, la diaria
+  deslizante y no de calendario porque el proveedor repone en su zona horaria y no en la del móvil. **No
+  se persiste, a conciencia**: mil quinientas peticiones al día son una cada cincuenta y siete segundos
+  durante veinticuatro horas, y eso no se alcanza pulsando un botón. Y un 429 se clasifica por **el
+  retraso que pide**, no por el texto que trae: el texto cambia, está en inglés, y FR-027 prohíbe
+  mostrarlo. **Las dos cifras del plan gratuito están pendientes de confirmar en el panel del
+  proveedor**, que es donde Google las publica ahora.
 - **Cuando un prompt enumera qué rellenar, lo que no está en la lista es lo que se pierde.** La versión
   v2 decía que un análisis parcial «no exime de rellenar **los campos estructurados**». El modelo
   obedeció al pie de la letra: rellenó los estructurados y dejó **el resumen** en blanco, con
@@ -315,10 +339,17 @@ Composable → ViewModel → UseCase → Repository (interfaz en domain)
   conocimiento del propietario, que una credencial dentro de un APK distribuido es recuperable. Nunca en
   Logcat, ni en Crashlytics, ni en analítica: ni la clave ni el contenido del documento. **Nunca un
   interceptor de registro a nivel de cuerpo en el cliente de IA.**
-- **El modelo del servicio está en Preview, no en producción.** Por eso su identificador vive en
-  `AiSummaryConstants` y el acceso va detrás de `GroqSummaryDataSource`: cuando lo retiren, es una línea
-  y una implementación nueva. Esas tres constantes —modelo, versión de prompt, versión de esquema— se
-  guardan con cada resumen; si alguna deja de coincidir, lo guardado queda **obsoleto, no borrado**.
+- **El identificador del modelo vive en `AiSummaryConstants` y el acceso va detrás de
+  `GeminiSummaryDataSource`, y la feature 009 es la factura que lo comprobó.** Cambiar de proveedor
+  —de Groq con Qwen a `gemini-3.5-flash-lite`— costó `data/source/remote/` más tres constantes de
+  dominio: ni el dominio del resumen, ni `ui/`, ni `strings.xml`, ni la base de datos, ni las veintiuna
+  pruebas instrumentadas de la pestaña se tocaron. Esas tres constantes —modelo, versión de prompt,
+  versión de esquema— se guardan con cada resumen; si alguna deja de coincidir, lo guardado queda
+  **obsoleto, no borrado**, y al cambiar las tres a la vez **todo lo guardado quedó obsoleto por
+  diseño**. Los ficheros que describen al proveedor llevan su nombre (`GeminiDtos`,
+  `OkHttpGeminiSummaryDataSource`); los que describen nuestro formato, no (`SummarySchema`,
+  `SummaryPayloadDtos`, `SummaryValidator`, `DocumentText`). **`SummaryPayload` es lo que se serializa
+  en `summary_json`, así que ni un nombre de propiedad puede cambiar**: hay prueba de regresión.
 - **Guardados existe desde la feature 005, pero solo marca: no conserva el documento.** Esta guía
   prometía que guardar para leer sin conexión sería la funcionalidad de Guardados, y esa mitad queda
   **aplazada** por decisión del propietario, no olvidada: el requisito FR-024 de
@@ -479,7 +510,9 @@ fichero de prueba. Si añades una clase de dominio sin test, la build falla.
 - **Esa prueba solo muerde con navegación de tres botones.** Con gestos el margen puede ser cero.
   `adb shell settings put secure navigation_mode 0` antes de la tanda instrumentada.
 - **La tanda instrumentada completa tarda casi tres horas, no trece minutos.** Medido el 4 de
-  septiembre de 2026: **154 pruebas en 161 minutos**, mediana de 46,4 s por prueba. La cifra importa
+  septiembre de 2026: **154 pruebas en 161 minutos**, mediana de 46,4 s por prueba, y medido otra vez
+  ese mismo día tras la feature 009: **154 pruebas en 116 minutos**, 45,3 s por prueba. El coste por
+  prueba es el mismo; lo que varía es la sobrecarga de la tanda. La cifra importa
   porque quien espere trece minutos dará por colgado algo que va bien; lánzala en segundo plano.
   Lo llamativo no es que sea lenta, es que el coste es un **suelo fijo y no depende de lo que la
   prueba haga**: las dos clases que no montan Compose —`BocRssParserDeviceTest` y
@@ -531,12 +564,52 @@ fichero de prueba. Si añades una clase de dominio sin test, la build falla.
   **todo lo declarado después venía vacío** —una convocatoria con plazos e importes salía en blanco—.
   Va la última, acotada con `maxLength`. El orden de la pantalla es otro y no depende de este: la
   tarjeta sigue mostrando la prosa arriba. Si alguien ordena esas propiedades alfabéticamente, la ficha
-  se vacía otra vez; lo vigila `GroqSummarySchemaTest`.
+  se vacía otra vez; lo vigila `SummarySchemaTest`.
 - **Un `catch` que no escribe nada convierte un fallo en un misterio.** Los tres sitios que abren un PDF
   se tragaban la excepción sin dejar rastro, así que un proceso aislado muerto y un fichero ilegible se
   veían igual: nada en pantalla y nada en el registro. Ahora informan por `CrashReporter.log`, y
   `FirebaseCrashReporter` **también escribe en logcat cuando `BuildConfig.DEBUG`**, con etiqueta `BOC`.
   Nunca el contenido del documento ni la clave: solo el tipo de fallo y de dónde viene.
+- **Cancelar una corrutina NO interrumpe un `Call.execute()` de OkHttp con una
+  `CancellationException`: le rompe el socket, y lo que sale es una `IOException`.** Visto en un móvil:
+  alguien pulsó Atrás mientras se generaba un resumen y el registro dijo `gemini: network:
+  SocketException: Software caused connection abort` y `summary failed: Offline`. No había ningún
+  problema de conexión —la persona se fue—, y el `catch (CancellationException)` de al lado **no llega a
+  dispararse nunca**. Peor: `fail()` publica ese estado, y en `observeSummary` el estado en curso
+  **gana** al resumen almacenado, así que al volver se lee «No hay conexión» de un fallo que no existió.
+  El arreglo es `currentCoroutineContext().ensureActive()` como **primera** línea del `catch (IOException)`;
+  `generate()` ya sabía qué hacer con una cancelación (FR-006), lo que faltaba era que llegara hasta allí.
+  Cualquier llamada bloqueante dentro de una corrutina tiene este agujero.
+- **`gemini-3.5-flash-lite` tuvo una caída de capacidad sostenida el 4 de septiembre de 2026, y el
+  modelo hermano no.** Medido, no supuesto: una petición **mínima** de 150 bytes sin esquema devolvía
+  `HTTP 500: currently experiencing high demand` una y otra vez, mientras la misma petición a
+  `gemini-3.5-flash` daba **HTTP 200 en 3,2 s** con la misma clave y desde la misma máquina. Eso
+  descarta el tamaño de la petición, el esquema, la credencial y la red: es capacidad del modelo. El
+  mismo cuerpo había funcionado a dos segundos tres horas antes.
+  **Qué hacer si vuelve**: nada, primero. El proveedor dice que los picos son temporales, en pantalla
+  ya se lee «Inténtalo de nuevo» y los tres intentos con backoff cubren un pico corto. Si persiste, la
+  escapatoria es **una línea** en `AiSummaryConstants.MODEL_ID` —que está ahí exactamente para esto—,
+  a cambio de dejar obsoletos todos los resúmenes guardados. **No** montes una cadena de reserva entre
+  modelos: el `model_id` que se guarda con cada resumen dejaría de ser determinista, y es la columna
+  que decide qué está obsoleto. Y ten presente que cada 500 cuenta en el contador de cuota, porque se
+  apunta al pedir: tres 500 gastan tres peticiones del cupo diario para cero resúmenes.
+- **El servicio se agota por tiempo con cierta frecuencia, y el reintento salva la mayoría de las
+  veces.** Medido el 4 de septiembre de 2026 en el emulador: dos generaciones de tres se llevaron un
+  `InterruptedIOException: timeout` en el primer intento y salieron en el segundo; una tercera acumuló
+  dos tiempos agotados y un `HTTP 500: gemini-3.5-flash-lite is currently experiencing high demand`.
+  Es decir: el `MAX_ATTEMPTS = 3` con backoff **se gana el sueldo**, no es decoración. Y en pantalla
+  todo eso es «No se ha podido generar el resumen» con reintento, que es lo correcto (FR-027).
+- **Conducir la interfaz con coordenadas fijas no funciona en el detalle de publicación.** La altura de
+  la cabecera cambia con la longitud del título, así que la fila de pestañas se mueve entre una
+  publicación y otra: unas coordenadas que valen para un anuncio caen en «Descripción» en el siguiente.
+  Si automatizas una comprobación manual con `adb shell input`, lee la pantalla con
+  `uiautomator dump` **entre toque y toque**. Y cuidado con `input swipe` sobre una pantalla corta: un
+  gesto sobre la zona no desplazable puede acabar pulsando el botón que haya debajo —a mí me disparó un
+  «Reintentar» y me hizo creer un momento que la pantalla se había quedado colgada en «Generando…»—.
+- **El paso de razonamiento de Gemini se llama `thought`, no `model_thoughts` como dice su
+  documentación, y llega SIEMPRE antes que la respuesta.** Comprobado contra el servicio real: tomar
+  `steps[0]` habría fallado en el cien por cien de las respuestas. `OkHttpGeminiSummaryDataSource`
+  busca `model_output` **por tipo** y nunca por posición, y hay una prueba con el nombre real.
 - **El proceso aislado del PDF nace y muere en cada documento, y eso es normal.** `androidx.pdf` genera
   un `Intent` con identificador único por documento, así que cada `openDocument()` arranca su propio
   proceso; al cerrar, muere. En Logcat sale como `PROCESS STARTED`/`PROCESS ENDED` **con el nombre de
@@ -547,6 +620,11 @@ fichero de prueba. Si añades una clase de dominio sin test, la build falla.
   desde `produceState` lo ejecutaba en el hilo principal; y cerrarlo en `onCleared()` sin capturar es un
   cierre de la aplicación en cuanto el proceso aislado ya haya muerto por su cuenta, que es lo normal.
   Va en `withContext(dispatchers.io)` y dentro de `runCatching`.
+- **Una aserción sobre el prompt que dependa de dónde cae un salto de línea se rompe al reformatear,
+  sin que nada esté mal.** La plantilla va envuelta a cien columnas y `trimIndent()` conserva los saltos,
+  así que cualquier frase de más de unas palabras los cruza: `"resume lo que has leído"` no está en el
+  mensaje, `"resume lo que\nhas leído"` sí. Se comprueba sobre el mensaje con los espacios colapsados
+  —`message.replace(Regex("\\s+"), " ")`—, no sobre fragmentos elegidos para caber en una línea.
 - **`trimIndent()` se aplica DESPUÉS de interpolar, y eso rompió el prompt.** Un valor multilínea que
   entra en la plantilla sin sangría arrastra el indent común a cero, así que no se recorta nada y el
   mensaje entero sale con ocho espacios en cada línea, pagados de la cuota de tokens. `SummaryPromptFactory`
@@ -571,27 +649,34 @@ Las líneas van en inglés y dicen la fase, el tamaño de lo enviado y el motivo
 
 ```
 summary: document ready, extracting
-summary: sending pages 4/9, 15582 chars, ~4870 tokens
-groq: HTTP 400: <lo que conteste el servicio>
-groq: blank summary: plainLanguageSummary=0 keyPoints=6 …, finish_reason=stop
+summary: sending pages 9/9, 31164 chars
+gemini: HTTP 400: <lo que conteste el servicio>
+gemini: HTTP 429, retry in 37s
+gemini: status=incomplete
+gemini: no model_output, 1 step(s), status=failed
+gemini: blank summary: plainLanguageSummary=0 keyPoints=6 …, status=completed, 240 output tokens
 extraction failed: DeadObjectException
 summary failed: Unknown
 ```
 
 **Nunca la credencial ni el contenido del documento**: de una respuesta se registra su *forma* —nombres
-de campo y tamaños—, y del servicio su `error.message`, que habla de nuestra petición. Tres pruebas lo
-vigilan. Y **`AiSummaryError.Unknown` cubre cuatro situaciones distintas** —documento que no se descarga,
+de campo y tamaños—, y del servicio su `error.message`, que habla de nuestra petición. Cinco pruebas lo
+vigilan. **Las claves de Gemini tienen dos formatos y hay que buscar los dos**: el clásico empieza por
+`AIza` y el que se emite hoy, por `AQ.` —comprobado contra una clave real: 53 caracteres empezando por
+`AQ.A`—. Ninguno es el `gsk_` del proveedor anterior. Buscar un solo prefijo, o el viejo, es exactamente
+cómo se da por limpio un repositorio que no lo está. Y **`AiSummaryError.Unknown` cubre cuatro situaciones distintas** —documento que no se descarga,
 extracción rota, código HTTP sin mejor sitio, y cualquier excepción del camino—: en pantalla son la
 misma frase y en el registro no pueden serlo.
 
-**Intermitencia conocida** — `SplashRestorationTest` falló una vez en cinco ejecuciones con
-`Activity never becomes requested state "[DESTROYED]"`. Es un tiempo de espera agotado dentro de
-`recreate()`, no la aserción de la prueba, y solo ocurrió en una tanda completa —que entonces
-duraba trece minutos; hoy son casi tres horas, y por qué está anotado más arriba—; en
-aislamiento y en una segunda tanda completa pasa. No hay causa raíz identificada: apunta a
-saturación del emulador, agravada porque ahora toda prueba instrumentada atraviesa el mínimo de
-1,2 s del arranque. Queda anotado a propósito en lugar de inventar un arreglo sin diagnóstico. Si
-vuelve a fallar, hay que investigarlo de verdad: un test intermitente incumple el principio V.
+**Intermitencia conocida, y la clase que la sufría ya no existe** — `SplashRestorationTest` falló una
+vez en cinco ejecuciones con `Activity never becomes requested state "[DESTROYED]"`: un tiempo de
+espera agotado dentro de `recreate()`, no la aserción de la prueba. **Esa clase no está en el
+proyecto**: hoy las pruebas de arranque son `SplashBackStackTest`, `SplashNavigationTest` y
+`ui/splash/SplashContentTest`, y las tres pasaron en la tanda del 4 de septiembre de 2026 tras la
+feature 009 —154 pruebas, cero fallos—. Se conserva el apunte porque el mecanismo sigue siendo
+posible: `recreate()` bajo saturación del emulador, agravado porque toda prueba instrumentada
+atraviesa el mínimo de 1,2 s del arranque. Si reaparece en cualquier clase, hay que investigarlo de
+verdad: un test intermitente incumple el principio V.
 
 ---
 

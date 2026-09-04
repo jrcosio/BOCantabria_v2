@@ -11,11 +11,11 @@ import com.jrblanco.boccantabria.data.source.local.AiSummaryEntity
 import com.jrblanco.boccantabria.data.source.local.PdfExtractionResult
 import com.jrblanco.boccantabria.data.source.local.PdfTextExtractor
 import com.jrblanco.boccantabria.data.source.local.PdfTextNormalizer
-import com.jrblanco.boccantabria.data.source.remote.GroqRefusal
-import com.jrblanco.boccantabria.data.source.remote.GroqSummaryDataSource
-import com.jrblanco.boccantabria.data.source.remote.GroqSummaryPayload
-import com.jrblanco.boccantabria.data.source.remote.GroqSummaryResult
-import com.jrblanco.boccantabria.data.source.remote.SummaryBudget
+import com.jrblanco.boccantabria.data.source.remote.DocumentText
+import com.jrblanco.boccantabria.data.source.remote.GeminiRefusal
+import com.jrblanco.boccantabria.data.source.remote.GeminiSummaryDataSource
+import com.jrblanco.boccantabria.data.source.remote.GeminiSummaryResult
+import com.jrblanco.boccantabria.data.source.remote.SummaryPayload
 import com.jrblanco.boccantabria.data.source.remote.SummaryPromptFactory
 import com.jrblanco.boccantabria.data.source.remote.SummaryValidator
 import com.jrblanco.boccantabria.data.source.remote.toDomain
@@ -63,7 +63,7 @@ class AiSummaryRepositoryImpl(
     private val extractor: PdfTextExtractor,
     private val normalizer: PdfTextNormalizer,
     private val prompts: SummaryPromptFactory,
-    private val summaries: GroqSummaryDataSource,
+    private val summaries: GeminiSummaryDataSource,
     private val validator: SummaryValidator,
     private val dao: AiSummaryDao,
     private val preferences: AiPreferences,
@@ -172,27 +172,26 @@ class AiSummaryRepositoryImpl(
             }
         }
 
-        val selected = SummaryBudget.select(corpus)
+        val rendered = DocumentText.render(corpus)
         val system = prompts.systemMessage()
-        val user = prompts.userMessage(publication, selected, corpus.totalPages)
+        val user = prompts.userMessage(publication, rendered, corpus.totalPages)
 
         crashReporter.log(
-            "summary: sending pages ${selected.pages.size}/${corpus.totalPages}, " +
-                "${selected.text.length} chars, ~${selected.estimatedTokens} tokens",
+            "summary: sending pages ${rendered.pages.size}/${corpus.totalPages}, " +
+                "${rendered.text.length} chars",
         )
-        publish(key, AiSummaryStatus.Generating(selected.pages.size, corpus.totalPages))
+        publish(key, AiSummaryStatus.Generating(rendered.pages.size, corpus.totalPages))
         val answer = summaries.summarise(
             system = system,
             user = user,
-            estimatedTokens = selected.estimatedTokens + PROMPT_OVERHEAD_TOKENS,
         )
 
         val success = when (answer) {
-            is GroqSummaryResult.Success -> answer
-            is GroqSummaryResult.Rejected -> return fail(key, answer.reason.toSummaryError())
+            is GeminiSummaryResult.Success -> answer
+            is GeminiSummaryResult.Rejected -> return fail(key, answer.reason.toSummaryError())
         }
 
-        val corrected = validator.validate(success.payload, corpus, selected.pages)
+        val corrected = validator.validate(success.payload, rendered, corpus.totalPages)
             // The one case the validator refuses outright: a summary with nothing to say. Worth
             // naming, because on screen it looks the same as a malformed body and is not.
             ?: return fail(key, AiSummaryError.InvalidResponse)
@@ -206,9 +205,9 @@ class AiSummaryRepositoryImpl(
                 name = EVENT_SUMMARY,
                 parameters = mapOf(
                     PARAM_CACHED to "false",
-                    PARAM_PAGES to selected.pages.size.toString(),
+                    PARAM_PAGES to rendered.pages.size.toString(),
                     PARAM_TOTAL_PAGES to corpus.totalPages.toString(),
-                    PARAM_PARTIAL to selected.isPartial.toString(),
+                    PARAM_PARTIAL to rendered.isPartial.toString(),
                     PARAM_TOTAL_TOKENS to success.usage.totalTokens.toString(),
                 ),
             ),
@@ -224,8 +223,8 @@ class AiSummaryRepositoryImpl(
     private suspend fun store(
         publication: Publication,
         pdfSha256: String,
-        payload: GroqSummaryPayload,
-        answer: GroqSummaryResult.Success,
+        payload: SummaryPayload,
+        answer: GeminiSummaryResult.Success,
     ) {
         dao.upsert(
             AiSummaryEntity(
@@ -238,8 +237,8 @@ class AiSummaryRepositoryImpl(
                 // coverage even if the service's original answer did not.
                 summaryJson = json.encodeToString(payload),
                 createdAtEpochMillis = time.nowMillis(),
-                promptTokens = answer.usage.promptTokens,
-                completionTokens = answer.usage.completionTokens,
+                promptTokens = answer.usage.totalInputTokens,
+                completionTokens = answer.usage.totalOutputTokens,
                 totalTokens = answer.usage.totalTokens,
                 systemFingerprint = answer.systemFingerprint,
             ),
@@ -284,7 +283,7 @@ class AiSummaryRepositoryImpl(
 
     /** A row that no longer parses is treated as absent rather than crashing the screen. */
     private fun AiSummaryEntity.decode(): AiSummary? = runCatching {
-        json.decodeFromString<GroqSummaryPayload>(summaryJson).toDomain()
+        json.decodeFromString<SummaryPayload>(summaryJson).toDomain()
     }.getOrNull()
 
     private fun DomainError.toSummaryError(): AiSummaryError = when (this) {
@@ -292,13 +291,13 @@ class AiSummaryRepositoryImpl(
         DomainError.Unknown -> AiSummaryError.Unknown
     }
 
-    private fun GroqRefusal.toSummaryError(): AiSummaryError = when (this) {
-        GroqRefusal.NotConfigured -> AiSummaryError.NotConfigured
-        GroqRefusal.Network -> AiSummaryError.Offline
-        GroqRefusal.Malformed, GroqRefusal.BlankSummary -> AiSummaryError.InvalidResponse
-        is GroqRefusal.QuotaMinute -> AiSummaryError.QuotaMinute(secondsRemaining)
-        GroqRefusal.QuotaDay -> AiSummaryError.QuotaDay
-        is GroqRefusal.HttpError -> AiSummaryError.Unknown
+    private fun GeminiRefusal.toSummaryError(): AiSummaryError = when (this) {
+        GeminiRefusal.NotConfigured -> AiSummaryError.NotConfigured
+        GeminiRefusal.Network -> AiSummaryError.Offline
+        GeminiRefusal.Malformed, GeminiRefusal.BlankSummary -> AiSummaryError.InvalidResponse
+        is GeminiRefusal.QuotaMinute -> AiSummaryError.QuotaMinute(secondsRemaining)
+        GeminiRefusal.QuotaDay -> AiSummaryError.QuotaDay
+        is GeminiRefusal.HttpError -> AiSummaryError.Unknown
     }
 
     private companion object {
@@ -310,6 +309,5 @@ class AiSummaryRepositoryImpl(
         const val PARAM_TOTAL_TOKENS = "total_tokens"
 
         /** The fixed prompt and the metadata, on top of the document text. */
-        const val PROMPT_OVERHEAD_TOKENS = 700
     }
 }

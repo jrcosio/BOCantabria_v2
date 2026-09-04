@@ -28,9 +28,9 @@ import com.jrblanco.boccantabria.data.source.local.AiPreferences
 import com.jrblanco.boccantabria.data.source.local.AiSummaryDao
 import com.jrblanco.boccantabria.data.source.local.PdfTextExtractor
 import com.jrblanco.boccantabria.data.source.local.PdfTextNormalizer
-import com.jrblanco.boccantabria.data.source.remote.GroqApiKeyProvider
-import com.jrblanco.boccantabria.data.source.remote.GroqRateLimitCoordinator
-import com.jrblanco.boccantabria.data.source.remote.GroqSummaryDataSource
+import com.jrblanco.boccantabria.data.source.remote.GeminiApiKeyProvider
+import com.jrblanco.boccantabria.data.source.remote.GeminiRateLimitCoordinator
+import com.jrblanco.boccantabria.data.source.remote.GeminiSummaryDataSource
 import com.jrblanco.boccantabria.data.source.remote.SummaryPromptFactory
 import com.jrblanco.boccantabria.data.source.remote.SummaryValidator
 import com.jrblanco.boccantabria.domain.repository.AiSummaryRepository
@@ -203,9 +203,9 @@ class KoinModulesTest {
         koin.get<PdfTextNormalizer>()
         koin.get<SummaryPromptFactory>()
         koin.get<SummaryValidator>()
-        koin.get<GroqApiKeyProvider>()
-        koin.get<GroqRateLimitCoordinator>()
-        koin.get<GroqSummaryDataSource>()
+        koin.get<GeminiApiKeyProvider>()
+        koin.get<GeminiRateLimitCoordinator>()
+        koin.get<GeminiSummaryDataSource>()
         koin.get<ObserveAiSummaryUseCase>()
         koin.get<GenerateAiSummaryUseCase>()
         koin.get<ObserveAiNoticeAcceptedUseCase>()
@@ -276,9 +276,9 @@ class KoinModulesTest {
             PdfTextNormalizer::class,
             SummaryPromptFactory::class,
             SummaryValidator::class,
-            GroqApiKeyProvider::class,
-            GroqRateLimitCoordinator::class,
-            GroqSummaryDataSource::class,
+            GeminiApiKeyProvider::class,
+            GeminiRateLimitCoordinator::class,
+            GeminiSummaryDataSource::class,
             SearchRepository::class,
             SearchPublicationsUseCase::class,
             GetSearchIssuersUseCase::class,

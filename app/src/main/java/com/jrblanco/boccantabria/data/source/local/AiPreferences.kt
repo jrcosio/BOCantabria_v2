@@ -50,7 +50,17 @@ class SharedPreferencesAiPreferences(
     }
 
     private companion object {
-        const val KEY_NOTICE_ACCEPTED = "ai_notice_accepted"
+        /**
+         * Versioned, and it must be versioned again whenever the wording of the notice changes
+         * substantially.
+         *
+         * Feature 009 added a sentence — the service may use the text of that public document to
+         * improve its models — and whoever had already accepted the previous notice never read it.
+         * FR-045 of feature 007 still holds: shown at most once per device **and per version of the
+         * notice**. The old key is left where it is; clearing it would need a preference migration to
+         * gain nothing (009 research.md D-113, FR-031a).
+         */
+        const val KEY_NOTICE_ACCEPTED = "ai_notice_accepted_v2"
     }
 }
 

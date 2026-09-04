@@ -1,5 +1,6 @@
 package com.jrblanco.boccantabria.data.source.local
 
+import com.jrblanco.boccantabria.domain.model.AiSummaryConstants
 import android.app.Application
 import androidx.room.Room
 import androidx.test.core.app.ApplicationProvider
@@ -56,7 +57,7 @@ class AiSummaryDaoTest {
         val stored = summaries.byExternalKey("boc:439765")
 
         assertEquals("a".repeat(64), stored?.pdfSha256)
-        assertEquals("qwen/qwen3.8-27b", stored?.modelId)
+        assertEquals(AiSummaryConstants.MODEL_ID, stored?.modelId)
         assertEquals(1_700_000_000_000L, stored?.createdAtEpochMillis)
         assertEquals(300, stored?.totalTokens)
         assertEquals("fp_abc", stored?.systemFingerprint)
@@ -112,7 +113,7 @@ class AiSummaryDaoTest {
     ) = AiSummaryEntity(
         externalKey = externalKey,
         pdfSha256 = "a".repeat(64),
-        modelId = "qwen/qwen3.8-27b",
+        modelId = AiSummaryConstants.MODEL_ID,
         promptVersion = "boc-summary-es-v1",
         schemaVersion = "boc-summary-schema-v1",
         summaryJson = summaryJson,

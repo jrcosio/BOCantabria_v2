@@ -58,7 +58,12 @@ class AiErrorMessagesTest {
 
     @Test
     fun `no message names the provider or the technology behind it`() {
-        val forbidden = listOf("groq", "qwen", "http", "json", "api", "token", "sdk", "null")
+        // Los del proveedor anterior se quedan: una frase que lo nombrara seguiría estando mal
+        // aunque ya no sea el proveedor, y quitarlos dejaría el hueco por donde volvería a entrar.
+        val forbidden = listOf(
+            "groq", "qwen", "gemini", "google",
+            "http", "json", "api", "token", "sdk", "null",
+        )
 
         everyError.forEach { error ->
             val message = context.getString(error.messageRes()).lowercase()
