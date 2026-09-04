@@ -478,6 +478,24 @@ fichero de prueba. Si añades una clase de dominio sin test, la build falla.
   sistema —el mismo número, que es la firma del problema—.
 - **Esa prueba solo muerde con navegación de tres botones.** Con gestos el margen puede ser cero.
   `adb shell settings put secure navigation_mode 0` antes de la tanda instrumentada.
+- **La tanda instrumentada completa tarda casi tres horas, no trece minutos.** Medido el 4 de
+  septiembre de 2026: **154 pruebas en 161 minutos**, mediana de 46,4 s por prueba. La cifra importa
+  porque quien espere trece minutos dará por colgado algo que va bien; lánzala en segundo plano.
+  Lo llamativo no es que sea lenta, es que el coste es un **suelo fijo y no depende de lo que la
+  prueba haga**: las dos clases que no montan Compose —`BocRssParserDeviceTest` y
+  `AndroidxPdfTextExtractorTest`— tardan de 0,0 a 0,2 s, y las veintinueve que sí montan Compose dan
+  46,2 s de mediana **todas**. `MainShellBottomInsetTest` mide un margen y tarda 46,3 s;
+  `PageChipsTest` dibuja dos chips y tarda 46,2 s; `AiSummaryTabTest`, que monta la pestaña entera
+  veintiuna veces, 46,2 s también. **No son las animaciones**: con las tres escalas a cero la misma
+  clase da 45,5 s. **Ni el tamaño de la suite**: una tanda de 24 pruebas da la misma media. No hay
+  causa raíz identificada —el emulador es una imagen con Google Play en API 37 y entre prueba y
+  prueba se ve arrancar Finsky, GMS y Docs, pero eso es una sospecha, no un diagnóstico—. Queda
+  anotado a propósito, como la intermitencia del final: inventar una explicación sería peor que
+  reconocer que falta.
+- **`--tests` no existe en `connectedDebugAndroidTest`.** Falla con `Unknown command-line option`.
+  Para ejecutar una sola clase o un solo método:
+  `-Pandroid.testInstrumentationRunnerArguments.class=<paquete>.<Clase>` y, opcionalmente,
+  `#<metodo>`. Es la diferencia entre iterar en un minuto o en tres horas.
 - **Una pestaña guardada se restaura por nombre, nunca con `valueOf`.** `Preguntar` fue pestaña y hoy
   es pantalla; un nombre guardado que ya no existe tumbaría el detalle al volver de la muerte del
   proceso, en el único camino que nadie recorre a mano.
@@ -568,7 +586,8 @@ misma frase y en el registro no pueden serlo.
 
 **Intermitencia conocida** — `SplashRestorationTest` falló una vez en cinco ejecuciones con
 `Activity never becomes requested state "[DESTROYED]"`. Es un tiempo de espera agotado dentro de
-`recreate()`, no la aserción de la prueba, y solo ocurrió en una tanda completa de 13 minutos; en
+`recreate()`, no la aserción de la prueba, y solo ocurrió en una tanda completa —que entonces
+duraba trece minutos; hoy son casi tres horas, y por qué está anotado más arriba—; en
 aislamiento y en una segunda tanda completa pasa. No hay causa raíz identificada: apunta a
 saturación del emulador, agravada porque ahora toda prueba instrumentada atraviesa el mínimo de
 1,2 s del arranque. Queda anotado a propósito en lugar de inventar un arreglo sin diagnóstico. Si
