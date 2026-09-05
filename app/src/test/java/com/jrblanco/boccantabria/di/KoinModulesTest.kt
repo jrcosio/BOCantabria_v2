@@ -26,8 +26,9 @@ import com.jrblanco.boccantabria.data.source.remote.RemoteConfigDataSource
 import com.jrblanco.boccantabria.data.source.remote.RemoteConfigValues
 import com.jrblanco.boccantabria.data.source.local.AiPreferences
 import com.jrblanco.boccantabria.data.source.local.AiSummaryDao
-import com.jrblanco.boccantabria.data.source.local.PdfTextExtractor
-import com.jrblanco.boccantabria.data.source.local.PdfTextNormalizer
+import com.jrblanco.boccantabria.data.source.local.PdfPageCounter
+import com.jrblanco.boccantabria.data.source.remote.AiDocumentSessionStore
+import com.jrblanco.boccantabria.data.source.remote.AiDocumentUploader
 import com.jrblanco.boccantabria.data.source.remote.GeminiApiKeyProvider
 import com.jrblanco.boccantabria.data.source.remote.GeminiRateLimitCoordinator
 import com.jrblanco.boccantabria.data.source.remote.GeminiSummaryDataSource
@@ -36,6 +37,7 @@ import com.jrblanco.boccantabria.data.source.remote.SummaryValidator
 import com.jrblanco.boccantabria.domain.repository.AiSummaryRepository
 import com.jrblanco.boccantabria.domain.repository.AppConfigRepository
 import com.jrblanco.boccantabria.domain.usecase.AcceptAiNoticeUseCase
+import com.jrblanco.boccantabria.domain.usecase.ReleaseAiDocumentSessionUseCase
 import com.jrblanco.boccantabria.domain.usecase.GenerateAiSummaryUseCase
 import com.jrblanco.boccantabria.domain.usecase.ObserveAiNoticeAcceptedUseCase
 import com.jrblanco.boccantabria.domain.usecase.ObserveAiSummaryUseCase
@@ -199,8 +201,9 @@ class KoinModulesTest {
         koin.get<AiSummaryRepository>()
         koin.get<AiSummaryDao>()
         koin.get<AiPreferences>()
-        koin.get<PdfTextExtractor>()
-        koin.get<PdfTextNormalizer>()
+        koin.get<PdfPageCounter>()
+        koin.get<AiDocumentUploader>()
+        koin.get<AiDocumentSessionStore>()
         koin.get<SummaryPromptFactory>()
         koin.get<SummaryValidator>()
         koin.get<GeminiApiKeyProvider>()
@@ -210,6 +213,7 @@ class KoinModulesTest {
         koin.get<GenerateAiSummaryUseCase>()
         koin.get<ObserveAiNoticeAcceptedUseCase>()
         koin.get<AcceptAiNoticeUseCase>()
+        koin.get<ReleaseAiDocumentSessionUseCase>()
 
         koin.get<DispatcherProvider>()
         koin.get<TimeProvider>()
@@ -269,11 +273,13 @@ class KoinModulesTest {
             GenerateAiSummaryUseCase::class,
             ObserveAiNoticeAcceptedUseCase::class,
             AcceptAiNoticeUseCase::class,
+            ReleaseAiDocumentSessionUseCase::class,
             AiSummaryDao::class,
             AiSummaryRepository::class,
             AiPreferences::class,
-            PdfTextExtractor::class,
-            PdfTextNormalizer::class,
+            PdfPageCounter::class,
+            AiDocumentUploader::class,
+            AiDocumentSessionStore::class,
             SummaryPromptFactory::class,
             SummaryValidator::class,
             GeminiApiKeyProvider::class,

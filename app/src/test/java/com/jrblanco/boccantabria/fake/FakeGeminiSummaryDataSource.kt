@@ -3,7 +3,8 @@ package com.jrblanco.boccantabria.fake
 import com.jrblanco.boccantabria.data.source.remote.CoverageDto
 import com.jrblanco.boccantabria.data.source.remote.GeminiSummaryDataSource
 import com.jrblanco.boccantabria.data.source.remote.GeminiSummaryResult
-import com.jrblanco.boccantabria.data.source.remote.GeminiUsage
+import com.jrblanco.boccantabria.data.source.remote.SummaryUsage
+import com.jrblanco.boccantabria.data.source.remote.UploadedDocument
 import com.jrblanco.boccantabria.data.source.remote.ReferencedTextDto
 import com.jrblanco.boccantabria.data.source.remote.SummaryPayload
 import kotlinx.coroutines.CompletableDeferred
@@ -15,7 +16,7 @@ import kotlinx.coroutines.CompletableDeferred
 class FakeGeminiSummaryDataSource(
     var result: GeminiSummaryResult = GeminiSummaryResult.Success(
         payload = summaryPayload(),
-        usage = GeminiUsage(
+        usage = SummaryUsage(
             totalInputTokens = 5_600,
             totalOutputTokens = 1_200,
             totalTokens = 6_800,
@@ -34,10 +35,19 @@ class FakeGeminiSummaryDataSource(
     var lastUserMessage: String? = null
         private set
 
-    override suspend fun summarise(system: String, user: String): GeminiSummaryResult {
+    /** Which uploaded document the request pointed at. The point of feature 010. */
+    var lastDocument: UploadedDocument? = null
+        private set
+
+    override suspend fun summarise(
+        system: String,
+        user: String,
+        document: UploadedDocument,
+    ): GeminiSummaryResult {
         calls++
         lastSystemMessage = system
         lastUserMessage = user
+        lastDocument = document
         gate?.await()
         return result
     }

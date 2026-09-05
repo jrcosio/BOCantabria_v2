@@ -18,21 +18,24 @@ package com.jrblanco.boccantabria.data.source.remote
 class SummaryValidator {
 
     /**
-     * @param document exactly what went out, from [DocumentText.render]. Its `pages` are the only
-     *   evidence of what was analysed; the corpus alone could not say, because the guardrail can cut
-     *   a document short.
-     * @param totalPages how many pages the document has, from the corpus.
+     * @param totalPages how many pages the document has, counted **on the device**. It used to
+     *   receive the pages that actually went out, because the guardrail could cut a document short;
+     *   since feature 010 the whole document is sent, so the set of admissible pages is simply
+     *   `1..totalPages`. It matters that this number does not come from the model: not believing the
+     *   count it declares is what this whole file is for, and a citation to a page that does not
+     *   exist would be a link to nowhere (010 research.md D-205).
      * @return the corrected payload, or `null` when there is nothing worth showing — which the
      *   caller turns into `InvalidResponse`, and neither shows nor stores (FR-019).
      */
-    fun validate(
-        raw: SummaryPayload,
-        document: RenderedDocument,
-        totalPages: Int,
-    ): SummaryPayload? {
+    fun validate(raw: SummaryPayload, totalPages: Int): SummaryPayload? {
         if (raw.plainLanguageSummary.isBlank()) return null
 
-        val sentPages = document.pages
+        // Every page went out, so every page was submitted. The doctrine has not changed — coverage
+        // is still computed from what was **actually sent** and never from what the model claims —
+        // it is just that what was sent is now the whole document, so a new summary is always
+        // complete. Rows stored before feature 010 can still be partial, and the screen still knows
+        // how to say so; that is why the coverage type and its message survive (010 data-model §5.2).
+        val sentPages = (1..totalPages).toList()
         val allowed = sentPages.toSet()
         val prose = raw.plainLanguageSummary.trim()
         // The warning follows the *cause*, not the repair: prose with no finished sentence at all is

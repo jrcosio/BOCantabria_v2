@@ -33,7 +33,7 @@ class AiSummaryErrorTest {
 
     @Test
     fun `a document without text will not become one by retrying`() {
-        assertFalse(AiSummaryError.NoExtractableText.isRetryable)
+        assertFalse(AiSummaryError.UnreadableDocument.isRetryable)
     }
 
     @Test

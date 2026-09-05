@@ -19,14 +19,18 @@ package com.jrblanco.boccantabria.domain.model
 object AiSummaryConstants {
 
     /**
-     * Published on 21 July 2026, generally available rather than preview, and announced by the
-     * provider as optimised for document processing.
+     * The one line that changes the provider's model, and the reason it is a constant.
      *
-     * 1 048 576 tokens of input and 65 536 of output, which is what removed the scarcity the whole
-     * feature used to be built around: any bulletin publication now goes in whole
-     * (009 research.md D-101).
+     * Feature 009 measured what that is worth: a sustained capacity outage on `gemini-3.5-flash-lite`
+     * on 4 September 2026 was survived by pointing this at a sibling. Do **not** build a fallback
+     * chain between models: this value is stored beside every summary and is the column that decides
+     * what is stale, so it has to stay deterministic (009 CLAUDE.md).
+     *
+     * Feature 010 adds a requirement this value must satisfy, and it is not negotiable: the model
+     * has to accept a **file part** and honour a strict JSON schema at the same time. That cannot be
+     * settled from documentation — it is checked against the live service in `quickstart.md` §3 bis
+     * before this line is fixed (010 research.md D-213).
      */
-    //const val MODEL_ID: String = "gemini-3.5-flash-lite"
     const val MODEL_ID: String = "gemini-3.1-flash-lite"
 
     /**
@@ -38,8 +42,15 @@ object AiSummaryConstants {
      * answers measured on a real phone. v4 sends the whole document instead of the first pages that
      * fit, so a partial reading became the exception rather than the norm, and asks the model to pick
      * the most relevant items when a section would run past ten (009 research.md D-104, D-112).
+     *
+     * v5 stops sending text at all. The official document itself is attached to the request and the
+     * service reads it, so the slot that carried page-marked text is gone and the system message says
+     * where the document is. Two of the three constants change with it and [SCHEMA_VERSION] does not,
+     * because the schema is untouched — which is enough to make every stored summary stale, by
+     * design: one made from text we extracted was not made under the same conditions as one made from
+     * the document (010 research.md D-212).
      */
-    const val PROMPT_VERSION: String = "boc-summary-es-v4"
+    const val PROMPT_VERSION: String = "boc-summary-es-v5"
 
     /**
      * Bump when the response schema changes shape.

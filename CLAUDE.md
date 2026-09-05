@@ -81,7 +81,9 @@ core/
 data/
   repository/     Implementaciones de las interfaces de domain
   source/local/   Room: BocDatabase, entidades, DAOs y Converters
-  source/remote/  OkHttp, el catálogo de las 19 fuentes, el analizador y el normalizador
+  source/remote/  OkHttp, el catálogo de las 19 fuentes, el analizador, el normalizador, y desde la
+                  feature 010 la Files API del servicio de IA —subida reanudable escrita a mano— y el
+                  almacén de la sesión del documento
   telemetry/      Implementaciones de Firebase. ÚNICO sitio que toca el SDK
 domain/
   model/          Modelos de dominio, Kotlin puro (AppResult, DomainError, Publication,
@@ -254,9 +256,12 @@ Composable → ViewModel → UseCase → Repository (interfaz en domain)
 ### El documento oficial
 
 - **`androidx.pdf` se toca en exactamente dos sitios**, y desde la feature 007 ya no en uno solo:
-  `ui/pdf` para **dibujar** el documento y `data/source/local/AndroidxPdfTextExtractor` para **extraer su
-  texto**. Extraer texto es una fuente de datos, no presentación; ponerlo en `ui` obligaría al modelo de
-  pantalla a orquestar la tubería entera y eso incumple el principio III. La interfaz
+  `ui/pdf` para **dibujar** el documento y `data/source/local/AndroidxPdfPageCounter` para **contar sus
+  páginas**. Hasta la feature 010 el segundo extraía el texto entero; ahora el documento se envía al
+  servicio y lo único que hace falta saber en el dispositivo es cuántas páginas tiene —para descartar
+  una cita a una página que no existe— y si está protegido con contraseña. Es una fuente de datos, no
+  presentación; ponerlo en `ui` obligaría al modelo de pantalla a orquestar la tubería entera y eso
+  incumple el principio III. La interfaz
   `PdfDocumentLoader` **se queda en `ui/pdf`**: moverla a `data` rompería la regla Konsist «ui no
   depende de data», porque el visor y la vista previa la importan. La biblioteca está en **beta** y su API
   puede cambiar: fuera de ese paquete nadie la nombra. `PdfDocumentLoader` es el seam —abrir un
@@ -281,13 +286,38 @@ Composable → ViewModel → UseCase → Repository (interfaz en domain)
   registra el destino enumerado (`linkedin` o `github`), nunca la URL ni datos personales.
 - **Resumen IA existe desde la feature 007, y su regla número uno es que no se genera solo.** Solo al
   pulsar el botón: la cuota del servicio es gratuita, compartida por toda la organización y diaria, y
-  resumir lo que nadie ha pedido la vaciaría en una tarde. Tres cosas más que conviene no deshacer sin
-  pensarlo: el texto del PDF **no se almacena** —regenerar vuelve a extraerlo, que es local y gratis, y
-  guardarlo crecería sin tope y exigiría la primera sentencia de borrado del proyecto—; un documento sin
-  texto utilizable **no llega nunca** al servicio, y eso se decide contando caracteres, no esperando una
-  excepción; y la advertencia «Comprueba siempre el texto oficial» va **dentro** del texto al copiar o
-  compartir, porque fuera de la aplicación el resumen pierde la tarjeta, el icono y la pantalla que lo
-  enmarcaba.
+  resumir lo que nadie ha pedido la vaciaría en una tarde. Y la advertencia «Comprueba siempre el texto
+  oficial» va **dentro** del texto al copiar o compartir, porque fuera de la aplicación el resumen
+  pierde la tarjeta, el icono y la pantalla que lo enmarcaba.
+- **Desde la feature 010 no se envía el texto del documento: se envía el documento.** La cadena
+  `extraer → limpiar → renderizar con marcas de página` se retiró entera, y con ella
+  `AndroidxPdfTextExtractor`, `PdfTextNormalizer`, `DocumentText` y `PdfCorpus`. El PDF se sube a la
+  **Files API** con el protocolo de subida reanudable, y la petición lleva una referencia. Dos
+  consecuencias que conviene tener presentes: **un PDF escaneado ya se resume** —era imposible antes, y
+  el invariante «un documento sin texto utilizable no llega nunca al servicio» queda **superado, no
+  incumplido**: existía porque lo que viajaba era el texto—; y el juicio sobre si el documento sirve lo
+  hace ahora el servicio, así que un documento ilegible cuesta una petición.
+- **El documento subido tiene dueño y tiene final.** `AiDocumentSessionStore` mantiene **como mucho
+  uno** vivo en todo el proceso: se sube en la primera acción de IA de la visita, se reutiliza mientras
+  se esté en esa publicación —regenerar no vuelve a subir— y se borra en `onCleared()` del modelo de
+  pantalla del detalle. Ese punto no es casual: Preguntar y el visor se apilan **encima** del detalle,
+  así que su entrada sigue viva mientras se usan. Y `release()` **no es una función suspendida** a
+  propósito: en `onCleared()` el `viewModelScope` ya está cancelado y lanzar el borrado ahí no borraría
+  nada, así que el almacén tiene un ámbito propio. Si el proceso muere sin borrar, el servicio caduca el
+  fichero por su cuenta; eso es la red de seguridad, no el mecanismo.
+- **La librería oficial de Kotlin de Google NO se puede usar en esta aplicación, y conviene saberlo
+  antes de volver a intentarlo.** `com.google.genai:google-genai-kotlin` llegó a 1.0.0 el 2 de
+  septiembre de 2026 y la feature 010 la adoptó: catálogo, Java 17, exclusiones de empaquetado, tres
+  clases escritas contra ella y el APK compilando. El primer test que construyó el cliente reveló que
+  su artefacto de Android lleva un guardián que **lanza siempre**:
+  `IllegalStateException: SECURITY FATAL: Initializing the Client with an API Key or Credentials on
+  Android is blocked to prevent credential leaks`. No es el aviso del README —eso ya se había leído y
+  asumido—: es un `throw` incondicional en `androidMain/SecurityContext.kt`. Sin un servidor propio
+  detrás, en Android no hay forma de construir el cliente. Se retiró entera y la Files API se escribió
+  a mano sobre OkHttp. **Forzar el artefacto `-jvm` para saltarse el guardián se descartó a
+  conciencia**: es rodear un control de seguridad del proveedor sobre una variante no compilada para
+  Android. La vía correcta el día que haya backend, o el día que Firebase AI Logic exponga ficheros,
+  es Firebase AI Logic — hoy no tiene Files API y por eso no vale.
 - **Ya no hay presupuesto de tokens, y por qué había uno es la mitad de la historia de esta
   funcionalidad.** Hasta la feature 009 el proveedor daba 8.000 tokens por minuto compartidos, y de ahí
   salía todo: 4.500 de documento contra 1.800 de respuesta, un troceado que elegía qué páginas caben, y
@@ -323,14 +353,23 @@ Composable → ViewModel → UseCase → Repository (interfaz en domain)
   obedeció al pie de la letra: rellenó los estructurados y dejó **el resumen** en blanco, con
   `finish_reason=stop` —no se quedó sin sitio, terminó por su cuenta—. Desde v3, `plainLanguageSummary`
   se declara obligatorio siempre, y lo que falte va en `coverage` y `warnings`, nunca en un campo vacío.
-- **El texto que sale de pdfium se sanea antes de viajar.** Un sustituto UTF-16 sin pareja no es un
-  carácter: produce UTF-8 inválido en el cuerpo JSON y el servicio rechaza la petición entera con un
-  400, siempre para el mismo documento. `PdfTextNormalizer` los elimina junto a los caracteres de
-  control.
+- **El saneado del texto de pdfium se fue con la extracción, y el problema que resolvía también.** Un
+  sustituto UTF-16 sin pareja producía UTF-8 inválido en el cuerpo JSON y el servicio rechazaba la
+  petición entera con un 400, siempre para el mismo documento. Desde la feature 010 no viaja texto
+  nuestro en el cuerpo, sino un fichero binario y unos metadatos que salen de la base de datos, así que
+  el defecto **deja de ser posible por construcción**. Se anota porque si algún día vuelve a enviarse
+  texto extraído, vuelve con él.
 - **Un arreglo que convierte un error en otro es peor que no arreglar nada.** El reintento automático de
   un resumen vacío salía disparado, chocaba con la cuota del mismo minuto y el lector acababa leyendo
   «se ha alcanzado el límite». Ahora se consulta al coordinador antes de reintentar y, si no hay margen,
   se devuelve el rechazo original.
+- **Buscar la credencial en el repositorio da un acierto que NO es una fuga.** `app/google-services.json`
+  lleva un `current_key` que empieza por `AIza` y está versionado a propósito desde el commit base: es
+  la clave de Android de Firebase, restringida en la consola por paquete y huella de firma, y el
+  fichero tiene que estar ahí para que la build funcione. La de Gemini son 53 caracteres empezando por
+  `AQ.A`; la de Firebase, 39 empezando por `AIza`. La comprobación va con
+  `':!app/google-services.json'`, porque una comprobación que falla siempre es una comprobación que se
+  deja de mirar.
 - **La credencial del servicio de IA se lee de `local.properties` y se expone por `BuildConfig`.** Con
   API de proveedor de Gradle (`providers.fileContents`), no con `File.readText`: la caché de
   configuración está activada y leer un fichero a pelo en tiempo de configuración es una entrada no
@@ -396,11 +435,12 @@ borrar un test para que pase la build.
 - Todo bug corregido lleva un test de regresión que falla **antes** del arreglo.
 - Tests deterministas: sin red real, sin reloj del sistema, sin depender del orden.
 
-**Reglas de arquitectura** (`ArchitectureRulesTest`, Konsist): **ocho** reglas —el texto decía seis
-y quedó desfasado cuando la feature 002 añadió las dos del tema—. Hacen cumplir la separación de
-capas, que solo `data` toque Firebase, que solo `core/ui/theme` importe `Color`, que nada dependa
-del tema del sistema, y que toda clase de dominio de nivel superior y todo `ViewModel` tenga su
-fichero de prueba. Si añades una clase de dominio sin test, la build falla.
+**Reglas de arquitectura** (`ArchitectureRulesTest`, Konsist): **nueve** reglas —eran seis, la
+feature 002 añadió las dos del tema y la 010 la novena—. Hacen cumplir la separación de capas, que
+solo `data` toque Firebase, que **solo `data` nombre los tipos del servicio de IA**
+(`com.google.genai`), que solo `core/ui/theme` importe `Color`, que nada dependa del tema del
+sistema, y que toda clase de dominio de nivel superior y todo `ViewModel` tenga su fichero de prueba.
+Si añades una clase de dominio sin test, la build falla.
 
 > **Lo que las pruebas de esta casa no pueden ver, y cómo se ve.** Los dos defectos que de verdad
 > rompían el Resumen IA en un móvil —el modelo dejando el resumen vacío, y el techo de salida cortando
@@ -648,14 +688,17 @@ adb -s <serie> logcat -s BOC:V
 Las líneas van en inglés y dicen la fase, el tamaño de lo enviado y el motivo exacto del fallo:
 
 ```
-summary: document ready, extracting
-summary: sending pages 9/9, 31164 chars
+summary: document ready, counting pages
+summary: 9 pages
+upload: sending 412 KB
+upload: ready after 2 poll(s)
+session: released boc:439765
 gemini: HTTP 400: <lo que conteste el servicio>
 gemini: HTTP 429, retry in 37s
 gemini: status=incomplete
 gemini: no model_output, 1 step(s), status=failed
 gemini: blank summary: plainLanguageSummary=0 keyPoints=6 …, status=completed, 240 output tokens
-extraction failed: DeadObjectException
+pages failed: DeadObjectException
 summary failed: Unknown
 ```
 
@@ -667,6 +710,13 @@ vigilan. **Las claves de Gemini tienen dos formatos y hay que buscar los dos**: 
 cómo se da por limpio un repositorio que no lo está. Y **`AiSummaryError.Unknown` cubre cuatro situaciones distintas** —documento que no se descarga,
 extracción rota, código HTTP sin mejor sitio, y cualquier excepción del camino—: en pantalla son la
 misma frase y en el registro no pueden serlo.
+
+**Y la lección de la feature 010, que es la misma con otro traje.** La librería oficial se adoptó
+leyendo su README y su código fuente —API verificada línea por línea, artefacto descargado, bytecode
+inspeccionado— y aun así el bloqueo no salió hasta **ejecutarla**. Un `throw` en una función `actual`
+de `androidMain` no se ve en la documentación, no se ve en la firma y no se ve en el POM. Lo que lo
+encontró fue el primer test que construyó el objeto de verdad. Verificar la forma de una dependencia
+no es lo mismo que ejecutarla.
 
 **Intermitencia conocida, y la clase que la sufría ya no existe** — `SplashRestorationTest` falló una
 vez en cinco ejecuciones con `Activity never becomes requested state "[DESTROYED]"`: un tiempo de

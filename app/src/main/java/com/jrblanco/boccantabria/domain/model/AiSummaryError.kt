@@ -16,8 +16,18 @@ sealed interface AiSummaryError {
     /** No connection, and nothing stored to fall back on. */
     data object Offline : AiSummaryError
 
-    /** Scanned or empty. **Never reaches the service** (FR-012). */
-    data object NoExtractableText : AiSummaryError
+    /**
+     * The service could not read the document.
+     *
+     * This slot used to mean the opposite end of the same problem: "scanned or empty, so we could not
+     * pull any text out of it, and it never reaches the service". That judgement was ours because
+     * what travelled **was** the text. Now the document itself travels and a scan is a valid input,
+     * so the case that cannot happen any more is gone and the one that can starts here: the upload
+     * was accepted and the service still failed to process it (010 research.md D-217, FR-002).
+     *
+     * Not retryable, for the same reason it never was: trying again cannot change it.
+     */
+    data object UnreadableDocument : AiSummaryError
 
     data object EncryptedPdf : AiSummaryError
 
@@ -45,6 +55,6 @@ sealed interface AiSummaryError {
     val isRetryable: Boolean
         get() = when (this) {
             Offline, is QuotaMinute, InvalidResponse, Unknown -> true
-            NoExtractableText, EncryptedPdf, QuotaDay, NotConfigured -> false
+            UnreadableDocument, EncryptedPdf, QuotaDay, NotConfigured -> false
         }
 }

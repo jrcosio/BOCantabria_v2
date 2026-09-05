@@ -7,10 +7,10 @@ import com.jrblanco.boccantabria.core.util.TimeProvider
 import com.jrblanco.boccantabria.data.source.local.AiPreferences
 import com.jrblanco.boccantabria.data.source.local.AiSummaryEntity
 import com.jrblanco.boccantabria.data.source.local.BocDatabase
-import com.jrblanco.boccantabria.data.source.local.PdfExtractionResult
-import com.jrblanco.boccantabria.data.source.local.PdfTextNormalizer
+import com.jrblanco.boccantabria.data.source.local.PageCountResult
 import com.jrblanco.boccantabria.data.source.remote.GeminiRefusal
 import com.jrblanco.boccantabria.data.source.remote.GeminiSummaryResult
+import com.jrblanco.boccantabria.data.source.remote.AiDocumentSessionStore
 import com.jrblanco.boccantabria.data.source.remote.SummaryPromptFactory
 import com.jrblanco.boccantabria.data.source.remote.SummaryValidator
 import com.jrblanco.boccantabria.di.ROBOLECTRIC_SDK
@@ -21,13 +21,13 @@ import com.jrblanco.boccantabria.domain.model.AppResult
 import com.jrblanco.boccantabria.domain.model.DocumentStatus
 import com.jrblanco.boccantabria.fake.FakeDocumentRepository
 import com.jrblanco.boccantabria.fake.FakeGeminiSummaryDataSource
-import com.jrblanco.boccantabria.fake.FakePdfTextExtractor
+import com.jrblanco.boccantabria.fake.FakeAiDocumentUploader
+import com.jrblanco.boccantabria.fake.FakePdfPageCounter
 import com.jrblanco.boccantabria.fake.RecordingAnalyticsTracker
 import com.jrblanco.boccantabria.fake.RecordingCrashReporter
 import com.jrblanco.boccantabria.fake.TestDispatcherProvider
 import com.jrblanco.boccantabria.fake.officialDocument
 import com.jrblanco.boccantabria.fake.publication
-import com.jrblanco.boccantabria.fake.scannedCorpus
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.async
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -57,7 +57,8 @@ class AiSummaryRepositoryImplTest {
 
     private val dispatcher = StandardTestDispatcher()
     private val documents = FakeDocumentRepository(DocumentStatus.Available(officialDocument()))
-    private val extractor = FakePdfTextExtractor()
+    private val counter = FakePdfPageCounter()
+    private val uploader = FakeAiDocumentUploader()
     private val service = FakeGeminiSummaryDataSource()
     private val analytics = RecordingAnalyticsTracker()
     private val crashReporter = RecordingCrashReporter()
@@ -128,31 +129,33 @@ class AiSummaryRepositoryImplTest {
 
     // ---------- What must never cost a request ----------
 
-    /** FR-012 and SC-005. Asking about an empty context spends quota and gets invention back. */
+    /**
+     * **FR-002, the point of the feature.** A document with no text used to be refused here, because
+     * what travelled was the text. Now the document travels and a scan is a valid input: nothing
+     * about its contents may stand between the page count and the upload.
+     */
     @Test
-    fun `a document without usable text never reaches the service`() = runTest(dispatcher) {
-        extractor.result = PdfExtractionResult.NoExtractableText
-        val repository = repository()
-
-        val result = repository.generate(publication("boc:439765"), force = false)
-        advanceUntilIdle()
-
-        assertTrue(result is AppResult.Failure)
-        assertEquals(0, service.calls)
-        assertEquals(
-            AiSummaryStatus.Failed(AiSummaryError.NoExtractableText),
-            repository.observeSummary("boc:439765").first(),
-        )
-    }
-
-    @Test
-    fun `a protected document never reaches the service either`() = runTest(dispatcher) {
-        extractor.result = PdfExtractionResult.EncryptedPdf
+    fun `a document reaches the service whatever its contents`() = runTest(dispatcher) {
+        counter.result = PageCountResult.Success(totalPages = 3)
         val repository = repository()
 
         repository.generate(publication("boc:439765"), force = false)
         advanceUntilIdle()
 
+        assertEquals("se sube", 1, uploader.uploads)
+        assertEquals("y se pregunta", 1, service.calls)
+    }
+
+    /** FR-004 and SC-007. The one thing that still stops a document on the device. */
+    @Test
+    fun `a protected document never reaches the service either`() = runTest(dispatcher) {
+        counter.result = PageCountResult.Encrypted
+        val repository = repository()
+
+        repository.generate(publication("boc:439765"), force = false)
+        advanceUntilIdle()
+
+        assertEquals("no se sube", 0, uploader.uploads)
         assertEquals(0, service.calls)
         assertEquals(
             AiSummaryStatus.Failed(AiSummaryError.EncryptedPdf),
@@ -187,7 +190,9 @@ class AiSummaryRepositoryImplTest {
         repository.generate(publication("boc:439765"), force = false)
         advanceUntilIdle()
 
-        assertEquals(1, service.calls)
+        assertEquals("no se vuelve a preguntar", 1, service.calls)
+        assertEquals("ni se vuelven a contar las páginas", 1, counter.calls)
+        assertEquals("ni se vuelve a subir", 1, uploader.uploads)
     }
 
     @Test
@@ -293,12 +298,69 @@ class AiSummaryRepositoryImplTest {
         assertFailure(GeminiRefusal.HttpError(500), AiSummaryError.Unknown)
     }
 
+    // ---------- El documento viaja una vez, y se suelta al salir ----------
+
+    /**
+     * **FR-008 y SC-005.** Rehacer un resumen sin salir de la publicación no vuelve a subir el
+     * documento. Es lo que hace que la funcionalidad no cueste el doble de lo necesario, y lo que la
+     * pantalla Preguntar reutilizará.
+     *
+     * Se comprueba con `force = true` las dos veces, porque con `force = false` la segunda llamada
+     * ni siquiera llega a la sesión: la corta la fila guardada.
+     */
+    @Test
+    fun `regenerating within the same visit does not upload the document again`() =
+        runTest(dispatcher) {
+            val repository = repository()
+
+            repository.generate(publication("boc:439765"), force = true)
+            advanceUntilIdle()
+            repository.generate(publication("boc:439765"), force = true)
+            advanceUntilIdle()
+
+            assertEquals("se pregunta dos veces", 2, service.calls)
+            assertEquals("y se sube una", 1, uploader.uploads)
+        }
+
+    /** **FR-009 y SC-006.** Salir de la publicación retira el documento del servicio. */
+    @Test
+    fun `releasing the session deletes the document from the service`() = runTest(dispatcher) {
+        val repository = repository()
+        repository.generate(publication("boc:439765"), force = false)
+        advanceUntilIdle()
+
+        repository.releaseDocumentSession("boc:439765")
+        advanceUntilIdle()
+
+        assertEquals(listOf("files/fake-1"), uploader.deleted)
+    }
+
+    /**
+     * **FR-029.** Un rechazo de la **subida** no es lo mismo que uno de la **generación**, aunque el
+     * transporte los llame igual: el primero significa que el servicio no ha podido leer el
+     * documento y no se reintenta; el segundo, que la respuesta no valía.
+     */
+    @Test
+    fun `a document the service cannot process is reported as unreadable`() = runTest(dispatcher) {
+        uploader.rejection = GeminiRefusal.Malformed
+        val repository = repository()
+
+        repository.generate(publication("boc:439765"), force = false)
+        advanceUntilIdle()
+
+        assertEquals("no se llega a preguntar", 0, service.calls)
+        assertEquals(
+            AiSummaryStatus.Failed(AiSummaryError.UnreadableDocument),
+            repository.observeSummary("boc:439765").first(),
+        )
+    }
+
     /** FR-036: an unusable answer is neither shown nor stored. */
     @Test
     fun `an answer that does not survive validation is not stored`() = runTest(dispatcher) {
         service.result = GeminiSummaryResult.Success(
             payload = com.jrblanco.boccantabria.fake.summaryPayload(plainLanguageSummary = "  "),
-            usage = com.jrblanco.boccantabria.data.source.remote.GeminiUsage(),
+            usage = com.jrblanco.boccantabria.data.source.remote.SummaryUsage(),
             systemFingerprint = null,
         )
         val repository = repository()
@@ -374,8 +436,12 @@ class AiSummaryRepositoryImplTest {
 
     private fun repository(service: FakeGeminiSummaryDataSource = this.service) = AiSummaryRepositoryImpl(
         documents = documents,
-        extractor = extractor,
-        normalizer = PdfTextNormalizer(),
+        pages = counter,
+        sessions = AiDocumentSessionStore(
+            uploader = uploader,
+            dispatchers = TestDispatcherProvider(dispatcher),
+            crashReporter = crashReporter,
+        ),
         prompts = SummaryPromptFactory(),
         summaries = service,
         validator = SummaryValidator(),

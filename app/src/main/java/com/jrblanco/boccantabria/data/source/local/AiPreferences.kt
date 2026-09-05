@@ -56,11 +56,18 @@ class SharedPreferencesAiPreferences(
          *
          * Feature 009 added a sentence — the service may use the text of that public document to
          * improve its models — and whoever had already accepted the previous notice never read it.
+         *
+         * Feature 010 changed something bigger than a sentence: what leaves the device is no longer
+         * the **text** we extracted but the **document itself**, and the service keeps it for a
+         * limited time. Accepting «the text is sent» was not accepting that, so the key goes up again
+         * (010 FR-032, FR-033).
+         *
          * FR-045 of feature 007 still holds: shown at most once per device **and per version of the
-         * notice**. The old key is left where it is; clearing it would need a preference migration to
-         * gain nothing (009 research.md D-113, FR-031a).
+         * notice**. Old keys are left where they are; clearing them would need a preference migration
+         * to gain nothing, and reading one would be taking as accepted a text nobody has seen
+         * (009 research.md D-113, FR-031a).
          */
-        const val KEY_NOTICE_ACCEPTED = "ai_notice_accepted_v2"
+        const val KEY_NOTICE_ACCEPTED = "ai_notice_accepted_v3"
     }
 }
 

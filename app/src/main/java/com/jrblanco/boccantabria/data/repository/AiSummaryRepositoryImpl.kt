@@ -8,15 +8,15 @@ import com.jrblanco.boccantabria.core.util.TimeProvider
 import com.jrblanco.boccantabria.data.source.local.AiPreferences
 import com.jrblanco.boccantabria.data.source.local.AiSummaryDao
 import com.jrblanco.boccantabria.data.source.local.AiSummaryEntity
-import com.jrblanco.boccantabria.data.source.local.PdfExtractionResult
-import com.jrblanco.boccantabria.data.source.local.PdfTextExtractor
-import com.jrblanco.boccantabria.data.source.local.PdfTextNormalizer
-import com.jrblanco.boccantabria.data.source.remote.DocumentText
+import com.jrblanco.boccantabria.data.source.local.PageCountResult
+import com.jrblanco.boccantabria.data.source.local.PdfPageCounter
+import com.jrblanco.boccantabria.data.source.remote.AiDocumentSessionStore
 import com.jrblanco.boccantabria.data.source.remote.GeminiRefusal
 import com.jrblanco.boccantabria.data.source.remote.GeminiSummaryDataSource
 import com.jrblanco.boccantabria.data.source.remote.GeminiSummaryResult
 import com.jrblanco.boccantabria.data.source.remote.SummaryPayload
 import com.jrblanco.boccantabria.data.source.remote.SummaryPromptFactory
+import com.jrblanco.boccantabria.data.source.remote.SessionResult
 import com.jrblanco.boccantabria.data.source.remote.SummaryValidator
 import com.jrblanco.boccantabria.data.source.remote.toDomain
 import com.jrblanco.boccantabria.domain.model.AiSummary
@@ -26,7 +26,6 @@ import com.jrblanco.boccantabria.domain.model.AiSummaryStatus
 import com.jrblanco.boccantabria.domain.model.AppResult
 import com.jrblanco.boccantabria.domain.model.DocumentStatus
 import com.jrblanco.boccantabria.domain.model.DomainError
-import com.jrblanco.boccantabria.domain.model.PdfCorpus
 import com.jrblanco.boccantabria.domain.model.Publication
 import com.jrblanco.boccantabria.domain.repository.AiSummaryRepository
 import com.jrblanco.boccantabria.domain.repository.DocumentRepository
@@ -45,23 +44,30 @@ import kotlinx.serialization.json.Json
  * The whole pipeline, in one place.
  *
  * ```
- * ensureLocalCopy -> extract -> normalise -> budget -> ask -> validate -> store
+ * ensureLocalCopy -> pageCount -> session.open (uploads) -> ask -> validate -> store
  * ```
  *
  * Shaped like [DocumentRepositoryImpl] because it is the same problem: progress is published into a
  * map the screen observes, while [generate] does the work. That keeps the view model free of
  * orchestration, which principle III requires (research.md D-025).
  *
+ * **The order is not incidental.** `pageCount` runs **before** the upload, so a password-protected
+ * document never leaves the device (FR-004, SC-007). And the cached row is checked before all of it:
+ * a stored summary costs no page count, no upload and no request.
+ *
  * Three guarantees that cannot be relaxed:
- * - **Observing never generates.** Only [generate] reaches the service (FR-002, SC-004).
- * - **A document without usable text never reaches the service** (FR-012, SC-005).
- * - **Two concurrent generations of the same publication share one request** (FR-005).
+ * - **Observing never generates.** Only [generate] reaches the service (FR-017, SC-004).
+ * - **A password-protected document never leaves the device** (FR-004, SC-007). This replaces the
+ *   guarantee of features 007 and 009, "a document without usable text never reaches the service",
+ *   which is superseded rather than broken: it existed because what travelled *was* the text, and a
+ *   scan is a valid input now (010 research.md D-204).
+ * - **Two concurrent generations of the same publication share one request** (FR-022).
  */
 @Suppress("LongParameterList")
 class AiSummaryRepositoryImpl(
     private val documents: DocumentRepository,
-    private val extractor: PdfTextExtractor,
-    private val normalizer: PdfTextNormalizer,
+    private val pages: PdfPageCounter,
+    private val sessions: AiDocumentSessionStore,
     private val prompts: SummaryPromptFactory,
     private val summaries: GeminiSummaryDataSource,
     private val validator: SummaryValidator,
@@ -148,6 +154,12 @@ class AiSummaryRepositoryImpl(
 
     override suspend fun acceptNotice() = preferences.acceptNotice()
 
+    /**
+     * Not suspending, because the only caller is the detail view model's `onCleared()` and by then
+     * its scope is cancelled. The store launches the deletion on a scope of its own.
+     */
+    override fun releaseDocumentSession(externalKey: String) = sessions.release(externalKey)
+
     private suspend fun run(publication: Publication): AppResult<AiSummary> {
         val key = publication.externalKey
 
@@ -157,41 +169,47 @@ class AiSummaryRepositoryImpl(
             is AppResult.Failure -> return fail(key, fetched.error.toSummaryError())
         }
 
-        publish(key, AiSummaryStatus.Preparing(AiSummaryStatus.Preparing.Phase.EXTRACTING_TEXT))
-        crashReporter.log("summary: document ready, extracting")
-        val corpus = when (
-            val extracted = extractor.extract(document.localPath, key, document.checksum)
-        ) {
-            is PdfExtractionResult.Success -> normalizer.normalise(extracted.corpus)
-            // The three cases that must never cost a request (FR-012, SC-005).
-            PdfExtractionResult.NoExtractableText -> return fail(key, AiSummaryError.NoExtractableText)
-            PdfExtractionResult.EncryptedPdf -> return fail(key, AiSummaryError.EncryptedPdf)
-            is PdfExtractionResult.Failure -> {
-                crashReporter.recordNonFatal(extracted.cause)
+        // Before the upload, and that is the point: this is what keeps a password-protected document
+        // on the device (FR-004). It also gives the validator the one number it must not take from
+        // the model — how many pages the document really has (D-205).
+        crashReporter.log("summary: document ready, counting pages")
+        val totalPages = when (val counted = pages.pageCount(document.localPath)) {
+            is PageCountResult.Success -> counted.totalPages
+            PageCountResult.Encrypted -> return fail(key, AiSummaryError.EncryptedPdf)
+            is PageCountResult.Failure -> {
+                crashReporter.recordNonFatal(counted.cause)
                 return fail(key, AiSummaryError.Unknown)
             }
         }
+        crashReporter.log("summary: $totalPages pages")
 
-        val rendered = DocumentText.render(corpus)
+        publish(key, AiSummaryStatus.Preparing(AiSummaryStatus.Preparing.Phase.UPLOADING_DOCUMENT))
+        // Idempotent: within a visit to this publication the document travels once, so regenerating
+        // costs nothing extra (FR-008, SC-005).
+        val uploaded = when (
+            val session = sessions.open(
+                externalKey = key,
+                pdfSha256 = document.checksum,
+                localPath = document.localPath,
+                displayName = displayNameFor(publication),
+            )
+        ) {
+            is SessionResult.Ready -> session.session.document
+            is SessionResult.Rejected -> return fail(key, session.reason.toUploadError())
+        }
+
         val system = prompts.systemMessage()
-        val user = prompts.userMessage(publication, rendered, corpus.totalPages)
+        val user = prompts.userMessage(publication, totalPages)
 
-        crashReporter.log(
-            "summary: sending pages ${rendered.pages.size}/${corpus.totalPages}, " +
-                "${rendered.text.length} chars",
-        )
-        publish(key, AiSummaryStatus.Generating(rendered.pages.size, corpus.totalPages))
-        val answer = summaries.summarise(
-            system = system,
-            user = user,
-        )
+        publish(key, AiSummaryStatus.Generating(totalPages))
+        val answer = summaries.summarise(system = system, user = user, document = uploaded)
 
         val success = when (answer) {
             is GeminiSummaryResult.Success -> answer
             is GeminiSummaryResult.Rejected -> return fail(key, answer.reason.toSummaryError())
         }
 
-        val corrected = validator.validate(success.payload, rendered, corpus.totalPages)
+        val corrected = validator.validate(success.payload, totalPages)
             // The one case the validator refuses outright: a summary with nothing to say. Worth
             // naming, because on screen it looks the same as a malformed body and is not.
             ?: return fail(key, AiSummaryError.InvalidResponse)
@@ -205,9 +223,7 @@ class AiSummaryRepositoryImpl(
                 name = EVENT_SUMMARY,
                 parameters = mapOf(
                     PARAM_CACHED to "false",
-                    PARAM_PAGES to rendered.pages.size.toString(),
-                    PARAM_TOTAL_PAGES to corpus.totalPages.toString(),
-                    PARAM_PARTIAL to rendered.isPartial.toString(),
+                    PARAM_TOTAL_PAGES to totalPages.toString(),
                     PARAM_TOTAL_TOKENS to success.usage.totalTokens.toString(),
                 ),
             ),
@@ -219,6 +235,13 @@ class AiSummaryRepositoryImpl(
         publish(key, null)
         return AppResult.Success(summary)
     }
+
+    /**
+     * What the document is called in the service. Public data of the publication and nothing else:
+     * not what the reader saved, not what they read, no identifier of theirs (FR-006).
+     */
+    private fun displayNameFor(publication: Publication): String =
+        "BOC ${publication.externalKey}"
 
     private suspend fun store(
         publication: Publication,
@@ -291,6 +314,19 @@ class AiSummaryRepositoryImpl(
         DomainError.Unknown -> AiSummaryError.Unknown
     }
 
+    /**
+     * A refusal from the **upload**, which is a different sentence to the reader.
+     *
+     * `Malformed` here means the service accepted the bytes and still could not process the
+     * document, which is exactly what [AiSummaryError.UnreadableDocument] says. From the
+     * **generation** the same refusal means the answer would not parse, which is `InvalidResponse`.
+     * Same word, two situations, and telling them apart is the whole reason this second map exists.
+     */
+    private fun GeminiRefusal.toUploadError(): AiSummaryError = when (this) {
+        GeminiRefusal.Malformed, GeminiRefusal.BlankSummary -> AiSummaryError.UnreadableDocument
+        else -> toSummaryError()
+    }
+
     private fun GeminiRefusal.toSummaryError(): AiSummaryError = when (this) {
         GeminiRefusal.NotConfigured -> AiSummaryError.NotConfigured
         GeminiRefusal.Network -> AiSummaryError.Offline
@@ -303,11 +339,9 @@ class AiSummaryRepositoryImpl(
     private companion object {
         const val EVENT_SUMMARY = "ai_summary_generated"
         const val PARAM_CACHED = "cached"
-        const val PARAM_PAGES = "pages_analyzed"
         const val PARAM_TOTAL_PAGES = "total_pages"
-        const val PARAM_PARTIAL = "partial"
         const val PARAM_TOTAL_TOKENS = "total_tokens"
-
-        /** The fixed prompt and the metadata, on top of the document text. */
+        // `pages_analyzed` and `partial` are gone rather than kept lying: the whole document is sent,
+        // so one would always equal the total and the other would always be false.
     }
 }

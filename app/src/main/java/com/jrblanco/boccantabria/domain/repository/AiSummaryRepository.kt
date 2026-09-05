@@ -41,4 +41,18 @@ interface AiSummaryRepository {
     fun observeNoticeAccepted(): Flow<Boolean>
 
     suspend fun acceptNotice()
+
+    /**
+     * Lets go of the document prepared for [externalKey] in the service.
+     *
+     * Not suspending, and that is the point. The only moment that means "the reader left this
+     * publication" is the detail view model's `onCleared()`, and by then its scope is already
+     * cancelled — launching the deletion there would delete nothing. So the call returns at once and
+     * the work happens on a scope that outlives it.
+     *
+     * It returns nothing either. A deletion that fails has nobody to tell: the service expires the
+     * file on its own, which is the safety net FR-011 relies on. What it does do is leave a line in
+     * the log.
+     */
+    fun releaseDocumentSession(externalKey: String)
 }

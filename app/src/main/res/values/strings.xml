@@ -234,7 +234,7 @@
 
     <!-- Fases del proceso. No hay respuesta progresiva, así que la espera tiene que contar algo. -->
     <string name="ai_summary_phase_fetching">Obteniendo el documento oficial…</string>
-    <string name="ai_summary_phase_extracting">Leyendo el texto del documento…</string>
+    <string name="ai_summary_phase_uploading">Preparando el documento…</string>
     <string name="ai_summary_phase_generating">Generando el resumen…</string>
     <string name="ai_summary_quota_wait">Se ha alcanzado el límite por minuto. Continuaremos en unos %1$d s.</string>
 
@@ -243,10 +243,6 @@
       En plural de verdad: «Se analizarán las 1 primeras» es lo que sale si no se hace, y es un caso
       que ocurre —un documento largo del que solo cabe la primera página—.
     -->
-    <plurals name="ai_summary_partial_before">
-        <item quantity="one">Documento de %1$d páginas. Se analizará solo la primera.</item>
-        <item quantity="other">Documento de %1$d páginas. Se analizarán las %2$d primeras.</item>
-    </plurals>
     <plurals name="ai_summary_partial_after">
         <item quantity="one">Se ha analizado la página %1$s de %2$d. El resumen no cubre el documento completo.</item>
         <item quantity="other">Se han analizado las páginas %1$s de %2$d. El resumen no cubre el documento completo.</item>
@@ -260,13 +256,13 @@
 
     <!-- El aviso de la primera vez -->
     <string name="ai_notice_title">El texto se envía a un servicio externo</string>
-    <string name="ai_notice_body">Para generar el resumen, la aplicación envía el texto de este documento oficial a un servicio de inteligencia artificial fuera del dispositivo. No se envía nada tuyo: ni lo que has guardado, ni lo que has leído. El servicio puede usar el texto de este documento público para mejorar sus modelos.</string>
+    <string name="ai_notice_body">Para generar el resumen, la aplicación envía el documento oficial completo a un servicio de inteligencia artificial fuera del dispositivo. El servicio lo conserva un tiempo limitado, y la aplicación lo retira al salir de esta publicación. No se envía nada tuyo: ni lo que has guardado, ni lo que has leído. El servicio puede usar el contenido de este documento público para mejorar sus modelos.</string>
     <string name="ai_notice_continue">Continuar</string>
     <string name="ai_notice_cancel">Cancelar</string>
 
     <!-- Mensajes de error. En lenguaje corriente y sin ningún código (FR-040). -->
     <string name="ai_error_offline">No hay conexión. El resumen podrá generarse cuando vuelvas a estar conectado.</string>
-    <string name="ai_error_no_text">Este documento no contiene texto que la aplicación pueda analizar.</string>
+    <string name="ai_error_unreadable">No se ha podido leer este documento. Puedes consultar el PDF oficial.</string>
     <string name="ai_error_encrypted">El documento está protegido y no se puede leer su texto.</string>
     <string name="ai_error_quota_minute">Se ha alcanzado temporalmente el límite de la función. Inténtalo dentro de unos segundos.</string>
     <string name="ai_error_quota_day">Se ha alcanzado el límite de resúmenes de hoy. Inténtalo mañana.</string>

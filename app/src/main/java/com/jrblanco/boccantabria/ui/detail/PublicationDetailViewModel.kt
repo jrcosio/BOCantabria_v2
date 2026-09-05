@@ -17,6 +17,7 @@ import com.jrblanco.boccantabria.domain.usecase.ObserveAiNoticeAcceptedUseCase
 import com.jrblanco.boccantabria.domain.usecase.ObserveAiSummaryUseCase
 import com.jrblanco.boccantabria.domain.usecase.ObservePublicationUseCase
 import com.jrblanco.boccantabria.domain.usecase.ObserveSavedKeysUseCase
+import com.jrblanco.boccantabria.domain.usecase.ReleaseAiDocumentSessionUseCase
 import com.jrblanco.boccantabria.domain.usecase.OpenOfficialDocumentUseCase
 import com.jrblanco.boccantabria.domain.usecase.SetPublicationSavedUseCase
 import com.jrblanco.boccantabria.domain.usecase.ShareOfficialDocumentUseCase
@@ -54,6 +55,7 @@ class PublicationDetailViewModel(
     private val generateAiSummary: GenerateAiSummaryUseCase,
     private val observeAiNoticeAccepted: ObserveAiNoticeAcceptedUseCase,
     private val acceptAiNotice: AcceptAiNoticeUseCase,
+    private val releaseAiDocumentSession: ReleaseAiDocumentSessionUseCase,
     getSections: GetBocSectionsUseCase,
     private val analytics: AnalyticsTracker,
 ) : ViewModel() {
@@ -314,4 +316,19 @@ class PublicationDetailViewModel(
         const val KEY_TAB: String = "detail_tab"
         private const val SUBSCRIPTION_TIMEOUT_MILLIS = 5_000L
     }
+    /**
+     * Leaving the publication lets go of the document prepared in the service.
+     *
+     * **This** is the moment, and not the asking screen's or the viewer's: both are pushed on top of
+     * this entry, so it stays alive while they are used and is only cleared on the way back out. That
+     * asking is only reachable through here is what makes one point enough.
+     *
+     * The call is not suspending and it cannot be: by the time `onCleared()` runs, `viewModelScope`
+     * is already cancelled and anything launched into it would never run. The store keeps a scope of
+     * its own for exactly this (FR-009, 010 research.md D-208).
+     */
+    override fun onCleared() {
+        releaseAiDocumentSession(externalKey)
+    }
+
 }

@@ -1,6 +1,5 @@
 package com.jrblanco.boccantabria.data.source.remote
 
-import com.jrblanco.boccantabria.domain.model.PdfCorpus
 import com.jrblanco.boccantabria.fake.publication
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
@@ -21,14 +20,28 @@ class SummaryPromptFactoryTest {
         assertTrue(message.contains("27 de agosto de 2026"))
     }
 
+    /**
+     * **The point of feature 010.** The document is not in the message any more: it is attached to
+     * the request and the service reads it. What the message keeps is the metadata and the number of
+     * pages, so the model can cite them.
+     */
     @Test
-    fun `the document is delimited and every page marked`() {
-        val message = userMessage(pages = listOf("Primera", "Segunda"))
+    fun `the document does not travel inside the message`() {
+        val message = userMessage(totalPages = 2)
 
-        assertTrue(message.contains("<documento_boc>"))
-        assertTrue(message.contains("</documento_boc>"))
-        assertTrue(message.contains("[PÁGINA 1]"))
-        assertTrue(message.contains("[PÁGINA 2]"))
+        assertFalse(message, message.contains("<documento_boc>"))
+        assertFalse(message, message.contains("[PÁGINA"))
+        assertTrue("el total de páginas sí, para poder citarlas", message.contains("2"))
+    }
+
+    /** The model has to be told where the document is, or it has nothing to read. */
+    @Test
+    fun `the message says the document is attached`() {
+        val said = userMessage().replace(Regex("\\s+"), " ")
+        val system = factory.systemMessage().replace(Regex("\\s+"), " ")
+
+        assertTrue(said, said.contains("documento oficial se adjunta"))
+        assertTrue(system, system.contains("documento PDF adjunto"))
     }
 
     /**
@@ -37,11 +50,7 @@ class SummaryPromptFactoryTest {
      */
     @Test
     fun `an absent field never reaches the model as the word null`() {
-        val message = factory.userMessage(
-            publication = withoutBlobId(),
-            document = DocumentText.render(corpus(listOf("Contenido"))),
-            totalPages = 1,
-        )
+        val message = factory.userMessage(publication = withoutBlobId(), totalPages = 1)
 
         assertFalse("no puede aparecer el literal null", message.contains("null"))
         assertTrue(message.contains(SummaryPromptFactory.NOT_AVAILABLE))
@@ -132,7 +141,7 @@ class SummaryPromptFactoryTest {
      * Lo que faltaba era decir que el resumen es obligatorio siempre.
      */
     @Test
-    fun `a partial reading is told the summary itself is never optional`() {
+    fun `a document it cannot fully read is told the summary itself is never optional`() {
         val message = userMessage()
 
         // Se compara sobre el mensaje con los espacios colapsados. La plantilla va envuelta a 100
@@ -141,7 +150,7 @@ class SummaryPromptFactoryTest {
         val said = message.replace(Regex("\\s+"), " ")
 
         assertTrue(said.contains("plainLanguageSummary es SIEMPRE obligatorio"))
-        assertTrue(said.contains("resume lo que has leído"))
+        assertTrue(said.contains("resume lo que sí has podido leer"))
         assertTrue(said.contains("no es motivo para dejar nada vacío"))
         assertTrue("y también los estructurados", said.contains("campos estructurados"))
         assertTrue("y dónde va lo que falta", said.contains("warnings"))
@@ -172,7 +181,7 @@ class SummaryPromptFactoryTest {
      */
     @Test
     fun `nothing about the person is sent`() {
-        val message = userMessage(pages = listOf("Contenido del documento oficial."))
+        val message = userMessage()
         val system = factory.systemMessage()
 
         listOf("guardad", "favorit", "historial", "device", "usuario_", "android_id", "advertising")
@@ -184,29 +193,22 @@ class SummaryPromptFactoryTest {
             }
     }
 
-    /** The request carries publication metadata and document text, and nothing else. */
+    /** The request carries publication metadata and the rules of the summary, and nothing else. */
     @Test
-    fun `the request is metadata plus document text`() {
-        val message = userMessage(pages = listOf("Contenido del documento oficial."))
+    fun `the request is metadata and instructions`() {
+        val message = userMessage()
 
-        val documentPart = message.substringAfter("<documento_boc>").substringBefore("</documento_boc>")
-        assertTrue(documentPart.contains("Contenido del documento oficial."))
         assertTrue(message.startsWith("Genera un resumen estructurado"))
+        assertTrue(message.contains("METADATOS DE LA PUBLICACIÓN"))
+        assertTrue(message.contains("CRITERIOS DEL RESUMEN"))
     }
 
-    private fun userMessage(pages: List<String> = listOf("Contenido")) = factory.userMessage(
+    private fun userMessage(totalPages: Int = 1) = factory.userMessage(
         publication = publication(key = "boc:439765"),
-        document = DocumentText.render(corpus(pages)),
-        totalPages = pages.size,
+        totalPages = totalPages,
     )
 
     /** A publication the bulletin published without a blob identifier: the field is genuinely absent. */
     private fun withoutBlobId() = publication(key = "boc:1").copy(blobId = null)
 
-    private fun corpus(pages: List<String>) = PdfCorpus(
-        externalKey = "boc:439765",
-        pdfSha256 = "a".repeat(64),
-        totalPages = pages.size,
-        pages = pages.mapIndexed { index, text -> PdfCorpus.PdfPageText(index + 1, text) },
-    )
 }

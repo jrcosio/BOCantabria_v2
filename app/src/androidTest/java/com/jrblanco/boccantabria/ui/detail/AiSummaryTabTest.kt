@@ -91,29 +91,29 @@ class AiSummaryTabTest {
         composeRule.onNodeWithTag(TAG_AI_SUMMARY_PROGRESS).assertIsDisplayed()
         composeRule.onNodeWithText("Obteniendo el documento oficial…").assertIsDisplayed()
 
-        status.value = AiSummaryStatus.Preparing(AiSummaryStatus.Preparing.Phase.EXTRACTING_TEXT)
-        composeRule.onNodeWithText("Leyendo el texto del documento…").assertIsDisplayed()
+        status.value = AiSummaryStatus.Preparing(AiSummaryStatus.Preparing.Phase.UPLOADING_DOCUMENT)
+        composeRule.onNodeWithText("Preparando el documento…").assertIsDisplayed()
 
-        status.value = AiSummaryStatus.Generating(analysedPages = 2, totalPages = 2)
+        status.value = AiSummaryStatus.Generating(totalPages = 2)
         composeRule.onNodeWithText("Generando el resumen…").assertIsDisplayed()
     }
 
     /**
-     * FR-028. Said after the text has been read and **before** the allowance is spent, which is the
-     * earliest honest moment: until the text is extracted nobody knows how many pages fit.
+     * There used to be a warning here, said before the allowance was spent, announcing that only the
+     * first N pages would be read. Feature 010 removed it because the whole document is sent now, so
+     * announcing a fraction would be announcing something false. The test survives inverted: **no
+     * warning, whatever the size of the document** (010 data-model §5.2).
      */
     @Test
-    fun a_document_that_does_not_fit_is_announced_before_the_request() {
-        setContent(AiSummaryStatus.Generating(analysedPages = 6, totalPages = 14))
+    fun a_long_document_is_no_longer_announced_as_a_partial_reading() {
+        setContent(AiSummaryStatus.Generating(totalPages = 14))
 
-        composeRule.onNodeWithTag(TAG_AI_SUMMARY_PARTIAL_WARNING).assertIsDisplayed()
-        composeRule.onNodeWithText("Documento de 14 páginas. Se analizarán las 6 primeras.")
-            .assertIsDisplayed()
+        composeRule.onNodeWithTag(TAG_AI_SUMMARY_PARTIAL_WARNING).assertDoesNotExist()
     }
 
     @Test
-    fun a_document_that_fits_whole_says_nothing_about_coverage() {
-        setContent(AiSummaryStatus.Generating(analysedPages = 3, totalPages = 3))
+    fun a_short_document_says_nothing_about_coverage_either() {
+        setContent(AiSummaryStatus.Generating(totalPages = 3))
 
         composeRule.onNodeWithTag(TAG_AI_SUMMARY_PARTIAL_WARNING).assertDoesNotExist()
     }
@@ -274,9 +274,9 @@ class AiSummaryTabTest {
     /** And withheld where it could not. Offering it there is its own kind of lie. */
     @Test
     fun a_document_without_text_is_explained_and_offers_no_retry() {
-        setContent(AiSummaryStatus.Failed(AiSummaryError.NoExtractableText))
+        setContent(AiSummaryStatus.Failed(AiSummaryError.UnreadableDocument))
 
-        composeRule.onNodeWithText("Este documento no contiene texto que la aplicación pueda analizar.")
+        composeRule.onNodeWithText("No se ha podido leer este documento. Puedes consultar el PDF oficial.")
             .assertIsDisplayed()
         composeRule.onNodeWithTag(TAG_AI_SUMMARY_RETRY).assertDoesNotExist()
     }

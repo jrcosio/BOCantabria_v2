@@ -5,8 +5,8 @@ import com.jrblanco.boccantabria.core.util.DispatcherProvider
 import com.jrblanco.boccantabria.domain.model.AiSummaryConstants
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.currentCoroutineContext
-import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonArray
@@ -19,24 +19,20 @@ import okhttp3.OkHttpClient
 import okhttp3.Request
 import okhttp3.RequestBody.Companion.toRequestBody
 import java.io.IOException
-import java.util.concurrent.TimeUnit
 
 /**
- * Talks to the summarising service over plain OkHttp.
+ * The one way out to the summarising service.
  *
- * The client is **derived** from the shared one with `newBuilder()`, exactly as the document
- * downloader does and for the same reason: it shares the connection pool instead of duplicating it.
- * Retrofit would have been a new dependency for a single POST, and feature 009 added no dependency
- * at all (009 research.md D-102).
+ * Feature 010 changed **what travels**: the request used to carry the document's text as a JSON
+ * string and now it carries a reference to a document already uploaded through the Files API. What
+ * did **not** change is everything the layers above depend on — the seven [GeminiRefusal] cases, one
+ * for one, each feeding a message on the screen and an instrumented test.
  *
- * The endpoint is the **Interactions API**, generally available since June 2026 and what the provider
- * recommends for new code; `generateContent` is labelled legacy. It also gives two things the other
- * does not: `store: false` for zero retention, and an interaction `status` that diagnoses better than
- * a `finish_reason` (009 research.md D-103).
+ * It also moved from the Interactions API to `generateContent`, because that is the surface the Files
+ * API references belong to.
  *
- * **There is no body-level logging interceptor here, and there must never be one.** It would put the
- * credential and the whole document into the system log, which is precisely what FR-032 and SC-010
- * forbid.
+ * The official Kotlin library was adopted and then withdrawn: its Android artifact throws on
+ * construction when given an API key. See research.md D-227.
  */
 class OkHttpGeminiSummaryDataSource(
     client: OkHttpClient,
@@ -44,30 +40,22 @@ class OkHttpGeminiSummaryDataSource(
     private val coordinator: GeminiRateLimitCoordinator,
     private val dispatchers: DispatcherProvider,
     private val crashReporter: CrashReporter,
-    private val baseUrl: String = DEFAULT_BASE_URL,
+    private val baseUrl: String = OkHttpGeminiDocumentUploader.DEFAULT_BASE_URL,
 ) : GeminiSummaryDataSource {
 
-    private val client = client.newBuilder()
-        .connectTimeout(CONNECT_TIMEOUT_SECONDS, TimeUnit.SECONDS)
-        .readTimeout(READ_TIMEOUT_SECONDS, TimeUnit.SECONDS)
-        .writeTimeout(WRITE_TIMEOUT_SECONDS, TimeUnit.SECONDS)
-        .build()
+    private val client = client.newBuilder().build()
 
     /**
-     * `encodeDefaults` is not cosmetic, and it is the same trap under a new name.
-     *
-     * Without it kotlinx-serialization omits any property equal to its default, so `store` and
-     * `thinking_level` would never be sent — and the service's own defaults for both are the
-     * opposite of what this feature wants: retention **on** and reasoning at `medium`, billed.
+     * `encodeDefaults` is not cosmetic: without it kotlinx-serialization omits any property equal to
+     * its default, and the settings this feature depends on — the thinking level above all — would
+     * never be sent. The provider's own default for that is reasoning **on**, and billed.
      */
-    private val json = Json {
-        ignoreUnknownKeys = true
-        encodeDefaults = true
-    }
+    private val json = Json { ignoreUnknownKeys = true; encodeDefaults = true }
 
     override suspend fun summarise(
         system: String,
         user: String,
+        document: UploadedDocument,
     ): GeminiSummaryResult = withContext(dispatchers.io) {
         val key = apiKeys.apiKey() ?: return@withContext rejected(GeminiRefusal.NotConfigured)
 
@@ -77,16 +65,21 @@ class OkHttpGeminiSummaryDataSource(
                 QuotaVerdict.ExhaustedDay -> rejected(GeminiRefusal.QuotaDay)
                 is QuotaVerdict.WaitMinute ->
                     rejected(GeminiRefusal.QuotaMinute(verdict.secondsRemaining))
-                QuotaVerdict.Allowed -> attempt(key, system, user)
+                QuotaVerdict.Allowed -> attempt(key, system, user, document)
             }
         }
     }
 
-    private suspend fun attempt(key: String, system: String, user: String): GeminiSummaryResult {
+    private suspend fun attempt(
+        key: String,
+        system: String,
+        user: String,
+        document: UploadedDocument,
+    ): GeminiSummaryResult {
         var lastRefusal: GeminiRefusal = GeminiRefusal.Network
 
         repeat(MAX_ATTEMPTS) { attempt ->
-            when (val outcome = execute(key, system, user)) {
+            when (val outcome = execute(key, system, user, document)) {
                 is GeminiSummaryResult.Success -> return outcome
                 is GeminiSummaryResult.Rejected -> {
                     lastRefusal = outcome.reason
@@ -102,31 +95,51 @@ class OkHttpGeminiSummaryDataSource(
         return rejected(lastRefusal)
     }
 
-    private suspend fun execute(key: String, system: String, user: String): GeminiSummaryResult = try {
-        val payload = GeminiInteractionRequest(
-            model = AiSummaryConstants.MODEL_ID,
-            systemInstruction = system,
-            input = listOf(GeminiInputContent(type = INPUT_TYPE_TEXT, text = user)),
-            // Zero retention. The default is `true` (009 research.md D-107, FR-030).
-            store = false,
-            generationConfig = GeminiGenerationConfig(
-                // The default is "medium", and thinking is billed (D-106).
-                thinkingLevel = THINKING_LEVEL,
-                maxOutputTokens = MAX_OUTPUT_TOKENS,
+    private suspend fun execute(
+        key: String,
+        system: String,
+        user: String,
+        document: UploadedDocument,
+    ): GeminiSummaryResult = try {
+        val payload = GeminiGenerateRequest(
+            systemInstruction = GeminiContent(parts = listOf(GeminiPart(text = system))),
+            contents = listOf(
+                GeminiContent(
+                    role = ROLE_USER,
+                    parts = listOf(
+                        // The document, by reference. It was uploaded once and stays there for as
+                        // long as the reader is in this publication.
+                        GeminiPart(
+                            fileData = GeminiFileData(
+                                fileUri = document.fileUri,
+                                mimeType = document.mimeType,
+                            ),
+                        ),
+                        GeminiPart(text = user),
+                    ),
+                ),
             ),
-            responseFormat = GeminiResponseFormat(schema = SummarySchema.value),
+            generationConfig = GeminiGenerationConfig(
+                // The provider's default is "medium", and reasoning is billed (009 D-106).
+                thinkingConfig = GeminiThinkingConfig(thinkingLevel = THINKING_LEVEL),
+                maxOutputTokens = MAX_OUTPUT_TOKENS,
+                responseMimeType = MEDIA_TYPE_JSON,
+                // The schema, verbatim: its property **order** is payload, and rewriting it would
+                // put that bomb back on the table for nothing (D-211).
+                responseJsonSchema = SummarySchema.value,
+            ),
         )
 
         val request = Request.Builder()
-            .url(baseUrl)
+            .url("$baseUrl/$API_VERSION/models/${AiSummaryConstants.MODEL_ID}:generateContent")
             // The credential travels in the header and never in the body or the query string, so
             // that a body or a URL captured for diagnosis cannot carry it.
-            .header(HEADER_API_KEY, key)
-            .header("Content-Type", MEDIA_TYPE)
-            .post(json.encodeToString(payload).toRequestBody(MEDIA_TYPE.toMediaType()))
+            .header(OkHttpGeminiDocumentUploader.HEADER_API_KEY, key)
+            .post(json.encodeToString(payload).toRequestBody(CONTENT_TYPE_JSON.toMediaType()))
             .build()
 
         // Counted when it goes out, not when it comes back: what spends the allowance is asking.
+        // Three 500s spend three requests of the daily quota for zero summaries.
         coordinator.recordRequest()
 
         client.newCall(request).execute().use { response ->
@@ -141,20 +154,16 @@ class OkHttpGeminiSummaryDataSource(
                     report("HTTP 429, retry in ${seconds}s")
                     when (coordinator.recordExhaustion(seconds)) {
                         QuotaVerdict.ExhaustedDay -> rejected(GeminiRefusal.QuotaDay)
-                        is QuotaVerdict.WaitMinute ->
+                        is QuotaVerdict.WaitMinute, QuotaVerdict.Allowed ->
                             rejected(GeminiRefusal.QuotaMinute(seconds))
-                        QuotaVerdict.Allowed -> rejected(GeminiRefusal.QuotaMinute(seconds))
                     }
                 }
 
                 !response.isSuccessful -> {
-                    // The status code never reaches the screen (FR-027), and that is precisely why it
+                    // The status code never reaches the screen (FR-028), and that is precisely why it
                     // has to reach the log: a 400 and a 503 are the same sentence to the reader and
-                    // completely different problems to whoever has to fix it.
-                    //
-                    // And the code alone is not enough. The service explains its refusals in the
-                    // body, so the reason travels too. It is the provider's own wording about our
-                    // request, never the document: what we sent is described, not quoted.
+                    // completely different problems to whoever has to fix it. The reason travels too;
+                    // it is the provider's own wording about our request, never the document.
                     report("HTTP ${response.code}: ${reasonFrom(bodyText)}")
                     rejected(GeminiRefusal.HttpError(response.code))
                 }
@@ -168,55 +177,49 @@ class OkHttpGeminiSummaryDataSource(
         // **A blocking OkHttp call does not throw `CancellationException` when the coroutine is
         // cancelled.** `Call.execute()` blocks; cancelling tears the socket down, and what comes out
         // is an `IOException` — `SocketException: Software caused connection abort` on a real phone.
-        // The catch above therefore never fires, and without this line leaving the screen mid-request
-        // is reported as `Network`, which the reader sees as «No hay conexión» for a failure that
-        // never happened. Worse, `fail()` publishes it, and in `observeSummary` the in-flight state
-        // wins over the stored summary, so the wrong error is still there on the way back.
-        //
-        // `generate()` already knew what to do with a cancellation — it clears the state and reports
-        // nothing, with FR-006 quoted in the comment. What was missing was letting the cancellation
-        // reach it. Seen on a device on 4 September 2026; there is a regression test.
+        // Without this line, leaving the screen mid-request is reported as `Network`, and the reader
+        // sees «No hay conexión» for a failure that never happened. Seen on a device on 4 September
+        // 2026; there is a regression test.
         currentCoroutineContext().ensureActive()
         report("network: ${error.javaClass.simpleName}: ${error.message}")
         rejected(GeminiRefusal.Network)
     }
 
     private fun parse(body: String): GeminiSummaryResult = try {
-        val interaction = json.decodeFromString<GeminiInteraction>(body)
-        val status = interaction.status
-        // `incomplete` and `budget_exceeded` mean our own ceiling or the service's cut the answer,
-        // not that it misbehaved. Said plainly, because the two look identical once the JSON fails to
-        // parse — and with the previous provider this had to be instrumented after the fact.
-        if (status != null && status != STATUS_COMPLETED) report("status=$status")
+        val answer = json.decodeFromString<GeminiGenerateResponse>(body)
+        val candidate = answer.candidates.firstOrNull()
+        val finish = candidate?.finishReason
+        // `MAX_TOKENS` used to have to be deduced from JSON that would not parse, and the reader was
+        // told «no se ha podido construir un resumen fiable» — our problem wearing the service's
+        // clothes. Said plainly now.
+        if (finish != null && finish != FINISH_STOP) report("finishReason=$finish")
 
-        // Found by its type and never by position: the answer may carry reasoning steps in front,
-        // and depending on the order would be depending on something the provider does not promise.
-        val content = interaction.steps
-            .firstOrNull { it.type == STEP_MODEL_OUTPUT }
-            ?.content
-            ?.firstOrNull { !it.text.isNullOrBlank() }
-            ?.text
+        // Reasoning parts are skipped **by their flag and never by position**: the reasoning step
+        // arrives before the answer every single time, so taking the first part would have been
+        // wrong a hundred per cent of the time (009 research.md D-117).
+        val content = candidate?.content?.parts
+            ?.filter { it.thought != true }
+            ?.firstNotNullOfOrNull { it.text?.takeIf(String::isNotBlank) }
 
         if (content.isNullOrBlank()) {
-            report("no model_output, ${interaction.steps.size} step(s), status=$status")
+            report("no text, finishReason=$finish, ${answer.usageMetadata?.candidatesTokenCount ?: 0} output tokens")
             rejected(GeminiRefusal.Malformed)
         } else {
             val payload = json.decodeFromString<SummaryPayload>(content)
             if (payload.plainLanguageSummary.isBlank()) {
                 // Which keys came back, never what they held: the field names are our own schema,
-                // the values are the document (FR-032). Without this there is no way to tell an
-                // answer the service gave up on from one whose shape we failed to read.
+                // the values are the document (FR-036).
                 report(
-                    "blank summary: ${describe(content)}, status=$status, " +
-                        "${interaction.usage?.totalOutputTokens ?: 0} output tokens",
+                    "blank summary: ${describe(content)}, finishReason=$finish, " +
+                        "${answer.usageMetadata?.candidatesTokenCount ?: 0} output tokens",
                 )
                 rejected(GeminiRefusal.BlankSummary)
             } else {
                 GeminiSummaryResult.Success(
                     payload = payload,
-                    usage = interaction.usage ?: GeminiUsage(),
-                    // No equivalent in this service. The column is already nullable.
-                    systemFingerprint = null,
+                    usage = answer.toUsage(),
+                    // Which exact version answered. Same nullable column as before.
+                    systemFingerprint = answer.modelVersion,
                 )
             }
         }
@@ -229,7 +232,7 @@ class OkHttpGeminiSummaryDataSource(
     }
 
     /**
-     * How long the service asked us to wait, read from the header first and from a `RetryInfo` in the
+     * How long the service asked us to wait, from the header first and from a `RetryInfo` in the
      * error details second.
      *
      * The documentation promises neither, so both are tried and a default is used when neither
@@ -251,6 +254,11 @@ class OkHttpGeminiSummaryDataSource(
                 )
             }
     }.getOrNull()
+
+    /** The provider's own wording about our request. Never the document. */
+    private fun reasonFrom(body: String): String = runCatching {
+        json.decodeFromString<GeminiErrorEnvelope>(body).error?.message.orEmpty()
+    }.getOrElse { "" }.ifBlank { "sin detalle" }
 
     /**
      * A 401 does not become a 200 by asking again, and retrying a 429 without honouring its wait
@@ -290,70 +298,40 @@ class OkHttpGeminiSummaryDataSource(
     /**
      * What went wrong, in the log.
      *
-     * The screen gets one plain sentence with no status codes in it, which is right (FR-027) — and it
+     * The screen gets one plain sentence with no status codes in it, which is right (FR-028) — and it
      * is also why this line has to exist. Without it a 400, a 503 and an answer that would not parse
-     * are indistinguishable from the outside, and the first time the previous provider ran on a real
-     * phone that is exactly where the trail went cold. **Never the credential and never the
-     * document.**
+     * are indistinguishable from the outside, and the first time this ran on a real phone that is
+     * exactly where the trail went cold. **Never the credential and never the document.**
      */
     private fun report(what: String) = crashReporter.log("gemini: $what")
 
-    /**
-     * The provider's explanation for a refusal, and nothing else.
-     *
-     * Only `error.message` is taken, and only the first [MAX_REASON_LENGTH] characters of it: it is
-     * the service talking about our request, not about the document. If the body is not the shape we
-     * expect, its **length** is reported rather than its content.
-     */
-    private fun reasonFrom(body: String): String = runCatching {
-        Json.parseToJsonElement(body).jsonObject["error"]?.jsonObject
-            ?.get("message")?.jsonPrimitive?.content
-            ?.take(MAX_REASON_LENGTH)
-            ?: "no message, ${body.length} chars"
-    }.getOrElse { "unreadable body, ${body.length} chars" }
-
     companion object {
-        const val DEFAULT_BASE_URL = "https://generativelanguage.googleapis.com/v1beta/interactions"
+        const val API_VERSION = OkHttpGeminiDocumentUploader.API_VERSION
+        const val MEDIA_TYPE_JSON = "application/json"
+        const val ROLE_USER = "user"
 
-        const val HEADER_API_KEY = "x-goog-api-key"
-
-        private const val MEDIA_TYPE = "application/json"
-        private const val INPUT_TYPE_TEXT = "text"
-        private const val STEP_MODEL_OUTPUT = "model_output"
-        private const val STATUS_COMPLETED = "completed"
+        private const val CONTENT_TYPE_JSON = "application/json; charset=utf-8"
+        private const val THINKING_LEVEL = "MINIMAL"
+        private const val FINISH_STOP = "STOP"
         private const val FIELD_RETRY_DELAY = "retryDelay"
 
-        private const val THINKING_LEVEL = "minimal"
-
         /**
-         * Generous on purpose, and it closes a family of failures for good.
-         *
-         * The previous provider charged the per-minute allowance for
-         * `input + max_completion_tokens` **when the request was made**, spent or not — its own 429
-         * spelled it out: «Limit 8000, Used 7346, Requested 6475» — so the answer's ceiling had to
-         * stay at 1 800 and a real summary once came back at 1 625, fifteen from an earlier ceiling
-         * of 1 200. Past a ceiling the JSON arrives cut, does not parse, and the reader is told the
-         * service produced nothing reliable — a problem of ours dressed up as one of theirs.
-         *
-         * **This service charges the output actually used.** So a high ceiling costs nothing. Not the
-         * model's full 65 536 though: eight thousand is nearly five times the largest real answer,
-         * and leaving room to the maximum would waste a useful signal — an answer that reaches this
-         * ceiling means something is wrong in the prompt, and it should show
-         * (009 research.md D-110).
+         * Not 65 536, on purpose: if an answer ever reached 8 000, something is wrong with the prompt
+         * and it should show. The provider bills output **used**, not reserved (009 D-103).
          */
         private const val MAX_OUTPUT_TOKENS = 8_000
-
         private const val MAX_ATTEMPTS = 3
-
-        private const val CONNECT_TIMEOUT_SECONDS = 15L
-        private const val READ_TIMEOUT_SECONDS = 90L
-        private const val WRITE_TIMEOUT_SECONDS = 30L
-
-        private const val MAX_REASON_LENGTH = 400
-
         private const val HTTP_UNAUTHORIZED = 401
         private const val HTTP_FORBIDDEN = 403
         private const val HTTP_TOO_MANY_REQUESTS = 429
         private const val HTTP_SERVER_ERROR = 500
     }
 }
+
+private fun GeminiGenerateResponse.toUsage(): SummaryUsage = SummaryUsage(
+    totalInputTokens = usageMetadata?.promptTokenCount ?: 0,
+    totalOutputTokens = usageMetadata?.candidatesTokenCount ?: 0,
+    totalTokens = usageMetadata?.totalTokenCount ?: 0,
+    // Should be low or zero. If it grows, the thinking level is not being applied.
+    totalThoughtTokens = usageMetadata?.thoughtsTokenCount ?: 0,
+)

@@ -69,6 +69,30 @@ class ArchitectureRulesTest {
     }
 
     /**
+     * Only `data` may name the AI service's wire types.
+     *
+     * The same rule as Firebase's above, and it earned its place the hard way. Feature 010 adopted
+     * Google's official Kotlin library, wrote three classes against it, and only found out at the
+     * first test that its Android artifact **throws** when the client is given an API key — so the
+     * whole thing had to come back out (research.md D-227). It cost one package, because nothing
+     * outside `data` had ever named one of its types.
+     *
+     * Whatever the transport becomes next — a library that finally works on Android, Firebase AI
+     * Logic, a backend of our own — this rule is what keeps that from being more than one package
+     * again.
+     */
+    @Test
+    fun `only data names the AI service wire types`() {
+        Konsist
+            .scopeFromProject(sourceSetName = MAIN_SOURCE_SET)
+            .files
+            .filter { it.packagee?.name?.startsWith(DATA_PACKAGE) != true }
+            .assertTrue { file ->
+                file.imports.none { it.name.startsWith(GENAI_PACKAGE) }
+            }
+    }
+
+    /**
      * Colours are consumed from the theme, never declared at the point of use.
      *
      * Expressed as an import rule rather than by hunting for `Color(0xFF…)` literals inside
@@ -139,6 +163,7 @@ class ArchitectureRulesTest {
         const val DATA_PACKAGE = "$ROOT.data"
         const val UI_PACKAGE = "$ROOT.ui"
         const val FIREBASE_PACKAGE = "com.google.firebase"
+        const val GENAI_PACKAGE = "com.google.genai"
         const val THEME_PACKAGE = "$ROOT.core.ui.theme"
         const val COMPOSE_COLOR_IMPORT = "androidx.compose.ui.graphics.Color"
 

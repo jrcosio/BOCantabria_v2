@@ -9,18 +9,27 @@ package com.jrblanco.boccantabria.data.source.remote
  */
 interface GeminiSummaryDataSource {
 
-    suspend fun summarise(system: String, user: String): GeminiSummaryResult
+    /**
+     * @param document a document already uploaded to the service. It used to be the `user` parameter
+     *   that carried the text; since feature 010 `user` carries only the publication's metadata and
+     *   the document travels by reference (010 contracts §1.4).
+     */
+    suspend fun summarise(
+        system: String,
+        user: String,
+        document: UploadedDocument,
+    ): GeminiSummaryResult
 }
 
 sealed interface GeminiSummaryResult {
 
     data class Success(
         val payload: SummaryPayload,
-        val usage: GeminiUsage,
+        val usage: SummaryUsage,
         /**
-         * The previous provider sent a fingerprint of its serving configuration. This one has no
-         * equivalent, so it always arrives `null`. The column stays because it is already nullable
-         * and because the next provider might have one again.
+         * Which exact version of the model answered. The previous provider sent a fingerprint of its
+         * serving configuration and the one after it had no equivalent at all; the library exposes
+         * `modelVersion`, which is the same kind of fact. Still nullable, same column.
          */
         val systemFingerprint: String?,
     ) : GeminiSummaryResult
@@ -70,3 +79,20 @@ sealed interface GeminiRefusal {
 
     data class HttpError(val code: Int) : GeminiRefusal
 }
+
+/**
+ * What a generation cost, in tokens.
+ *
+ * It lived in `GeminiDtos.kt` and moved here when that file went, because it was never a wire type:
+ * the names are ours, nothing serialises it, and it is part of the signature of
+ * [GeminiSummaryResult.Success], which survives. It arrives built from the library's `usageMetadata`
+ * rather than deserialised from a body, so it carries no serialization annotations any more
+ * (010 tasks T041a).
+ */
+data class SummaryUsage(
+    val totalInputTokens: Int = 0,
+    val totalOutputTokens: Int = 0,
+    val totalTokens: Int = 0,
+    /** Should be low or zero. If it grows, the thinking level is not being applied. */
+    val totalThoughtTokens: Int = 0,
+)
