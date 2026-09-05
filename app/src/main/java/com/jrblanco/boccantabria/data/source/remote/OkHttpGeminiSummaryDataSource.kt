@@ -327,11 +327,3 @@ class OkHttpGeminiSummaryDataSource(
         private const val HTTP_SERVER_ERROR = 500
     }
 }
-
-private fun GeminiGenerateResponse.toUsage(): SummaryUsage = SummaryUsage(
-    totalInputTokens = usageMetadata?.promptTokenCount ?: 0,
-    totalOutputTokens = usageMetadata?.candidatesTokenCount ?: 0,
-    totalTokens = usageMetadata?.totalTokenCount ?: 0,
-    // Should be low or zero. If it grows, the thinking level is not being applied.
-    totalThoughtTokens = usageMetadata?.thoughtsTokenCount ?: 0,
-)

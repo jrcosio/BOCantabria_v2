@@ -35,11 +35,16 @@ class GeminiApiKeyProviderTest {
      */
     @Test
     fun `the credential never appears in the text form of the provider`() {
-        listOf("AIzaSecretoQueNoDebeSalir", "AQ.AbSecretoQueNoDebeSalir").forEach { secret ->
+        // Both prefixes, and both fixtures **deliberately too short to look like a real key**. The
+        // repository's leak scan hunts for `AIza` plus thirty-odd characters and `AQ.` plus twenty,
+        // which is what a real credential looks like; a fixture shaped like that makes the scan cry
+        // wolf on every run, and a check that always fails is a check that stops being read. What
+        // this test needs is the prefix, not the length (011, same lesson as 010 CLAUDE.md).
+        listOf("AIzaNoEsUnaClave", "AQ.ANoEsUnaClave").forEach { secret ->
             val rendered = BuildConfigGeminiApiKeyProvider(secret).toString()
 
             assertFalse(rendered.contains(secret))
-            assertFalse(rendered.contains("Secreto"))
+            assertFalse(rendered.contains("NoEsUnaClave"))
         }
     }
 }

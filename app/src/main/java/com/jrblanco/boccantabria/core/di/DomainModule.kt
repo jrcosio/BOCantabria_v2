@@ -9,7 +9,12 @@ import com.jrblanco.boccantabria.domain.usecase.ObservePublicationUseCase
 import com.jrblanco.boccantabria.domain.usecase.OpenOfficialDocumentUseCase
 import com.jrblanco.boccantabria.domain.usecase.ObservePublicationsUseCase
 import com.jrblanco.boccantabria.domain.usecase.ObserveSavedKeysUseCase
+import com.jrblanco.boccantabria.domain.usecase.AskAboutDocumentUseCase
+import com.jrblanco.boccantabria.domain.usecase.DiscardAiConversationUseCase
+import com.jrblanco.boccantabria.domain.usecase.ObserveAiAvailabilityUseCase
+import com.jrblanco.boccantabria.domain.usecase.ObserveAiConversationUseCase
 import com.jrblanco.boccantabria.domain.usecase.ReleaseAiDocumentSessionUseCase
+import com.jrblanco.boccantabria.domain.usecase.RetryLastQuestionUseCase
 import com.jrblanco.boccantabria.domain.usecase.ObserveSavedPublicationsUseCase
 import com.jrblanco.boccantabria.domain.usecase.PrepareStartupUseCase
 import com.jrblanco.boccantabria.domain.usecase.RefreshPublicationsUseCase
@@ -50,4 +55,11 @@ val domainModule = module {
     factory { ObserveAiNoticeAcceptedUseCase(repository = get()) }
     factory { AcceptAiNoticeUseCase(repository = get()) }
     factory { ReleaseAiDocumentSessionUseCase(repository = get()) }
+
+    // --- Preguntar al BOC (feature 011) ---
+    factory { ObserveAiConversationUseCase(repository = get()) }
+    factory { ObserveAiAvailabilityUseCase(repository = get()) }
+    factory { AskAboutDocumentUseCase(repository = get()) }
+    factory { RetryLastQuestionUseCase(repository = get()) }
+    factory { DiscardAiConversationUseCase(repository = get()) }
 }

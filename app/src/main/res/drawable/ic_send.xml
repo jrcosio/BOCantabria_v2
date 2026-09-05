@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Material Symbols Outlined, tomado de google/material-design-icons sin modificar el trazado.
+  El conjunto usa un viewBox con origen en -960, así que el grupo lo traslada para encajarlo en
+  el lienzo de 960 que espera un VectorDrawable (research.md D-005).
+
+  Comprobado antes de copiarlo: el trazado lleva coordenadas negativas, que es lo que esta plantilla
+  espera. El repositorio mezcla dos convenciones y algunos símbolos llegan en escala 24 sin viewBox;
+  meter uno de esos aquí no falla, simplemente dibuja fuera del lienzo y no se ve nada. Le pasó a
+  `ic_ai` durante cuatro features (011 research.md D-323).
+-->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp"
+    android:height="24dp"
+    android:viewportWidth="960"
+    android:viewportHeight="960">
+    <group android:translateY="960">
+        <path
+            android:fillColor="#FF000000"
+            android:pathData="M120,-160v-640l760,320-760,320ZM200,-280l474,-200-474,-200v139l240,61-240,61v139ZM200,-280v-400,400Z" />
+    </group>
+</vector>

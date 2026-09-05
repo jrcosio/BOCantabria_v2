@@ -8,15 +8,14 @@ import com.jrblanco.boccantabria.core.util.TimeProvider
 import com.jrblanco.boccantabria.data.source.local.AiPreferences
 import com.jrblanco.boccantabria.data.source.local.AiSummaryDao
 import com.jrblanco.boccantabria.data.source.local.AiSummaryEntity
-import com.jrblanco.boccantabria.data.source.local.PageCountResult
-import com.jrblanco.boccantabria.data.source.local.PdfPageCounter
+import com.jrblanco.boccantabria.data.source.remote.AiDocumentPreparer
 import com.jrblanco.boccantabria.data.source.remote.AiDocumentSessionStore
+import com.jrblanco.boccantabria.data.source.remote.PreparationResult
 import com.jrblanco.boccantabria.data.source.remote.GeminiRefusal
 import com.jrblanco.boccantabria.data.source.remote.GeminiSummaryDataSource
 import com.jrblanco.boccantabria.data.source.remote.GeminiSummaryResult
 import com.jrblanco.boccantabria.data.source.remote.SummaryPayload
 import com.jrblanco.boccantabria.data.source.remote.SummaryPromptFactory
-import com.jrblanco.boccantabria.data.source.remote.SessionResult
 import com.jrblanco.boccantabria.data.source.remote.SummaryValidator
 import com.jrblanco.boccantabria.data.source.remote.toDomain
 import com.jrblanco.boccantabria.domain.model.AiSummary
@@ -66,7 +65,7 @@ import kotlinx.serialization.json.Json
 @Suppress("LongParameterList")
 class AiSummaryRepositoryImpl(
     private val documents: DocumentRepository,
-    private val pages: PdfPageCounter,
+    private val preparer: AiDocumentPreparer,
     private val sessions: AiDocumentSessionStore,
     private val prompts: SummaryPromptFactory,
     private val summaries: GeminiSummaryDataSource,
@@ -163,40 +162,26 @@ class AiSummaryRepositoryImpl(
     private suspend fun run(publication: Publication): AppResult<AiSummary> {
         val key = publication.externalKey
 
-        publish(key, AiSummaryStatus.Preparing(AiSummaryStatus.Preparing.Phase.FETCHING_DOCUMENT))
-        val document = when (val fetched = documents.ensureLocalCopy(publication)) {
-            is AppResult.Success -> fetched.data
-            is AppResult.Failure -> return fail(key, fetched.error.toSummaryError())
-        }
-
-        // Before the upload, and that is the point: this is what keeps a password-protected document
-        // on the device (FR-004). It also gives the validator the one number it must not take from
-        // the model — how many pages the document really has (D-205).
-        crashReporter.log("summary: document ready, counting pages")
-        val totalPages = when (val counted = pages.pageCount(document.localPath)) {
-            is PageCountResult.Success -> counted.totalPages
-            PageCountResult.Encrypted -> return fail(key, AiSummaryError.EncryptedPdf)
-            is PageCountResult.Failure -> {
-                crashReporter.recordNonFatal(counted.cause)
+        // Fetching, counting the pages and uploading, in that order and behind one seam. Counting
+        // before uploading is what keeps a password-protected document on the device (FR-004), and it
+        // is also where the validator's one un-negotiable number comes from — how many pages the
+        // document really has (D-205). It lives in `AiDocumentPreparer` since feature 011, because the
+        // conversation needs exactly the same four steps and a duplicated invariant is an invariant
+        // that holds until somebody fixes one of the copies (011 research.md D-315).
+        val prepared = when (
+            val outcome = preparer.prepare(publication) { phase -> publish(key, phase.toStatus()) }
+        ) {
+            is PreparationResult.Ready -> outcome
+            is PreparationResult.Unreachable -> return fail(key, outcome.error.toSummaryError())
+            PreparationResult.Encrypted -> return fail(key, AiSummaryError.EncryptedPdf)
+            is PreparationResult.Refused -> return fail(key, outcome.reason.toUploadError())
+            is PreparationResult.Broken -> {
+                crashReporter.recordNonFatal(outcome.cause)
                 return fail(key, AiSummaryError.Unknown)
             }
         }
-        crashReporter.log("summary: $totalPages pages")
-
-        publish(key, AiSummaryStatus.Preparing(AiSummaryStatus.Preparing.Phase.UPLOADING_DOCUMENT))
-        // Idempotent: within a visit to this publication the document travels once, so regenerating
-        // costs nothing extra (FR-008, SC-005).
-        val uploaded = when (
-            val session = sessions.open(
-                externalKey = key,
-                pdfSha256 = document.checksum,
-                localPath = document.localPath,
-                displayName = displayNameFor(publication),
-            )
-        ) {
-            is SessionResult.Ready -> session.session.document
-            is SessionResult.Rejected -> return fail(key, session.reason.toUploadError())
-        }
+        val uploaded = prepared.document
+        val totalPages = prepared.totalPages
 
         val system = prompts.systemMessage()
         val user = prompts.userMessage(publication, totalPages)
@@ -216,7 +201,7 @@ class AiSummaryRepositoryImpl(
                 .also { crashReporter.log("summary rejected: blank prose from the service") }
 
         val summary = corrected.toDomain()
-        store(publication, document.checksum, corrected, success)
+        store(publication, prepared.pdfSha256, corrected, success)
 
         analytics.track(
             AnalyticsEvent(
@@ -235,13 +220,6 @@ class AiSummaryRepositoryImpl(
         publish(key, null)
         return AppResult.Success(summary)
     }
-
-    /**
-     * What the document is called in the service. Public data of the publication and nothing else:
-     * not what the reader saved, not what they read, no identifier of theirs (FR-006).
-     */
-    private fun displayNameFor(publication: Publication): String =
-        "BOC ${publication.externalKey}"
 
     private suspend fun store(
         publication: Publication,
@@ -308,6 +286,20 @@ class AiSummaryRepositoryImpl(
     private fun AiSummaryEntity.decode(): AiSummary? = runCatching {
         json.decodeFromString<SummaryPayload>(summaryJson).toDomain()
     }.getOrNull()
+
+    /**
+     * The preparer's phases in this screen's words. Two enums with the same two values, and on
+     * purpose: the preparer's is a signal of the data layer, and each screen keeps its own status
+     * (011 data-model §1.5).
+     */
+    private fun AiDocumentPreparer.Phase.toStatus(): AiSummaryStatus = AiSummaryStatus.Preparing(
+        when (this) {
+            AiDocumentPreparer.Phase.FETCHING_DOCUMENT ->
+                AiSummaryStatus.Preparing.Phase.FETCHING_DOCUMENT
+            AiDocumentPreparer.Phase.UPLOADING_DOCUMENT ->
+                AiSummaryStatus.Preparing.Phase.UPLOADING_DOCUMENT
+        },
+    )
 
     private fun DomainError.toSummaryError(): AiSummaryError = when (this) {
         DomainError.Network -> AiSummaryError.Offline

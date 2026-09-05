@@ -7,7 +7,8 @@ import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
-import com.jrblanco.boccantabria.ui.ask.AskScreen
+import androidx.navigation.toRoute
+import com.jrblanco.boccantabria.ui.ask.AskRoute
 import com.jrblanco.boccantabria.ui.detail.PublicationDetailScreen
 import com.jrblanco.boccantabria.ui.info.InfoScreen
 import com.jrblanco.boccantabria.ui.main.MainShell
@@ -89,8 +90,17 @@ fun BOCantabriaNavHost(
         composable<Route.PdfViewer> {
             PdfViewerScreen(onBack = navController::popBackStack)
         }
-        composable<Route.Ask> {
-            AskScreen(onBack = navController::popBackStack)
+        composable<Route.Ask> { entry ->
+            val route = entry.toRoute<Route.Ask>()
+            AskRoute(
+                onBack = navController::popBackStack,
+                // Following a source lands on the page it cites. The viewer stacks on top of the
+                // conversation, which stacks on top of the detail, so the detail's entry — the one
+                // that releases the document and discards the conversation — stays alive throughout.
+                onOpenDocument = { page ->
+                    navController.navigate(Route.PdfViewer(route.externalKey, page))
+                },
+            )
         }
     }
 }

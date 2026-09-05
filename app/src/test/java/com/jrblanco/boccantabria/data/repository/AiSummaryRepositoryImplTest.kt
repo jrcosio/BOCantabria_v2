@@ -10,6 +10,7 @@ import com.jrblanco.boccantabria.data.source.local.BocDatabase
 import com.jrblanco.boccantabria.data.source.local.PageCountResult
 import com.jrblanco.boccantabria.data.source.remote.GeminiRefusal
 import com.jrblanco.boccantabria.data.source.remote.GeminiSummaryResult
+import com.jrblanco.boccantabria.data.source.remote.AiDocumentPreparer
 import com.jrblanco.boccantabria.data.source.remote.AiDocumentSessionStore
 import com.jrblanco.boccantabria.data.source.remote.SummaryPromptFactory
 import com.jrblanco.boccantabria.data.source.remote.SummaryValidator
@@ -434,14 +435,28 @@ class AiSummaryRepositoryImplTest {
         systemFingerprint = "fp_abc",
     )
 
-    private fun repository(service: FakeGeminiSummaryDataSource = this.service) = AiSummaryRepositoryImpl(
-        documents = documents,
-        pages = counter,
-        sessions = AiDocumentSessionStore(
+    /**
+     * One store shared by the preparer and the repository, which is what production does: the
+     * preparer opens the session and the repository releases it. Two instances here would let a test
+     * pass while the real thing leaked a document.
+     */
+    private val sessions by lazy {
+        AiDocumentSessionStore(
             uploader = uploader,
             dispatchers = TestDispatcherProvider(dispatcher),
             crashReporter = crashReporter,
+        )
+    }
+
+    private fun repository(service: FakeGeminiSummaryDataSource = this.service) = AiSummaryRepositoryImpl(
+        documents = documents,
+        preparer = AiDocumentPreparer(
+            documents = documents,
+            pages = counter,
+            sessions = sessions,
+            crashReporter = crashReporter,
         ),
+        sessions = sessions,
         prompts = SummaryPromptFactory(),
         summaries = service,
         validator = SummaryValidator(),

@@ -8,7 +8,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.AnnotatedString
-import com.jrblanco.boccantabria.ui.detail.component.AiNoticeSheet
+import com.jrblanco.boccantabria.core.ui.component.AiNoticeSheet
 import com.jrblanco.boccantabria.ui.share.shareText
 import androidx.compose.ui.res.stringResource
 import androidx.lifecycle.compose.collectAsStateWithLifecycle

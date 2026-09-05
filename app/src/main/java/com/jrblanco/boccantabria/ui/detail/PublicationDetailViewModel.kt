@@ -17,6 +17,7 @@ import com.jrblanco.boccantabria.domain.usecase.ObserveAiNoticeAcceptedUseCase
 import com.jrblanco.boccantabria.domain.usecase.ObserveAiSummaryUseCase
 import com.jrblanco.boccantabria.domain.usecase.ObservePublicationUseCase
 import com.jrblanco.boccantabria.domain.usecase.ObserveSavedKeysUseCase
+import com.jrblanco.boccantabria.domain.usecase.DiscardAiConversationUseCase
 import com.jrblanco.boccantabria.domain.usecase.ReleaseAiDocumentSessionUseCase
 import com.jrblanco.boccantabria.domain.usecase.OpenOfficialDocumentUseCase
 import com.jrblanco.boccantabria.domain.usecase.SetPublicationSavedUseCase
@@ -56,6 +57,7 @@ class PublicationDetailViewModel(
     private val observeAiNoticeAccepted: ObserveAiNoticeAcceptedUseCase,
     private val acceptAiNotice: AcceptAiNoticeUseCase,
     private val releaseAiDocumentSession: ReleaseAiDocumentSessionUseCase,
+    private val discardAiConversation: DiscardAiConversationUseCase,
     getSections: GetBocSectionsUseCase,
     private val analytics: AnalyticsTracker,
 ) : ViewModel() {
@@ -329,6 +331,12 @@ class PublicationDetailViewModel(
      */
     override fun onCleared() {
         releaseAiDocumentSession(externalKey)
+        // Two clean-ups and not one that does both: they belong to two different repositories, and a
+        // single use case would hide that there are two owners. Both happen here rather than in the
+        // conversation screen because Preguntar and the viewer stack **on top** of the detail, so its
+        // entry outlives them and this is the only pop that means «the visit is over»
+        // (011 research.md D-314).
+        discardAiConversation(externalKey)
     }
 
 }

@@ -1,7 +1,9 @@
 package com.jrblanco.boccantabria.core.di
 
+import com.jrblanco.boccantabria.R
 import com.jrblanco.boccantabria.core.telemetry.AnalyticsTracker
 import com.jrblanco.boccantabria.core.telemetry.CrashReporter
+import com.jrblanco.boccantabria.data.repository.AiChatRepositoryImpl
 import com.jrblanco.boccantabria.data.repository.AiSummaryRepositoryImpl
 import com.jrblanco.boccantabria.data.repository.AppConfigRepositoryImpl
 import com.jrblanco.boccantabria.data.repository.BocSectionRepositoryImpl
@@ -27,6 +29,11 @@ import com.jrblanco.boccantabria.data.source.local.SavedPublicationDao
 import com.jrblanco.boccantabria.data.source.local.bocDatabase
 import com.jrblanco.boccantabria.data.source.remote.BocFeedCatalog
 import com.jrblanco.boccantabria.data.source.remote.BuildConfigGeminiApiKeyProvider
+import com.jrblanco.boccantabria.data.source.remote.AiDocumentPreparer
+import com.jrblanco.boccantabria.data.source.remote.ChatAnswerValidator
+import com.jrblanco.boccantabria.data.source.remote.ChatPromptFactory
+import com.jrblanco.boccantabria.data.source.remote.GeminiChatDataSource
+import com.jrblanco.boccantabria.data.source.remote.OkHttpGeminiChatDataSource
 import com.jrblanco.boccantabria.data.source.remote.AiDocumentSessionStore
 import com.jrblanco.boccantabria.data.source.remote.AiDocumentUploader
 import com.jrblanco.boccantabria.data.source.remote.GeminiApiKeyProvider
@@ -47,6 +54,7 @@ import com.jrblanco.boccantabria.data.source.remote.bocHttpClient
 import com.jrblanco.boccantabria.data.source.remote.firebaseRemoteConfigDataSource
 import com.jrblanco.boccantabria.data.telemetry.firebaseAnalyticsTracker
 import com.jrblanco.boccantabria.data.telemetry.firebaseCrashReporter
+import com.jrblanco.boccantabria.domain.repository.AiChatRepository
 import com.jrblanco.boccantabria.domain.repository.AiSummaryRepository
 import com.jrblanco.boccantabria.domain.repository.AppConfigRepository
 import com.jrblanco.boccantabria.domain.repository.BocSectionRepository
@@ -138,6 +146,14 @@ val dataModule = module {
     single {
         AiDocumentSessionStore(uploader = get(), dispatchers = get(), crashReporter = get())
     }
+    single {
+        AiDocumentPreparer(
+            documents = get(),
+            pages = get(),
+            sessions = get(),
+            crashReporter = get(),
+        )
+    }
     single<GeminiSummaryDataSource> {
         OkHttpGeminiSummaryDataSource(
             client = get(),
@@ -147,10 +163,38 @@ val dataModule = module {
             crashReporter = get(),
         )
     }
+    single<GeminiChatDataSource> {
+        OkHttpGeminiChatDataSource(
+            client = get(),
+            apiKeys = get(),
+            coordinator = get(),
+            dispatchers = get(),
+            crashReporter = get(),
+        )
+    }
+    factory { ChatPromptFactory() }
+    factory { ChatAnswerValidator() }
+    single<AiChatRepository> {
+        AiChatRepositoryImpl(
+            preparer = get(),
+            prompts = get(),
+            chat = get(),
+            validator = get(),
+            apiKeys = get(),
+            time = get(),
+            dispatchers = get(),
+            analytics = get(),
+            crashReporter = get(),
+            // Resolved here because `data` does not read `strings.xml`, and captured once because
+            // this application has a single language. With two, this becomes a provider
+            // (011 contracts §3.3).
+            outOfScopeText = androidContext().getString(R.string.ask_out_of_scope),
+        )
+    }
     single<AiSummaryRepository> {
         AiSummaryRepositoryImpl(
             documents = get(),
-            pages = get(),
+            preparer = get(),
             sessions = get(),
             prompts = get(),
             summaries = get(),

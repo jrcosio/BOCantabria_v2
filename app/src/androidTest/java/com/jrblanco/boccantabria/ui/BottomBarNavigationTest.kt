@@ -6,7 +6,6 @@ import androidx.compose.ui.test.onAllNodesWithTag
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.performClick
 import androidx.navigation.compose.rememberNavController
-import com.jrblanco.boccantabria.ui.detail.component.TAG_COMING_SOON
 import com.jrblanco.boccantabria.core.ui.theme.BOCantabriaTheme
 import com.jrblanco.boccantabria.fake.FakeBocRemoteDataSource
 import com.jrblanco.boccantabria.fake.KoinOverrideRule
@@ -63,7 +62,10 @@ class BottomBarNavigationTest {
         // demuestra que el marcador de posición se ha retirado de verdad (FR-021).
         composeRule.onNodeWithTag(TAG_BOTTOM_SEARCH).performClick()
 
-        composeRule.onNodeWithTag(TAG_COMING_SOON).assertDoesNotExist()
+        // La aserción sobre el marcador de posición se retiró en la feature 011 porque el
+        // componible que lo dibujaba **ya no existe en el proyecto**, y eso es una garantía más
+        // fuerte que comprobarlo en ejecución. Lo que sigue afirmándose es lo que importa: que en
+        // su lugar hay una pantalla de verdad.
         // Sin nada escrito, lo que se ve es el estado inicial: ni un vacío ni un error.
         composeRule.onNodeWithTag(TAG_SEARCH_INITIAL).assertIsDisplayed()
 
@@ -77,7 +79,7 @@ class BottomBarNavigationTest {
         // (FR-010, SC-008). Antes de la feature 005 afirmaba justo lo contrario.
         composeRule.onNodeWithTag(TAG_BOTTOM_SAVED).performClick()
 
-        composeRule.onNodeWithTag(TAG_COMING_SOON).assertDoesNotExist()
+        // Ídem: el marcador de posición ya no existe como componible (feature 011).
         // Sin nada guardado, lo que se ve es el estado vacío, que explica qué falta.
         composeRule.onNodeWithTag(TAG_SAVED_EMPTY).assertIsDisplayed()
 

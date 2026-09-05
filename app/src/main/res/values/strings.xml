@@ -110,8 +110,6 @@
 
     <!-- Pestañas aplazadas -->
     <string name="ask_title">Preguntar al BOC</string>
-    <string name="detail_ask_label">Pregunta al BOC</string>
-    <string name="detail_ask_coming">Aquí podrás preguntar sobre este documento.</string>
 
     <!-- Visor -->
     <string name="pdf_viewer_loading">Abriendo el documento…</string>
@@ -255,8 +253,8 @@
     <string name="ai_summary_share">Compartir</string>
 
     <!-- El aviso de la primera vez -->
-    <string name="ai_notice_title">El texto se envía a un servicio externo</string>
-    <string name="ai_notice_body">Para generar el resumen, la aplicación envía el documento oficial completo a un servicio de inteligencia artificial fuera del dispositivo. El servicio lo conserva un tiempo limitado, y la aplicación lo retira al salir de esta publicación. No se envía nada tuyo: ni lo que has guardado, ni lo que has leído. El servicio puede usar el contenido de este documento público para mejorar sus modelos.</string>
+    <string name="ai_notice_title">El documento se envía a un servicio externo</string>
+    <string name="ai_notice_body">Para generar el resumen o responder a tus preguntas, la aplicación envía el documento oficial completo a un servicio de inteligencia artificial fuera del dispositivo. El servicio lo conserva un tiempo limitado, y la aplicación lo retira al salir de esta publicación. No se envía nada tuyo: ni lo que has guardado, ni lo que has leído. El servicio puede usar el contenido de este documento público para mejorar sus modelos.</string>
     <string name="ai_notice_continue">Continuar</string>
     <string name="ai_notice_cancel">Cancelar</string>
 
@@ -271,4 +269,44 @@
     <string name="ai_error_unknown">No se ha podido generar el resumen. Inténtalo de nuevo.</string>
     <string name="ai_summary_no_document">Esta publicación no tiene documento oficial que resumir.</string>
     <string name="ai_summary_retry">Reintentar</string>
+
+    <!-- ==================== Preguntar al BOC (feature 011) ==================== -->
+
+    <!-- La pantalla -->
+    <string name="ask_scope_notice">Las respuestas se basan solo en este documento</string>
+    <string name="ask_composer_hint">Escribe una pregunta…</string>
+    <string name="ask_send">Enviar pregunta</string>
+    <string name="ask_open_document">Ver PDF oficial</string>
+    <string name="ask_sources">Fuentes</string>
+    <string name="ask_source_line">Página %1$d · %2$s</string>
+    <string name="ask_counter">%1$d/%2$d</string>
+    <string name="ask_you">Tú</string>
+    <string name="ask_assistant">BOC</string>
+
+    <!-- Las tres sugeridas. Fijas para toda publicación: generarlas costaría una petición
+         antes de que nadie haya preguntado nada (research.md D-325). -->
+    <string name="ask_suggestion_affects">¿A quién afecta?</string>
+    <string name="ask_suggestion_effective">¿Cuándo entra en vigor?</string>
+    <string name="ask_suggestion_deadlines">¿Qué plazos establece?</string>
+
+    <!-- Las fases de preparación. Las mismas dos del resumen, dichas igual. -->
+    <string name="ask_phase_fetching">Obteniendo el documento…</string>
+    <string name="ask_phase_uploading">Preparando el documento…</string>
+    <string name="ask_thinking">Buscando en el documento…</string>
+
+    <!-- Lo que se lee cuando la petición era ajena al documento. Es NUESTRO texto: ni un carácter
+         de lo que conteste el servicio llega a pantalla en ese caso (FR-021, SC-004). -->
+    <string name="ask_out_of_scope">Solo puedo responder sobre esta publicación del BOC. Prueba a preguntarme por su contenido: plazos, importes, a quién afecta o qué hay que hacer.</string>
+
+    <!-- Mensajes de error. En lenguaje corriente, sin ningún código y sin nombre de proveedor
+         (FR-031). Son ocho, uno por caso de AiChatError. -->
+    <string name="ask_error_offline">No hay conexión. Podrás preguntar cuando vuelvas a estar conectado.</string>
+    <string name="ask_error_quota_minute">Se ha alcanzado temporalmente el límite de la función. Inténtalo dentro de unos segundos.</string>
+    <string name="ask_error_quota_day">Se ha alcanzado el límite de preguntas de hoy. Inténtalo mañana.</string>
+    <string name="ask_error_not_configured">Preguntar no está disponible en esta aplicación.</string>
+    <string name="ask_error_unreadable">No se ha podido leer este documento. Puedes consultar el PDF oficial.</string>
+    <string name="ask_error_encrypted">El documento está protegido y no se puede consultar su contenido.</string>
+    <string name="ask_error_invalid">No se ha podido construir una respuesta fiable. Puedes consultar el documento oficial.</string>
+    <string name="ask_error_unknown">No se ha podido responder. Inténtalo de nuevo.</string>
+    <string name="ask_retry">Reintentar</string>
 </resources>
