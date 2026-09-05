@@ -19,25 +19,32 @@ sealed interface AiSummaryStatus {
      * strict schema and streaming are not compatible, so the wait has to say something (D-011).
      */
     data class Preparing(val phase: Phase) : AiSummaryStatus {
-        enum class Phase { FETCHING_DOCUMENT, EXTRACTING_TEXT }
+        /**
+         * Reading the text on the device used to be the second phase. Since feature 010 the document
+         * is uploaded whole and the service reads it, so what happens between fetching and generating
+         * is a transfer, not a read.
+         */
+        enum class Phase { FETCHING_DOCUMENT, UPLOADING_DOCUMENT }
     }
 
     /**
      * The request is in flight. No fraction to show, for the reason above.
      *
-     * It carries how much of the document is going out, because that is the earliest honest moment
-     * to say it: the pages that fit are only known once the text has been extracted, and extracting
-     * requires the document, which this application does not fetch until somebody asks for it. So
-     * the warning lands here — after the text is read, **before** the allowance is spent (FR-028).
+     * It used to carry `analysedPages` alongside the total, and warn before spending the allowance
+     * that only the first N pages would be read. That warning is gone with feature 010, and not
+     * because it was noisy: **the whole document is sent now**, so "the pages that fit" is not a
+     * choice any more and announcing one would be announcing something false. Keeping the field with
+     * `analysedPages == totalPages` would have left a branch of the screen and its test alive with no
+     * way of ever running, which is exactly what principle V forbids.
+     *
+     * What survives is the coverage declared **afterwards**, in [AiSummary.SummaryCoverage]: sending
+     * the whole document does not guarantee the model read all of it, and the validator still
+     * recomputes which pages the summary actually cites (010 data-model.md §5.2).
      */
-    data class Generating(val analysedPages: Int, val totalPages: Int) : AiSummaryStatus {
+    data class Generating(val totalPages: Int) : AiSummaryStatus {
         init {
-            require(analysedPages in 1..totalPages) {
-                "cannot send $analysedPages of $totalPages pages"
-            }
+            require(totalPages >= 1) { "a document has at least one page, was: $totalPages" }
         }
-
-        val isPartial: Boolean get() = analysedPages < totalPages
     }
 
     /** Waiting for quota to come back. Continues on its own (FR-038). */

@@ -405,12 +405,24 @@ y no se puede: `Client`, `ApiClient` y `Files` referencian `GoogleCredentials` e
 excluirla sería un `NoClassDefFoundError` al resolver el constructor, no un fallo diferido en una
 rama que nunca se ejecuta.
 
-**Lo que arrastra**: `google-auth-library-credentials`, `google-http-client`,
-`google-http-client-gson`, `gson`, `slf4j-api`, `error_prone_annotations`, `jsr305`,
-`auto-value-annotations` y **Guava**, que ella sola pesa unos 3 MB. Más Ktor 2.3.8
-(`client-core`, `client-okhttp`, `client-websockets`).
+**Lo que arrastra, medido y no supuesto.** Comparando el `debugRuntimeClasspath` con y sin la
+dependencia: **31 artefactos nuevos**. Los que pesan son Ktor 2.3.8 entero —`client-core`, `io`,
+`http`, `utils`, `client-okhttp`, `websockets`, `serialization`, `events`—, el propio
+`google-genai-kotlin-android` (2,7 MB), `google-auth-library-oauth2-http` con
+`google-http-client` y `google-http-client-gson`, **`org.apache.httpcomponents:httpclient` y
+`httpcore`**, `io.opencensus`, `io.grpc:grpc-api`, `commons-codec` y `gson`.
 
-**Consecuencia directa**: D-223. Sin optimización, ese peso acaba entero en el APK.
+**Y una corrección a lo que este documento dijo primero: Guava no es nueva.** Estaba ya en el
+classpath en `31.1-android`, arrastrada por `firebase-analytics`. Lo que hace el SDK es **subirla** a
+`33.4.0-android`. Atribuirle a esta feature tres megas que ya estaban habría sido inflar el argumento
+a favor de la decisión siguiente, y eso es peor que no tener argumento.
+
+**Consecuencia directa**: D-222. **El APK de debug pasa de unos 50 MB a 57,7 MB, del orden de +7 MB**,
+medido el 5 de septiembre de 2026 compilando con y sin la dependencia. La cifra es **aproximada a
+propósito**: las dos medidas se tomaron sobre compilaciones incrementales, no limpias, y una medición
+posterior sin la dependencia dio 52,4 MB en lugar de los 50,2 de la primera. El orden de magnitud
+—varios megas— es el que sostiene la decisión; el decimal no, y decirlo exacto sería fingir una
+precisión que no se tomó. Sin optimización, ese peso acaba entero en el APK que se distribuye.
 
 ---
 
@@ -429,8 +441,13 @@ empaquetado falla con entradas duplicadas. Es la vía documentada.
 **Decisión**: `buildTypes { release { optimization { enable = true } } }`. Las reglas propias van en
 `app/src/main/keepRules/*.keep`.
 
-**Motivo**: FR-041. Sin optimización, Guava y compañía entran enteras en el APK distribuido. Con ella
-se quedan las clases que se usan, que de Guava son cuatro.
+**Motivo**: FR-041, y un número medido: **del orden de +7 MB en el APK de debug** (D-220). El grueso
+—Ktor entero, `httpclient`, `opencensus`, `grpc-api`— son clases que esta aplicación no llega a
+ejecutar: el SDK las arrastra porque cubre casos de uso que aquí no se usan. Es exactamente el reparto
+que R8 sabe deshacer.
+
+**Lo que no se sabe todavía, y se sabrá en T079**: cuánto de esos 7,5 MB sobrevive a la optimización.
+El número de debug es el peor caso, no la previsión.
 
 **Cómo, exactamente**: AGP 9.3 —el proyecto está en 9.3.2— sustituyó `minifyEnabled` /
 `shrinkResources` / `proguardFiles` por el bloque `optimization`, que activa código y recursos a la
@@ -522,3 +539,73 @@ sus propios modos de fallo.
 esquema; que **sabe leer un PDF escaneado** (SC-001, el único criterio de éxito que depende de algo
 que no controlamos); que el fichero desaparece del servicio al salir; y que el registro dice la fase y
 el tamaño y no dice la credencial ni el contenido.
+
+---
+
+## La corrección
+
+### D-227 — La librería oficial **no se puede usar** en Android, y lo dice ella misma
+
+> **Sustituye a D-201, D-203, D-219, D-220, D-221, D-222 y D-223** de esta misma feature.
+
+**Decisión**: se retira `com.google.genai:google-genai-kotlin`. La Files API se implementa sobre el
+`OkHttpClient` que el proyecto ya tiene, que es exactamente la alternativa que D-201 había descartado
+y dejado escrita como plan B.
+
+**Motivo**: no es una preferencia ni un riesgo estimado. El artefacto `-android` de la librería lleva
+un guardián que **lanza siempre**:
+
+```kotlin
+// androidMain/kotlin/com/google/genai/kotlin/SecurityContext.kt
+internal actual fun validateSecurityContext(hasApiKey: Boolean, hasCredentials: Boolean) {
+  if (hasApiKey || hasCredentials) {
+    throw IllegalStateException(
+      "SECURITY FATAL: Initializing the Client with an API Key or Credentials on Android is " +
+        "blocked to prevent credential leaks. For mobile applications, please use Firebase AI " +
+        "Logic (https://firebase.google.com/docs/ai-logic) with Firebase App Check."
+    )
+  }
+}
+```
+
+`Client.<init>` lo llama antes de nada, así que en Android **no existe forma de construir el cliente
+con una credencial**. Con credencial y sin credencial son los dos únicos casos que esta aplicación
+tiene, y uno de los dos lanza.
+
+**Cómo se descubrió, y por qué no antes.** El README de la librería dice *«we strongly discourage
+embedding API keys… into public mobile client applications»*, y eso se leyó, se citó en D-202 y se
+asumió como una recomendación —igual que la aplicación asume desde la feature 007 que una credencial
+dentro de un APK es recuperable—. **Una recomendación se puede asumir; un `throw` no.** La diferencia
+no está en la documentación: está en el bytecode, y salió al ejecutar la primera prueba que construye
+el cliente de verdad. Es, en pequeño, la misma lección que `CLAUDE.md` ya tenía escrita: *una frontera
+con un servicio ajeno hay que atravesarla de verdad al menos una vez*.
+
+**Alternativas descartadas, en orden de peso:**
+
+- **Forzar el artefacto `-jvm` en Android** para saltarse el guardián. El guardián está en
+  `androidMain`, así que técnicamente funcionaría. Se descarta y conviene que quede escrito por qué:
+  es **rodear a mano un control de seguridad del proveedor**, sobre una variante que no está
+  compilada para Android, y que cualquier versión de parche puede romper sin aviso. Ganaríamos unas
+  ciento cincuenta líneas y perderíamos el derecho a decir que la aplicación usa la librería como su
+  autor la publica.
+- **Firebase AI Logic**. Es lo que el propio mensaje de error recomienda y quitaría la credencial del
+  APK, que es una mejora real. Pero **no expone la Files API** (D-202), y sin ella la feature 011
+  reenviaría el boletín entero en cada pregunta. Sigue siendo la vía correcta el día que exista un
+  backend propio o el día que Firebase AI Logic dé acceso a ficheros; hoy no cumple el requisito que
+  motiva esta feature.
+
+**Lo que sobrevive intacto, que es casi todo.** La forma de la feature no dependía de la librería:
+el documento se sube una vez, la sesión se comparte durante la visita y se suelta al salir, la
+extracción de texto local desaparece, el contador de páginas se queda, el prompt pierde el hueco del
+documento y el validador acota las citas a las páginas que existen. Solo cambia **el cable**: tres
+ficheros de `data/source/remote/` se reescriben contra OkHttp. Que el cambio quepa ahí es, otra vez,
+lo que el diseño de la 007 prometió por escrito.
+
+**Lo que se revierte con la librería**: Java 17 (D-219), las exclusiones de empaquetado (D-221), la
+activación de R8 (D-222) y el riesgo Ktor/OkHttp (D-223). Los cuatro existían **por la cola de
+dependencias**, y sin dependencia no hay cola. El APK de debug queda en **52,4 MB**, dentro del ruido
+de medición de la línea de partida.
+
+**Y una que sí se pierde**: `HttpOptions(baseUrl = …)` era el argumento que desbloqueaba adoptar un
+SDK. Sin SDK vuelve a ser irrelevante, y las pruebas vuelven a MockWebServer **sobre TLS**, como el
+resto del proyecto, con lo que D-224 también se retira.

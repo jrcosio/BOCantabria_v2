@@ -5,119 +5,112 @@ import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonObject
 
-/**
- * What travels to and from the summarising service, in the shape of its Interactions API.
- *
- * **This file describes the provider**, so it carries its name and it is the file to throw away when
- * the provider changes. Our own format lives next door in `SummaryPayloadDtos.kt`
- * (009 research.md D-111).
- *
- * Data-layer types: they never cross to `ui`.
- */
+// ---------- Files API ----------
+
+/** The metadata that starts a resumable upload. Only the display name travels. */
 @Serializable
-data class GeminiInteractionRequest(
-    val model: String,
-    @SerialName("system_instruction") val systemInstruction: String,
-    val input: List<GeminiInputContent>,
-    /**
-     * Zero retention.
-     *
-     * The service's own default is `true`: it keeps the interaction object to enable stateful
-     * conversation and background execution, and on a free account it holds it for a day. This
-     * feature uses neither — one request per publication, no thread — so retention would be cost
-     * without benefit (009 research.md D-107, FR-030).
-     */
-    val store: Boolean = false,
-    @SerialName("generation_config") val generationConfig: GeminiGenerationConfig,
-    @SerialName("response_format") val responseFormat: GeminiResponseFormat,
+internal data class GeminiFileUploadStart(val file: GeminiFileDisplayName)
+
+@Serializable
+internal data class GeminiFileDisplayName(@SerialName("display_name") val displayName: String)
+
+/** What both the upload and the status poll answer with. */
+@Serializable
+internal data class GeminiFileEnvelope(val file: GeminiFile? = null)
+
+@Serializable
+internal data class GeminiFile(
+    val name: String? = null,
+    val uri: String? = null,
+    val mimeType: String? = null,
+    val state: String? = null,
+    val error: GeminiError? = null,
+)
+
+// ---------- generateContent ----------
+
+@Serializable
+internal data class GeminiGenerateRequest(
+    @SerialName("system_instruction") val systemInstruction: GeminiContent,
+    val contents: List<GeminiContent>,
+    @SerialName("generationConfig") val generationConfig: GeminiGenerationConfig,
 )
 
 @Serializable
-data class GeminiInputContent(val type: String, val text: String)
-
-/**
- * No `temperature`, no `top_p`, no `top_k`, and that is not an oversight.
- *
- * The provider's documentation for this generation says outright not to change them, and this model
- * does not accept custom values for temperature, top-K or top-P at all. Sending them would be noise
- * at best and a 400 at worst (009 research.md D-106).
- */
-@Serializable
-data class GeminiGenerationConfig(
-    /**
-     * The service's default for this generation is `"medium"`, and thinking is billed.
-     *
-     * Summarising a bulletin does not need extended reasoning, so leaving the default in place would
-     * be paying for tokens nobody ever sees. This is the same lesson `reasoning_effort` cost in
-     * feature 007, under a different name. Note the documented caveat: on Flash-Lite `minimal` does
-     * not guarantee thinking is off, only that it is as close to off as the model offers.
-     */
-    @SerialName("thinking_level") val thinkingLevel: String = "minimal",
-    @SerialName("max_output_tokens") val maxOutputTokens: Int,
+internal data class GeminiContent(
+    val role: String? = null,
+    val parts: List<GeminiPart>,
 )
 
 @Serializable
-data class GeminiResponseFormat(
-    val type: String = "text",
-    @SerialName("mime_type") val mimeType: String = "application/json",
-    /** Goes in verbatim from `SummarySchema`, unmodelled. */
-    val schema: JsonElement,
+internal data class GeminiPart(
+    val text: String? = null,
+    @SerialName("file_data") val fileData: GeminiFileData? = null,
 )
 
 @Serializable
-data class GeminiInteraction(
-    val id: String? = null,
-    val model: String? = null,
-    /**
-     * `completed`, `incomplete`, `budget_exceeded`, `failed`, `cancelled`, `in_progress`…
-     *
-     * This is what the previous provider made us deduce from `finish_reason` and from counting empty
-     * fields. On screen every one of them is the same sentence, on purpose (FR-027); in the log they
-     * must not be (009 research.md D-117).
-     */
-    val status: String? = null,
-    val steps: List<GeminiStep> = emptyList(),
-    val usage: GeminiUsage? = null,
+internal data class GeminiFileData(
+    @SerialName("file_uri") val fileUri: String,
+    @SerialName("mime_type") val mimeType: String,
 )
 
 @Serializable
-data class GeminiStep(
-    /**
-     * `model_output` is the one that matters, and it is **not** the first step.
-     *
-     * Observed against the real service on 4 September 2026: a reasoning step of type `thought`
-     * comes before it. The documentation calls that one `model_thoughts`; what actually arrives is
-     * `thought`. Which is exactly why the parser looks for `model_output` **by type** and never by
-     * position (009 quickstart §3 bis).
-     */
-    val type: String? = null,
-    val content: List<GeminiContentPart> = emptyList(),
+internal data class GeminiGenerationConfig(
+    @SerialName("thinkingConfig") val thinkingConfig: GeminiThinkingConfig,
+    @SerialName("maxOutputTokens") val maxOutputTokens: Int,
+    @SerialName("responseMimeType") val responseMimeType: String,
+    @SerialName("responseJsonSchema") val responseJsonSchema: JsonElement,
 )
 
 @Serializable
-data class GeminiContentPart(val type: String? = null, val text: String? = null)
+internal data class GeminiThinkingConfig(@SerialName("thinkingLevel") val thinkingLevel: String)
 
 @Serializable
-data class GeminiUsage(
-    @SerialName("total_input_tokens") val totalInputTokens: Int = 0,
-    @SerialName("total_output_tokens") val totalOutputTokens: Int = 0,
-    @SerialName("total_tokens") val totalTokens: Int = 0,
-    /** Should be low or zero. If it grows, `thinking_level` is not being applied. */
-    @SerialName("total_thought_tokens") val totalThoughtTokens: Int = 0,
+internal data class GeminiGenerateResponse(
+    val candidates: List<GeminiCandidate> = emptyList(),
+    val usageMetadata: GeminiUsageMetadata? = null,
+    val modelVersion: String? = null,
 )
 
 @Serializable
-data class GeminiErrorEnvelope(val error: GeminiError? = null)
+internal data class GeminiCandidate(
+    val content: GeminiResponseContent? = null,
+    val finishReason: String? = null,
+)
+
+@Serializable
+internal data class GeminiResponseContent(val parts: List<GeminiResponsePart> = emptyList())
 
 /**
- * `code` is deliberately not deserialised: the HTTP response already carries it, and the
- * documentation is not consistent about whether it arrives here as a number or a string. Modelling a
- * field nobody needs only adds another way to fail at deserialisation.
+ * `thought` marks a reasoning part, and those must be skipped.
+ *
+ * Feature 009 learned this the hard way against the live service: the reasoning step arrives
+ * **always** before the answer, so taking the first part would have been wrong a hundred per cent of
+ * the time. Skip by the flag, never by position.
  */
 @Serializable
-data class GeminiError(
-    val message: String? = null,
-    val status: String? = null,
-    /** May carry a `RetryInfo` with a `retryDelay`. Read unmodelled (009 research.md D-109). */
+internal data class GeminiResponsePart(
+    val text: String? = null,
+    val thought: Boolean? = null,
+)
+
+@Serializable
+internal data class GeminiUsageMetadata(
+    val promptTokenCount: Int = 0,
+    val candidatesTokenCount: Int = 0,
+    val totalTokenCount: Int = 0,
+    val thoughtsTokenCount: Int = 0,
+)
+
+// ---------- Errors ----------
+
+@Serializable
+internal data class GeminiErrorEnvelope(val error: GeminiError? = null)
+
+@Serializable
+internal data class GeminiError(
+    val code: Int = 0,
+    val message: String = "",
+    val status: String = "",
     val details: List<JsonObject> = emptyList(),
 )

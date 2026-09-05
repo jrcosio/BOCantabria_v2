@@ -96,7 +96,9 @@ interface GeminiSummaryDataSource {
 ```
 
 **Cambio de firma**: gana `document`. Antes el documento **era** el parámetro `user`; ahora `user`
-lleva solo los metadatos de la publicación y el documento viaja por referencia.
+lleva solo los metadatos de la publicación y el documento viaja por referencia. La superficie del
+servicio también cambia, de la Interactions API a `generateContent`, porque es a esa a la que
+pertenecen las referencias de la Files API.
 
 **Lo que NO cambia**: `GeminiSummaryResult` y los **siete** casos de `GeminiRefusal`. Su campo `usage`
 pasa a ser `SummaryUsage`, que es el mismo tipo mudado desde `GeminiDtos.kt` y despojado de sus
@@ -118,21 +120,24 @@ el contenido del documento a Logcat y a Crashlytics. Cinco pruebas lo vigilan.
 
 ---
 
-### 1.5 `GenAiClientProvider` — el cliente, perezoso y sustituible
+### 1.5 `OkHttpGeminiDocumentUploader` — el protocolo de subida, a mano
 
 ```kotlin
-class GenAiClientProvider(apiKeys: GeminiApiKeyProvider, baseUrl: String? = null) {
-    suspend fun client(): Client?      // null cuando no hay credencial
-}
+class OkHttpGeminiDocumentUploader(
+    client: OkHttpClient, apiKeys: GeminiApiKeyProvider, coordinator: GeminiRateLimitCoordinator,
+    dispatchers: DispatcherProvider, crashReporter: CrashReporter, baseUrl: String = DEFAULT_BASE_URL,
+) : AiDocumentUploader
 ```
 
+Aquí iba `GenAiClientProvider`, envolviendo el cliente de la librería oficial. **La librería no se
+puede usar en Android** (research.md D-227), así que la Files API se escribe sobre el `OkHttpClient`
+compartido, derivado con `newBuilder()` como el resto del proyecto.
+
 **Garantías**:
-- Se construye **una vez** y se reutiliza: lleva dentro un cliente HTTP con su pool de conexiones.
-- `null` cuando la credencial falta o está en blanco, y ese `null` es lo único que produce
-  `NotConfigured` (FR-030, SC-010).
-- `baseUrl` va vacío en producción. Existe para que las pruebas apunten el cliente a un servidor
-  local (D-224).
-- `toString()` **no** revela la credencial, igual que `BuildConfigGeminiApiKeyProvider`.
+- Sin credencial, `Rejected(NotConfigured)` **sin ninguna llamada de red** (FR-030, SC-010).
+- La credencial viaja en la cabecera `x-goog-api-key`, nunca en el cuerpo ni en la URL.
+- `baseUrl` existe para que las pruebas apunten a un MockWebServer **sobre TLS**, como el resto de
+  las pruebas de red del proyecto.
 
 ---
 
@@ -246,10 +251,9 @@ lea entero.
 
 | Qué | Valor |
 |---|---|
-| Dependencia nueva | `com.google.genai:google-genai-kotlin`, declarada en `gradle/libs.versions.toml` con `[versions]` y `[libraries]`. **Ninguna coordenada literal en un `build.gradle.kts`** |
-| Java | `sourceCompatibility`, `targetCompatibility` y `jvmTarget` a **17** |
-| Empaquetado | `packaging.resources.excludes` con `META-INF/DEPENDENCIES`, `META-INF/INDEX.LIST`, `META-INF/{AL2.0,LGPL2.1}` y los `NOTICE`/`LICENSE` duplicados |
-| Optimización | `buildTypes { release { optimization { enable = true } } }` |
-| Reglas propias | `app/src/main/keepRules/*.keep`. **No** `proguard-rules.pro`: AGP 9.3 lee el conjunto de fuentes `keepRules` |
+| Dependencias | **ninguna nueva.** `gradle/libs.versions.toml` no se toca (D-227) |
+| Java | **11**, sin cambios. Subir a 17 lo exigía la librería retirada |
+| Empaquetado | Sin cambios |
+| Optimización | Sin cambios: sigue desactivada para release, como antes de esta feature |
 | Credencial | Sigue leyéndose de `GEMINI_API_KEY` en `local.properties` con API de proveedor de Gradle, con respaldo por variable de entorno. Si falta, **la build sigue en verde** y el campo es cadena vacía |
 | Base de datos | `app/schemas/` **sin cambios**. Versión 4 |

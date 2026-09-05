@@ -27,7 +27,7 @@ class AiErrorMessagesTest {
 
     private val everyError = listOf(
         AiSummaryError.Offline,
-        AiSummaryError.NoExtractableText,
+        AiSummaryError.UnreadableDocument,
         AiSummaryError.EncryptedPdf,
         AiSummaryError.QuotaMinute(secondsRemaining = 42),
         AiSummaryError.QuotaDay,

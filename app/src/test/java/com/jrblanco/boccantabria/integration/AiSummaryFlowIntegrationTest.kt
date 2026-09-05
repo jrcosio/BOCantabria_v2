@@ -9,7 +9,7 @@ import com.jrblanco.boccantabria.core.util.TimeProvider
 import com.jrblanco.boccantabria.data.repository.AiSummaryRepositoryImpl
 import com.jrblanco.boccantabria.data.source.local.AiPreferences
 import com.jrblanco.boccantabria.data.source.local.BocDatabase
-import com.jrblanco.boccantabria.data.source.local.PdfTextNormalizer
+import com.jrblanco.boccantabria.data.source.remote.AiDocumentSessionStore
 import com.jrblanco.boccantabria.data.source.remote.SummaryPromptFactory
 import com.jrblanco.boccantabria.data.source.remote.SummaryValidator
 import com.jrblanco.boccantabria.di.ROBOLECTRIC_SDK
@@ -20,7 +20,8 @@ import com.jrblanco.boccantabria.domain.usecase.GenerateAiSummaryUseCase
 import com.jrblanco.boccantabria.domain.usecase.ObserveAiSummaryUseCase
 import com.jrblanco.boccantabria.fake.FakeDocumentRepository
 import com.jrblanco.boccantabria.fake.FakeGeminiSummaryDataSource
-import com.jrblanco.boccantabria.fake.FakePdfTextExtractor
+import com.jrblanco.boccantabria.fake.FakeAiDocumentUploader
+import com.jrblanco.boccantabria.fake.FakePdfPageCounter
 import com.jrblanco.boccantabria.fake.TestDispatcherProvider
 import com.jrblanco.boccantabria.fake.officialDocument
 import com.jrblanco.boccantabria.fake.publication
@@ -53,7 +54,8 @@ class AiSummaryFlowIntegrationTest {
 
     private val dispatcher = StandardTestDispatcher()
     private val documents = FakeDocumentRepository(DocumentStatus.Available(officialDocument()))
-    private val extractor = FakePdfTextExtractor()
+    private val counter = FakePdfPageCounter()
+    private val uploader = FakeAiDocumentUploader()
     private val service = FakeGeminiSummaryDataSource()
 
     private lateinit var database: BocDatabase
@@ -118,7 +120,7 @@ class AiSummaryFlowIntegrationTest {
                     complete = true,
                 ),
             ),
-            usage = com.jrblanco.boccantabria.data.source.remote.GeminiUsage(),
+            usage = com.jrblanco.boccantabria.data.source.remote.SummaryUsage(),
             systemFingerprint = null,
         )
 
@@ -136,8 +138,12 @@ class AiSummaryFlowIntegrationTest {
 
     private fun repository(): AiSummaryRepository = AiSummaryRepositoryImpl(
         documents = documents,
-        extractor = extractor,
-        normalizer = PdfTextNormalizer(),
+        pages = counter,
+        sessions = AiDocumentSessionStore(
+            uploader = uploader,
+            dispatchers = TestDispatcherProvider(dispatcher),
+            crashReporter = NoOpCrashReporter(),
+        ),
         prompts = SummaryPromptFactory(),
         summaries = service,
         validator = SummaryValidator(),

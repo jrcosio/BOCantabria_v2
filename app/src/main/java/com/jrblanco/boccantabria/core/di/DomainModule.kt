@@ -9,6 +9,7 @@ import com.jrblanco.boccantabria.domain.usecase.ObservePublicationUseCase
 import com.jrblanco.boccantabria.domain.usecase.OpenOfficialDocumentUseCase
 import com.jrblanco.boccantabria.domain.usecase.ObservePublicationsUseCase
 import com.jrblanco.boccantabria.domain.usecase.ObserveSavedKeysUseCase
+import com.jrblanco.boccantabria.domain.usecase.ReleaseAiDocumentSessionUseCase
 import com.jrblanco.boccantabria.domain.usecase.ObserveSavedPublicationsUseCase
 import com.jrblanco.boccantabria.domain.usecase.PrepareStartupUseCase
 import com.jrblanco.boccantabria.domain.usecase.RefreshPublicationsUseCase
@@ -48,4 +49,5 @@ val domainModule = module {
     factory { GenerateAiSummaryUseCase(repository = get()) }
     factory { ObserveAiNoticeAcceptedUseCase(repository = get()) }
     factory { AcceptAiNoticeUseCase(repository = get()) }
+    factory { ReleaseAiDocumentSessionUseCase(repository = get()) }
 }

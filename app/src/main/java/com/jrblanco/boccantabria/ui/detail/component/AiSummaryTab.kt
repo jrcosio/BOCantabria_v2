@@ -160,20 +160,10 @@ private fun Progress(phaseRes: Int) {
  */
 @Composable
 private fun Generating(state: AiSummaryStatus.Generating) {
-    Column(verticalArrangement = Arrangement.spacedBy(BocTheme.spacing.space3)) {
-        if (state.isPartial) {
-            Notice(
-                text = pluralStringResource(
-                    R.plurals.ai_summary_partial_before,
-                    state.analysedPages,
-                    state.totalPages,
-                    state.analysedPages,
-                ),
-                testTag = TAG_AI_SUMMARY_PARTIAL_WARNING,
-            )
-        }
-        Progress(R.string.ai_summary_phase_generating)
-    }
+    // No warning ahead of the request any more: the whole document is sent, so there is no
+    // fraction to announce and announcing one would be announcing something false. What a summary
+    // did or did not cover is still said **afterwards**, from its own coverage (010 D-212).
+    Progress(R.string.ai_summary_phase_generating)
 }
 
 @Composable
@@ -317,13 +307,13 @@ private fun Message(text: String) {
 
 private fun AiSummaryStatus.Preparing.Phase.label(): Int = when (this) {
     AiSummaryStatus.Preparing.Phase.FETCHING_DOCUMENT -> R.string.ai_summary_phase_fetching
-    AiSummaryStatus.Preparing.Phase.EXTRACTING_TEXT -> R.string.ai_summary_phase_extracting
+    AiSummaryStatus.Preparing.Phase.UPLOADING_DOCUMENT -> R.string.ai_summary_phase_uploading
 }
 
 /** One message per case of FR-040. No status codes, no traces, no wording from the provider. */
 internal fun AiSummaryError.messageRes(): Int = when (this) {
     AiSummaryError.Offline -> R.string.ai_error_offline
-    AiSummaryError.NoExtractableText -> R.string.ai_error_no_text
+    AiSummaryError.UnreadableDocument -> R.string.ai_error_unreadable
     AiSummaryError.EncryptedPdf -> R.string.ai_error_encrypted
     is AiSummaryError.QuotaMinute -> R.string.ai_error_quota_minute
     AiSummaryError.QuotaDay -> R.string.ai_error_quota_day

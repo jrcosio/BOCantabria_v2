@@ -56,6 +56,13 @@ class FakeAiSummaryRepository(
 
     override fun observeNoticeAccepted(): Flow<Boolean> = notice
 
+    /** Every key this repository was asked to let go of, in order. */
+    val releasedKeys: MutableList<String> = mutableListOf()
+
+    override fun releaseDocumentSession(externalKey: String) {
+        releasedKeys += externalKey
+    }
+
     override suspend fun acceptNotice() {
         accepted++
         notice.value = true

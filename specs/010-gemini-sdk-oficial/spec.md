@@ -168,18 +168,22 @@ verificando que reaparece una vez y solo una.
 
 ---
 
-### User Story 5 - La aplicación se puede compilar, probar y empaquetar (Priority: P3)
+### User Story 5 - La aplicación se puede compilar y probar sin credencial (Priority: P3)
 
-Quien mantiene el proyecto puede compilarlo y pasar todas sus pruebas **sin ninguna credencial**, y
-puede además generar e instalar la versión optimizada que se distribuye y recorrerla entera.
+Quien mantiene el proyecto puede compilarlo y pasar todas sus pruebas **sin ninguna credencial**.
 
-**Why this priority**: No lo ve nadie que use la aplicación, pero sin ello no hay forma de saber si
-lo que se publica funciona. La segunda mitad —la versión optimizada— es nueva en esta feature y no
-existía antes.
+**Why this priority**: No lo ve nadie que use la aplicación, pero sin ello no hay forma de compilar
+en integración continua ni de trabajar sin secretos.
+
+> **Esta historia tenía una segunda mitad y se ha retirado.** Pedía generar e instalar la versión
+> optimizada y recorrerla entera, porque la librería que se iba a adoptar arrastraba varios megas de
+> dependencias. Esa librería **no se puede usar en Android** —su artefacto lanza una excepción cuando
+> se le da una credencial— y con ella se fue la cola de dependencias que justificaba optimizar. Sin
+> causa no hay requisito: FR-041 y FR-042 quedan retirados y SC-011 con ellos. Activar la
+> optimización sigue siendo buena idea, y sigue sin ser asunto de esta feature.
 
 **Independent Test**: Se comprueba compilando y ejecutando la batería de pruebas en un entorno sin
-credencial, y por separado instalando la versión optimizada en un dispositivo y recorriendo la
-aplicación.
+credencial.
 
 **Acceptance Scenarios**:
 
@@ -188,10 +192,6 @@ aplicación.
 2. **Given** esa misma compilación instalada, **When** una persona pulsa «Generar resumen»,
    **Then** se le dice que la función no está configurada en esta aplicación, y no se intenta ningún
    envío.
-3. **Given** la versión optimizada que se distribuye, **When** se instala y se recorren el arranque,
-   el boletín, la búsqueda, los guardados, el detalle, el visor del documento y el resumen,
-   **Then** todo funciona igual que en la versión de desarrollo.
-
 ---
 
 ### Edge Cases
@@ -319,12 +319,16 @@ aplicación.
 
 #### La aplicación empaquetada
 
-- **FR-041**: La versión que se distribuye MUST generarse con la optimización de tamaño activada.
-- **FR-042**: MUST existir una comprobación, ejecutada antes de dar la feature por terminada, de que
-  esa versión optimizada arranca y de que todas sus pantallas funcionan. No es sustituible por
-  pruebas automáticas, porque ninguna se ejecuta sobre ella.
+- ~~**FR-041**: La versión que se distribuye MUST generarse con la optimización de tamaño
+  activada.~~ **Retirado.** Existía porque la librería que se iba a adoptar arrastraba varios megas
+  de dependencias. La librería no se puede usar (ver *Assumptions*), y sin su cola no hay nada que
+  optimizar que no estuviera ya ahí antes de esta feature.
+- ~~**FR-042**: MUST existir una comprobación de que esa versión optimizada arranca…~~ **Retirado**
+  con FR-041, que era su única causa.
 - **FR-043**: La aplicación MUST seguir compilándose y pasando todas sus pruebas sin ninguna
   credencial configurada.
+- **FR-044**: La aplicación MUST NOT crecer de forma apreciable por este cambio. La subida del
+  documento se escribe sobre el cliente de red que ya existe, sin dependencias nuevas.
 
 ---
 
@@ -377,9 +381,8 @@ aplicación.
 - **SC-009**: Con el registro de diagnóstico activado y una generación completa, **cero** líneas
   contienen la credencial y **cero** contienen texto del documento.
 - **SC-010**: El proyecto compila y pasa el cien por cien de sus pruebas sin credencial configurada.
-- **SC-011**: La versión optimizada que se distribuye arranca y permite recorrer las **nueve** pantallas
-  de la aplicación —arranque, boletín, panel de secciones, búsqueda, guardados, detalle, visor, resumen y
-  acerca de— sin ningún cierre inesperado.
+- **SC-011**: El tamaño de la aplicación no crece de forma apreciable: cero dependencias nuevas
+  declaradas.
 - **SC-012**: Ningún mensaje visible contiene un código numérico, un nombre de servicio o un nombre
   de modelo.
 
@@ -411,13 +414,13 @@ aplicación.
 - **La cuota del plan gratuito no cambia con este cambio.** Preparar el documento no debería contar
   como una generación, pero se asume que sí podría, y la cuenta propia se lleva sobre las
   generaciones en cualquier caso.
-- **La librería elegida exige una versión del entorno de compilación superior a la actual del
-  proyecto.** Subirla es un cambio de configuración de build, exento del ciclo SDD, pero se hace
-  dentro de esta feature porque sin él no compila.
-- **La librería elegida arrastra dependencias considerables.** De ahí FR-041: sin optimización, el
-  tamaño de la aplicación distribuida crecería de forma desproporcionada para lo que aporta.
-- **Nadie ha ejecutado nunca la versión optimizada de esta aplicación.** De ahí que FR-042 sea una
-  comprobación manual y no una promesa.
+- **La librería oficial del proveedor no se puede usar en esta aplicación, y eso se comprobó
+  ejecutándola.** Su artefacto de Android lanza una excepción en cuanto se le da una credencial —un
+  guardián deliberado, no un aviso—, y esta aplicación no tiene un servidor propio detrás del que
+  esconderla. La subida del documento se escribe, por tanto, sobre el cliente de red que el proyecto
+  ya usa. Tres supuestos que dependían de la librería —que exigía subir el entorno de compilación,
+  que arrastraba varios megas de dependencias, y que por eso había que optimizar el empaquetado— se
+  retiran con ella. El detalle está en `research.md` D-227.
 - **Se mantiene, con conocimiento del propietario, que una credencial incluida en una aplicación
   distribuida es recuperable por quien la descargue.** No cambia con este cambio, y sigue siendo una
   decisión asumida, no un descuido.

@@ -13,10 +13,9 @@ import com.jrblanco.boccantabria.data.repository.SearchRepositoryImpl
 import com.jrblanco.boccantabria.data.source.local.AiPreferences
 import com.jrblanco.boccantabria.data.source.local.AiSummaryDao
 import com.jrblanco.boccantabria.data.source.local.AndroidConnectivityDataSource
-import com.jrblanco.boccantabria.data.source.local.PdfTextExtractor
-import com.jrblanco.boccantabria.data.source.local.PdfTextNormalizer
+import com.jrblanco.boccantabria.data.source.local.PdfPageCounter
 import com.jrblanco.boccantabria.data.source.local.aiPreferences
-import com.jrblanco.boccantabria.data.source.local.pdfTextExtractor
+import com.jrblanco.boccantabria.data.source.local.pdfPageCounter
 import com.jrblanco.boccantabria.data.source.local.BocDatabase
 import com.jrblanco.boccantabria.data.source.local.ConnectivityDataSource
 import com.jrblanco.boccantabria.data.source.local.DocumentCache
@@ -28,9 +27,12 @@ import com.jrblanco.boccantabria.data.source.local.SavedPublicationDao
 import com.jrblanco.boccantabria.data.source.local.bocDatabase
 import com.jrblanco.boccantabria.data.source.remote.BocFeedCatalog
 import com.jrblanco.boccantabria.data.source.remote.BuildConfigGeminiApiKeyProvider
+import com.jrblanco.boccantabria.data.source.remote.AiDocumentSessionStore
+import com.jrblanco.boccantabria.data.source.remote.AiDocumentUploader
 import com.jrblanco.boccantabria.data.source.remote.GeminiApiKeyProvider
 import com.jrblanco.boccantabria.data.source.remote.GeminiRateLimitCoordinator
 import com.jrblanco.boccantabria.data.source.remote.GeminiSummaryDataSource
+import com.jrblanco.boccantabria.data.source.remote.OkHttpGeminiDocumentUploader
 import com.jrblanco.boccantabria.data.source.remote.OkHttpGeminiSummaryDataSource
 import com.jrblanco.boccantabria.data.source.remote.SummaryPromptFactory
 import com.jrblanco.boccantabria.data.source.remote.SummaryValidator
@@ -105,20 +107,37 @@ val dataModule = module {
         )
     }
 
-    // --- Resumen IA (features 007 y 009) ---
-    // El extractor y las preferencias entran por función fábrica desde su propio paquete: este
-    // módulo no puede nombrar `androidx.pdf` ni `SharedPreferences`.
-    single<PdfTextExtractor> {
-        pdfTextExtractor(androidContext(), dispatchers = get(), crashReporter = get())
+    // --- Resumen IA (features 007, 009 y 010) ---
+    // El contador de páginas y las preferencias entran por función fábrica desde su propio paquete:
+    // este módulo no puede nombrar `androidx.pdf` ni `SharedPreferences`. Lo mismo vale para el
+    // cliente del servicio de IA, que se construye dentro de `GenAiClientProvider`.
+    single<PdfPageCounter> {
+        pdfPageCounter(androidContext(), dispatchers = get(), crashReporter = get())
     }
     single<AiPreferences> { aiPreferences(androidContext(), dispatchers = get()) }
-    single { PdfTextNormalizer() }
     single { SummaryPromptFactory() }
     single { SummaryValidator() }
     single<GeminiApiKeyProvider> { BuildConfigGeminiApiKeyProvider() }
     // Uno solo para toda la aplicación: es lo que serializa las peticiones y, desde la feature 009,
     // lo que lleva la cuenta del consumo, porque este servicio no manda cabeceras de cuota.
     single { GeminiRateLimitCoordinator(time = get(), random = get()) }
+    // La subida del documento a la Files API. Escrita a mano sobre el OkHttp compartido: la
+    // librería oficial de Google **prohíbe** construir su cliente con una credencial en Android
+    // (010 research.md D-227).
+    single<AiDocumentUploader> {
+        OkHttpGeminiDocumentUploader(
+            client = get(),
+            apiKeys = get(),
+            coordinator = get(),
+            dispatchers = get(),
+            crashReporter = get(),
+        )
+    }
+    // Como mucho **una** sesión viva en todo el proceso. Es lo que hace que el documento viaje una
+    // sola vez por visita, y lo que la pantalla Preguntar reutilizará (010 research.md D-207).
+    single {
+        AiDocumentSessionStore(uploader = get(), dispatchers = get(), crashReporter = get())
+    }
     single<GeminiSummaryDataSource> {
         OkHttpGeminiSummaryDataSource(
             client = get(),
@@ -131,8 +150,8 @@ val dataModule = module {
     single<AiSummaryRepository> {
         AiSummaryRepositoryImpl(
             documents = get(),
-            extractor = get(),
-            normalizer = get(),
+            pages = get(),
+            sessions = get(),
             prompts = get(),
             summaries = get(),
             validator = get(),

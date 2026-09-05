@@ -2,8 +2,12 @@
 
 **Feature**: `010-gemini-sdk-oficial` | **Fase**: 1 | **Fecha**: 5 de septiembre de 2026
 
-Cómo se valida esta feature. Cinco puertas, no cuatro, y una travesía de la frontera que ninguna
+Cómo se valida esta feature: las cuatro puertas de siempre y una travesía de la frontera que ninguna
 prueba puede sustituir.
+
+> Este documento pedía una **quinta** puerta, `assembleRelease`, porque la librería que se iba a
+> adoptar arrastraba varios megas de dependencias y había que activar la optimización. La librería no
+> se puede usar en Android (`research.md` D-227) y la quinta puerta se fue con ella.
 
 ---
 
@@ -13,8 +17,7 @@ prueba puede sustituir.
 export JAVA_HOME="/Applications/Android Studio.app/Contents/jbr/Contents/Home"
 ```
 
-Java **no está en el `PATH`**; el JBR de Android Studio es 21 y cubre de sobra el 17 que esta feature
-exige.
+Java **no está en el `PATH`**; el JBR de Android Studio sirve. El proyecto sigue compilando a Java 11.
 
 Para las comprobaciones manuales hace falta una credencial en `local.properties`:
 
@@ -28,8 +31,17 @@ cualquier commit conviene comprobarlo, y **hay que buscar los dos formatos**: el
 repositorio que no lo está.
 
 ```bash
-git grep -nE 'AIza[0-9A-Za-z_-]{30,}|AQ\.[0-9A-Za-z_-]{30,}' -- . && echo "¡PARA!" || echo "limpio"
+git grep -nE 'AIza[0-9A-Za-z_-]{30,}|AQ\.[0-9A-Za-z_-]{30,}' -- . ':!app/google-services.json' \
+  && echo "¡PARA!" || echo "limpio"
 ```
+
+**`app/google-services.json` se excluye a conciencia, y conviene saber por qué.** Contiene un
+`current_key` que empieza por `AIza` y que **está versionado desde el commit base a propósito**: es la
+clave de Android de Firebase, restringida en la consola por nombre de paquete y huella de firma, y el
+fichero tiene que estar en el repositorio para que la build funcione. No es la credencial de Gemini
+—comprobado: la de Gemini son 53 caracteres empezando por `AQ.A`, la de Firebase 39 empezando por
+`AIza`—. Sin esta exclusión la comprobación da un acierto **siempre**, y una comprobación que siempre
+falla es una comprobación que se deja de mirar.
 
 **Sin credencial la build sigue en verde** y las cuatro primeras puertas pasan enteras (FR-043,
 SC-010). Solo el §3 y el §3 bis la necesitan.
@@ -42,19 +54,19 @@ SC-010). Solo el §3 y el §3 bis la necesitan.
 | Tamaño máximo por fichero | 2 GB | No se comprueba: el descargador ya capa en 25 MB |
 | Peticiones por minuto / por día | 30 / 1.500 | Panel del proveedor. Heredado de la 009, sigue sin confirmar |
 | ¿La subida cuenta como petición de cuota? | Se supone que no | §3 bis, punto 7 |
+| ¿`gemini-3.1-flash-lite` acepta `file_data` y `responseJsonSchema` a la vez? | Sin confirmar | §3 bis, puntos 1 y 2. **Hasta comprobarlo, el modelo no se da por fijado** |
 
 ---
 
-## 1. Las cinco puertas
+## 1. Las cuatro puertas
 
-En este orden. Las cuatro primeras son las de la constitución; la quinta la trae esta feature.
+En este orden, las de la constitución.
 
 ```bash
 ./gradlew :app:assembleDebug
 ./gradlew :app:testDebugUnitTest
 ./gradlew :app:connectedDebugAndroidTest
 ./gradlew :app:lintDebug
-./gradlew :app:assembleRelease          # nueva
 ```
 
 **Avisos que cuestan tiempo si se ignoran:**
@@ -69,9 +81,6 @@ En este orden. Las cuatro primeras son las de la constitución; la quinta la tra
 - `--tests` **no existe** en `connectedDebugAndroidTest`. Para una clase suelta:
   `-Pandroid.testInstrumentationRunnerArguments.class=com.jrblanco.boccantabria.<Clase>`, y
   opcionalmente `#<metodo>`. Es la diferencia entre iterar en un minuto o en tres horas.
-- **La quinta puerta es nueva y puede fallar de formas que nadie ha visto**, porque nunca se ha
-  compilado release en este proyecto. Si R8 se queja, la salida es la keep rule concreta en
-  `app/src/main/keepRules/genai.keep`, no desactivar la optimización.
 
 ---
 
@@ -79,12 +88,17 @@ En este orden. Las cuatro primeras son las de la constitución; la quinta la tra
 
 | Qué | Dónde |
 |---|---|
-| La petición lleva una referencia a fichero y **no** el texto del documento | `GenAiSummaryDataSourceTest` |
-| El esquema viaja y se pide salida JSON | `GenAiSummaryDataSourceTest` |
-| 401/403 → «no configurado»; 429 → cuota con su retraso; 5xx → reintento | `GenAiSummaryDataSourceTest` |
-| `finishReason` distinto de `STOP` → resumen no fiable, nunca un texto cortado en pantalla | `GenAiSummaryDataSourceTest` |
-| **Ni la credencial ni el contenido del documento aparecen en el registro** | `GenAiSummaryDataSourceTest` |
-| Sin credencial no se hace ninguna llamada de red | `GenAiSummaryDataSourceTest`, `GeminiApiKeyProviderTest` |
+| La petición lleva una referencia a fichero y **no** el texto del documento | `OkHttpGeminiSummaryDataSourceTest` |
+| El esquema viaja y se pide salida JSON | `OkHttpGeminiSummaryDataSourceTest` |
+| 401/403 → «no configurado»; 429 → cuota con su retraso; 5xx → reintento | `OkHttpGeminiSummaryDataSourceTest` |
+| `finishReason` distinto de `STOP` → resumen no fiable, nunca un texto cortado en pantalla | `OkHttpGeminiSummaryDataSourceTest` |
+| Una parte marcada como razonamiento se salta **por su marca y no por su posición** | `OkHttpGeminiSummaryDataSourceTest` |
+| Irse de la pantalla es una cancelación y **no** un error de conexión | `OkHttpGeminiSummaryDataSourceTest` |
+| Un reintento sin cuota conserva el rechazo original | `OkHttpGeminiSummaryDataSourceTest` |
+| **Ni la credencial ni el contenido del documento aparecen en el registro** | `OkHttpGeminiSummaryDataSourceTest` |
+| Sin credencial no se hace ninguna llamada de red | `OkHttpGeminiSummaryDataSourceTest`, `GeminiApiKeyProviderTest` |
+| El nombre con el que el documento viaja no lleva nada de la persona | `AiDocumentSessionStoreTest` |
+| Nada fuera de `data` nombra los tipos del servicio de IA | `ArchitectureRulesTest` (regla 9) |
 | Dos aperturas de la misma clave → **una** subida | `AiDocumentSessionStoreTest` |
 | Abrir otra publicación retira la anterior | `AiDocumentSessionStoreTest` |
 | `release` de una clave que no es la actual no hace nada | `AiDocumentSessionStoreTest` |
@@ -97,7 +111,6 @@ En este orden. Las cuatro primeras son las de la constitución; la quinta la tra
 | Un resumen guardado no cuesta una segunda generación | `AiSummaryFlowIntegrationTest` |
 | La clave `_v2` del aviso no se lee | `AiPreferencesTest` |
 | Ningún mensaje nombra proveedor, modelo ni jerga técnica | `AiErrorMessagesTest` |
-| Nada fuera de `data` importa la librería | `ArchitectureRulesTest` (regla 9) |
 | El grafo de Koin resuelve entero | `KoinModulesTest` |
 | Los trece estados de la pestaña se dibujan | `AiSummaryTabTest` |
 
@@ -131,25 +144,6 @@ Con credencial, en un dispositivo o emulador.
 14. Recorrer el resto de la aplicación —arranque, boletín, panel de secciones, búsqueda, guardados,
     detalle, visor, acerca de— y comprobar que nada se ha movido.
 
-### Puerta 5, manual: la versión optimizada
-
-**Obligatoria (FR-042).** Nunca se ha ejecutado una versión optimizada de esta aplicación, así que
-esto no es rutina.
-
-```bash
-./gradlew :app:assembleRelease
-adb install -r app/build/outputs/apk/release/app-release.apk   # o el nombre que salga
-```
-
-Recorrer, con la aplicación instalada desde ese APK: arranque, boletín del día, panel lateral de
-secciones, búsqueda con filtros, guardados, detalle de publicación, visor del PDF, resumen IA
-completo, acerca de. Prestar atención a lo que R8 rompe típicamente: pantallas en blanco, listas
-vacías, cierres al abrir un destino, y cualquier cosa que dependa de reflexión.
-
-| Fecha | Resultado | Notas |
-|---|---|---|
-| _pendiente_ | | |
-
 ---
 
 ## 3 bis. La travesía real de la frontera — obligatoria en esta feature
@@ -174,14 +168,13 @@ adb -s <serie> logcat -s BOC:V
 | 6 | El fichero no se retira | Salir del detalle produce `session: released`; el fichero deja de estar disponible | _pendiente_ |
 | 7 | La subida consume cuota de generación | Varias subidas seguidas sin generar: ¿aparece un 429? | _pendiente_ |
 | 8 | Se filtra la credencial o el documento | `logcat` completo de una generación: cero apariciones de la clave y cero de texto del documento | _pendiente_ |
-| 9 | Ktor 2.3.8 y OkHttp 5.5.0 no conviven (D-223) | Cualquier petición real funciona; ninguna `NoSuchMethodError` | _pendiente_ |
-| 10 | La cancelación se clasifica como fallo de red (D-218) | Pulsar Atrás mientras genera: **ningún** «No hay conexión» al volver | _pendiente_ |
+| 9 | La cancelación se clasifica como fallo de red (D-218) | Pulsar Atrás mientras genera: **ningún** «No hay conexión» al volver | _pendiente_ |
 
 **Si el punto 3 falla**, SC-001 no se cumple y hay que decirlo en `spec.md` y en el informe, no
 disimularlo. Es el único criterio de éxito de esta feature que depende de algo que no controlamos.
 
-**Si el punto 9 falla**, la salida es D-223: excluir `ktor-client-okhttp` y sustituirlo por
-`ktor-client-cio` o `ktor-client-android`.
+**Si los puntos 1 o 2 fallan**, la salida es `AiSummaryConstants.MODEL_ID`, que está ahí exactamente
+para esto (D-213).
 
 ---
 
@@ -189,14 +182,11 @@ disimularlo. Es el único criterio de éxito de esta feature que depende de algo
 
 | Síntoma | Causa probable | Qué mirar |
 |---|---|---|
-| `NoClassDefFoundError: com/google/auth/...` | Alguien intentó excluir `google-auth-library` | D-220: no se puede. Está en la firma del constructor del cliente |
-| Falla el empaquetado por entradas duplicadas en `META-INF` | Faltan las exclusiones | D-221, y el bloque `packaging` de `app/build.gradle.kts` |
-| `NoSuchMethodError` en una llamada de red | Ktor 2.3.8 contra OkHttp 5.5.0 | D-223 y su salida |
-| No compila: «class file has wrong version 61.0» | Sigue en Java 11 | D-219 |
-| `assembleRelease` se queja de reglas que faltan | AGP 9 falla si un fichero de keep rules referenciado no existe | Crear `app/src/main/keepRules/genai.keep` |
-| La app de release arranca y una pantalla sale vacía | R8 ha quitado algo que hace falta | Añadir la keep rule concreta. **No** desactivar la optimización |
+| `IllegalStateException: SECURITY FATAL: Initializing the Client with an API Key…` | Alguien ha vuelto a meter `com.google.genai` | D-227: la librería **no se puede usar** en Android. La novena regla de Konsist debería haberlo parado antes |
 | «No se ha podido leer este documento» siempre | El servicio rechaza el fichero | `upload:` en el registro; puede ser el modelo (D-213) |
 | «No se ha podido generar el resumen» a menudo | Tiempos agotados del servicio | Es conocido: los tres intentos con backoff se ganan el sueldo. Si persiste, `MODEL_ID` |
 | «No hay conexión» al volver de haber salido | La cancelación se clasificó mal | D-218: `ensureActive()` como primera línea del `catch (IOException)` |
 | El aviso no reaparece tras actualizar | La clave de la preferencia no subió a `_v3` | `AiPreferences`, y `AiPreferencesTest` debería estar rojo |
+| La subida se queda colgada | El sondeo no encuentra `ACTIVE` | `upload:` en el registro dice cuántos sondeos hizo. El tope son 20 |
+| `upload: start gave no upload url` | El servicio no devolvió la cabecera `x-goog-upload-url` | Es el primer paso del protocolo reanudable; revisar las cabeceras `X-Goog-Upload-*` |
 | Las pruebas instrumentadas fallan en bloque | Hay un móvil conectado con la pantalla bloqueada | `ANDROID_SERIAL=emulator-5554` |

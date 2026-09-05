@@ -1,7 +1,6 @@
 package com.jrblanco.boccantabria.fake
 
 import com.jrblanco.boccantabria.domain.model.AiSummary
-import com.jrblanco.boccantabria.domain.model.PdfCorpus
 
 /** Builders for the AI summary tests, so no test has to spell out twelve fields to assert one. */
 fun aiSummary(
@@ -35,31 +34,3 @@ fun aiSummary(
     coverage = coverage,
 )
 
-/**
- * Pages long enough to pass the usable-text threshold, because a fixture of two short lines really
- * would look scanned and the rule would be right to say so.
- */
-fun pdfCorpus(
-    externalKey: String = "boc:439765",
-    pdfSha256: String = "a".repeat(64),
-    pages: List<String> = listOf(
-        "Aprobacion definitiva de la modificacion de la Ordenanza General de Subvenciones. ".repeat(20),
-    ),
-) = PdfCorpus(
-    externalKey = externalKey,
-    pdfSha256 = pdfSha256,
-    totalPages = pages.size,
-    pages = pages.mapIndexed { index, text -> PdfCorpus.PdfPageText(index + 1, text) },
-)
-
-/** A document that is all image: the case that must never reach the service (FR-012). */
-fun scannedCorpus(externalKey: String = "boc:439765") = PdfCorpus(
-    externalKey = externalKey,
-    pdfSha256 = "b".repeat(64),
-    totalPages = 3,
-    pages = listOf(
-        PdfCorpus.PdfPageText(1, "  "),
-        PdfCorpus.PdfPageText(2, "3"),
-        PdfCorpus.PdfPageText(3, ". ,"),
-    ),
-)

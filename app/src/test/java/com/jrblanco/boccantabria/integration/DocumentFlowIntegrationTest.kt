@@ -15,6 +15,7 @@ import com.jrblanco.boccantabria.data.repository.BocSectionRepositoryImpl
 import com.jrblanco.boccantabria.domain.usecase.ObserveOfficialDocumentUseCase
 import com.jrblanco.boccantabria.domain.usecase.ObservePublicationUseCase
 import com.jrblanco.boccantabria.domain.usecase.AcceptAiNoticeUseCase
+import com.jrblanco.boccantabria.domain.usecase.ReleaseAiDocumentSessionUseCase
 import com.jrblanco.boccantabria.domain.usecase.GenerateAiSummaryUseCase
 import com.jrblanco.boccantabria.domain.usecase.ObserveAiNoticeAcceptedUseCase
 import com.jrblanco.boccantabria.domain.usecase.ObserveAiSummaryUseCase
@@ -191,6 +192,7 @@ class DocumentFlowIntegrationTest {
             generateAiSummary = GenerateAiSummaryUseCase(FakeAiSummaryRepository()),
             observeAiNoticeAccepted = ObserveAiNoticeAcceptedUseCase(FakeAiSummaryRepository()),
             acceptAiNotice = AcceptAiNoticeUseCase(FakeAiSummaryRepository()),
+            releaseAiDocumentSession = ReleaseAiDocumentSessionUseCase(FakeAiSummaryRepository()),
             getSections = GetBocSectionsUseCase(BocSectionRepositoryImpl()),
             analytics = RecordingAnalyticsTracker(),
         )

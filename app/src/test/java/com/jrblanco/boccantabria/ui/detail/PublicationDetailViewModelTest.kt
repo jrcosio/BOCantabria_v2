@@ -13,6 +13,7 @@ import com.jrblanco.boccantabria.domain.repository.ConnectivityRepository
 import com.jrblanco.boccantabria.domain.usecase.GetBocSectionsUseCase
 import com.jrblanco.boccantabria.domain.usecase.ObserveOfficialDocumentUseCase
 import com.jrblanco.boccantabria.domain.usecase.AcceptAiNoticeUseCase
+import com.jrblanco.boccantabria.domain.usecase.ReleaseAiDocumentSessionUseCase
 import com.jrblanco.boccantabria.domain.usecase.GenerateAiSummaryUseCase
 import com.jrblanco.boccantabria.domain.usecase.ObserveAiNoticeAcceptedUseCase
 import com.jrblanco.boccantabria.domain.usecase.ObserveAiSummaryUseCase
@@ -557,6 +558,47 @@ class PublicationDetailViewModelTest {
         }
     }
 
+    // ---------- Salir de la publicación suelta el documento ----------
+
+    /**
+     * **FR-009 y SC-006.** Es el único punto del ciclo de vida que significa «se ha salido de esta
+     * publicación»: Preguntar y el visor se apilan **encima** del detalle, así que su entrada sigue
+     * viva mientras se usan y solo se limpia al hacer *pop*.
+     *
+     * `onCleared()` es `protected`, así que se invoca por reflexión sobre la superclase; en
+     * producción quien lo llama es el framework.
+     */
+    @Test
+    fun `leaving the publication releases the document prepared in the service`() = runTest {
+        val model = viewModel(key = "boc:439765")
+
+        model.callOnCleared()
+
+        assertEquals(listOf("boc:439765"), aiSummaries.releasedKeys)
+    }
+
+    /**
+     * Y no lo suelta antes de tiempo: mientras la pantalla vive, el documento tiene que seguir ahí
+     * para que regenerar —o preguntar— no vuelva a subirlo (FR-008).
+     */
+    @Test
+    fun `nothing is released while the screen is alive`() = runTest {
+        val model = viewModel(key = "boc:439765")
+
+        model.onGenerateSummary()
+        advanceUntilIdle()
+
+        assertEquals(emptyList<String>(), aiSummaries.releasedKeys)
+    }
+
+    /** `onCleared` is protected; the screen never calls it, the framework does. */
+    private fun PublicationDetailViewModel.callOnCleared() {
+        PublicationDetailViewModel::class.java.superclass
+            .getDeclaredMethod("onCleared")
+            .apply { isAccessible = true }
+            .invoke(this)
+    }
+
     private fun viewModel(
         stored: List<com.jrblanco.boccantabria.domain.model.Publication> = listOf(publication("boc:439765")),
         key: String = "boc:439765",
@@ -585,6 +627,7 @@ class PublicationDetailViewModelTest {
             generateAiSummary = GenerateAiSummaryUseCase(aiSummaries),
             observeAiNoticeAccepted = ObserveAiNoticeAcceptedUseCase(aiSummaries),
             acceptAiNotice = AcceptAiNoticeUseCase(aiSummaries),
+            releaseAiDocumentSession = ReleaseAiDocumentSessionUseCase(aiSummaries),
             getSections = GetBocSectionsUseCase(BocSectionRepositoryImpl()),
             analytics = analytics,
         )

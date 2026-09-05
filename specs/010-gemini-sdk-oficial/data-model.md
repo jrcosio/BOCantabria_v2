@@ -39,10 +39,12 @@ sealed interface PdfExtractionResult { Success | NoExtractableText | EncryptedPd
 
 // data/source/local/PdfTextNormalizer.kt             BORRADO
 // data/source/remote/DocumentText.kt                 BORRADO  (RenderedDocument, MAX_CHARACTERS)
-// data/source/remote/GeminiDtos.kt                   BORRADO  (el cable lo tipa la librería)
-//   ...salvo GeminiUsage, que NO era un tipo de cable: se muda a GeminiSummaryDataSource.kt
-//   renombrado a SummaryUsage, sin @Serializable, porque ya no se deserializa de un cuerpo
-//   sino que se construye desde usageMetadata. Es parte de GeminiSummaryResult.Success.
+// data/source/remote/GeminiDtos.kt                 REESCRITO, no borrado
+//   Se pensó borrarlo entero porque la librería oficial iba a tipar el cable. La librería no se
+//   puede usar en Android (D-227), así que el fichero se queda y cambia de contenido: fuera los
+//   tipos de la Interactions API, dentro los de la Files API y generateContent.
+//   GeminiUsage sí se va de aquí: nunca fue un tipo de cable —es parte de la firma de
+//   GeminiSummaryResult.Success— y se muda a GeminiSummaryDataSource.kt como SummaryUsage.
 ```
 
 `PdfTextNormalizer` se lleva consigo una cicatriz que conviene no perder de vista: eliminaba los
@@ -235,9 +237,13 @@ documento entero, así que un anuncio de «se analizarán las 6 primeras» serí
 el campo con `analysedPages == totalPages` habría dejado una rama de interfaz y su prueba vivas sin
 poder ejecutarse nunca, que es precisamente lo que el principio V prohíbe.
 
-**Lo que sí sobrevive es la cobertura declarada *a posteriori***: `AiSummary.SummaryCoverage`,
-`isPartial` y el plural `ai_summary_partial_after` se quedan. Enviar el documento entero no garantiza
-que el modelo lo lea entero, y el validador sigue recalculando qué páginas cita de verdad.
+**Lo que sí sobrevive es la cobertura, y por un motivo que no es el que parece.** `SummaryCoverage`,
+`isPartial` y el plural `ai_summary_partial_after` se quedan, pero **no** porque un resumen nuevo
+pueda ser parcial: no puede, porque va el documento entero y el validador sigue calculando la
+cobertura desde lo que **se envió** y nunca desde lo que el modelo declara. Se quedan porque **las
+filas guardadas antes de esta feature sí son parciales**, siguen mostrándose —marcadas como
+obsoletas, nunca borradas— y la pantalla tiene que saber decirlo. Quitar el tipo habría roto la
+lectura de lo ya almacenado, que es justo lo que FR-014 prohíbe.
 
 ### 5.3 Un error se sustituye por otro
 
@@ -314,15 +320,15 @@ leerla sería dar por aceptado un texto que nadie ha visto, y borrarla no aporta
 
 | Lo que llega | Adónde va | Nota |
 |---|---|---|
-| `GenerateContentResponse.text` | JSON del que sale `SummaryPayload` | **Ya salta las partes marcadas como `thought`**. En la 009 hubo que buscar el paso de salida por tipo y nunca por posición; ahora lo hace la librería |
-| `Candidate.finishReason` | `GeminiRefusal.BlankSummary` si no es `STOP` | `MAX_TOKENS` deja de deducirse de un JSON que no parsea: es un valor tipado |
+| La primera parte de la respuesta **que no lleve `thought: true`** | JSON del que sale `SummaryPayload` | Se filtra por la marca y **nunca por posición**: el paso de razonamiento llega siempre delante, así que quedarse con la primera parte habría fallado el cien por cien de las veces (009 D-117) |
+| `candidates[0].finishReason` | `GeminiRefusal.BlankSummary` si no es `STOP` | `MAX_TOKENS` deja de deducirse de un JSON que no parsea: viene dicho |
 | `usageMetadata.promptTokenCount` | `SummaryUsage.totalInputTokens` → `AiSummaryEntity.promptTokens` | |
 | `usageMetadata.thoughtsTokenCount` | `SummaryUsage.totalThoughtTokens` | No se persiste. Es el diagnóstico que dice si el razonamiento está de verdad apagado |
 | `usageMetadata.candidatesTokenCount` | `AiSummaryEntity.completionTokens` | |
 | `usageMetadata.totalTokenCount` | `AiSummaryEntity.totalTokens` | |
 | `modelVersion` | `AiSummaryEntity.systemFingerprint` | Misma columna nullable, mismo tipo de dato |
-| `ClientException.code` 401/403 | `GeminiRefusal.NotConfigured` | |
-| `ClientException.code` 429 | `QuotaMinute(s)` o `QuotaDay` | Los segundos se sacan del mensaje de la excepción, que incluye `error.details`; si no aparecen, de la ventana propia del coordinador (D-214) |
-| `ServerException` | `HttpError(code)` | Reintentable |
+| HTTP 401/403 | `GeminiRefusal.NotConfigured` | |
+| HTTP 429 | `QuotaMinute(s)` o `QuotaDay` | Los segundos salen de la cabecera `Retry-After` primero y del detalle `RetryInfo` del cuerpo después (009 D-109) |
+| HTTP 5xx | `HttpError(code)` | Reintentable |
 | `IOException` | `Network`, tras `ensureActive()` | La trampa de la cancelación sigue viva con cualquier cliente (D-218) |
 | `FileState.FAILED` o tope de sondeo | `GeminiRefusal.Malformed` → `AiSummaryError.UnreadableDocument` | |
