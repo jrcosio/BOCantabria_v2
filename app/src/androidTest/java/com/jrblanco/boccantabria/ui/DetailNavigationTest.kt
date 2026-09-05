@@ -69,17 +69,40 @@ class DetailNavigationTest {
         composeRule.onNodeWithTag(TAG_PDF_VIEWER_LOADING).assertIsDisplayed()
     }
 
+    /**
+     * **011 FR-047**, and the claim the whole lifetime of the conversation rests on.
+     *
+     * Preguntar stacks **on top** of the detail rather than replacing it, so the detail's entry stays
+     * alive while the conversation is used. That is what makes the detail the right place to release
+     * the document and discard the conversation: its `onCleared()` is the only pop that means «the
+     * visit is over» (011 research.md D-314). If anyone ever navigates here with `popUpTo`, this is
+     * what goes red.
+     *
+     * The back **stack** is what is asserted, not the back **gesture**: driving a real gesture proved
+     * impossible to do reliably part-way through a long run — three mechanisms, three different
+     * failures — and the gesture is Android's behaviour rather than ours.
+     */
     @Test
     fun asking_opens_its_own_screen_and_back_returns_to_the_detail() {
-        start()
+        val navController = start()
 
         composeRule.onAllNodesWithTag(TAG_PUBLICATION_CARD)[0].performClick()
         composeRule.onNodeWithTag(TAG_ACTION_ASK).performClick()
 
         composeRule.onNodeWithTag(TAG_ASK_SCREEN).assertIsDisplayed()
 
+        // The detail is still underneath, which is the point.
+        val whileAsking = navController.currentBackStack.value.mapNotNull { it.destination.route }
+        assertTrue(
+            "Preguntar reemplazó al detalle en vez de apilarse encima: $whileAsking",
+            whileAsking.any { it.contains(DETAIL) } && whileAsking.any { it.contains(ASK) },
+        )
+
         composeRule.onNodeWithTag(TAG_ASK_BACK).performClick()
         composeRule.onNodeWithTag(TAG_DETAIL_HEADER).assertIsDisplayed()
+
+        val afterBack = navController.currentBackStack.value.mapNotNull { it.destination.route }
+        assertTrue("Preguntar sigue en la pila: $afterBack", afterBack.none { it.contains(ASK) })
     }
 
     private fun start(): NavHostController {
@@ -99,5 +122,6 @@ class DetailNavigationTest {
     private companion object {
         const val TIMEOUT_MILLIS = 10_000L
         val DETAIL: String = Route.Detail::class.simpleName!!
+        val ASK: String = Route.Ask::class.simpleName!!
     }
 }

@@ -75,7 +75,8 @@ core/
   telemetry/  Contratos AnalyticsTracker y CrashReporter + AnalyticsEvent
   ui/theme/       Sistema de diseño: Color, Type, Spacing, Shape, Elevation, Theme
   ui/component/   Componibles compartidos sin estado, incluida PublicationCard —la usan Inicio y
-                  Guardados— e IllustratedMessage, del que ComingSoonMessage es un caso
+                  Guardados—, IllustratedMessage, del que ComingSoonMessage es un caso, y AiNoticeSheet,
+                  que desde la feature 011 abren dos pantallas y una sola aceptación cubre las dos
   util/       DispatcherProvider, AppVersionProvider, SearchText —la normalización de texto que
               usan las tres capas— y demás utilidades transversales
 data/
@@ -83,7 +84,9 @@ data/
   source/local/   Room: BocDatabase, entidades, DAOs y Converters
   source/remote/  OkHttp, el catálogo de las 19 fuentes, el analizador, el normalizador, y desde la
                   feature 010 la Files API del servicio de IA —subida reanudable escrita a mano— y el
-                  almacén de la sesión del documento
+                  almacén de la sesión del documento. Desde la 011, AiDocumentPreparer: los cuatro
+                  pasos que resumen y conversación comparten, y el ÚNICO sitio donde se decide que
+                  las páginas se cuentan antes de subir
   telemetry/      Implementaciones de Firebase. ÚNICO sitio que toca el SDK
 domain/
   model/          Modelos de dominio, Kotlin puro (AppResult, DomainError, Publication,
@@ -99,7 +102,8 @@ ui/
   detail/         Detalle de la publicación + component/ (cabecera, pestañas, ficha)
   pdf/            Visor del documento. ÚNICO sitio que toca androidx.pdf
   share/          ShareState y el envío por FileProvider, común a las tres pantallas
-  ask/            Preguntar sobre el documento. Marcador de posición «Próximamente»
+  ask/            Preguntar: la conversación sobre el documento. AskRoute + AskScreen + AskViewModel
+                  + AskUiState + component/. Se apila ENCIMA del detalle
   search/         Buscar: la búsqueda global sobre todo lo almacenado, con filtros y orden
   saved/          Guardados: la lista de lo que la persona ha marcado
   navigation/     Rutas tipadas, NavHost exterior y barra inferior
@@ -305,6 +309,42 @@ Composable → ViewModel → UseCase → Repository (interfaz en domain)
   propósito: en `onCleared()` el `viewModelScope` ya está cancelado y lanzar el borrado ahí no borraría
   nada, así que el almacén tiene un ámbito propio. Si el proceso muere sin borrar, el servicio caduca el
   fichero por su cuenta; eso es la red de seguridad, no el mecanismo.
+- **Preguntar existe desde la feature 011, y la promesa de que solo se hable del documento es un
+  mecanismo y no una esperanza.** Hay cinco capas —instrucción de sistema, pregunta delimitada,
+  documento declarado como datos, ámbito declarado en la respuesta, e higiene de longitud y blancos—,
+  y **solo la cuarta se puede comprobar con una prueba automática**: las otras viven al otro lado de la
+  frontera con el servicio, que todas las pruebas de esta casa doblan. Lo que sí es demostrable es que
+  **cuando la respuesta se declara fuera de ámbito, lo que se pinta es texto nuestro y ni un carácter
+  del suyo**. Esa sustitución es **una línea de `AiChatRepositoryImpl`**, y está ahí y no en la pantalla
+  para que ninguna pantalla futura pueda saltársela por descuido. La batería de intentos contra el
+  servicio real —siete preguntas y un PDF con una instrucción inyectada dentro— es obligatoria y vive en
+  `specs/011-preguntar-al-boc/quickstart.md` §3 bis.
+- **En el esquema del chat, `scope` va PRIMERO por la misma razón por la que el resumen va el último.**
+  El orden de las propiedades es el orden de generación, y lo declarado después del campo largo se
+  vacía si la generación se corta. En el resumen eso vaciaba una tarjeta; aquí dejaría el ámbito en
+  blanco, que es la defensa caída sin hacer ruido. Lo vigila `ChatAnswerSchemaTest`. Un `scope`
+  desconocido o ausente se trata como **fuera de ámbito**: ante la duda, texto nuestro.
+- **La conversación vive en memoria, como mucho una, y la petición no corre en el ámbito de la
+  pantalla.** `AiChatRepositoryImpl` tiene un `SupervisorJob` propio, y eso es deliberado: **cancelar no
+  devuelve la cuota** —se cuenta al pedir—, así que salir a mitad costaría lo mismo que terminar y
+  encima perdería la respuesta. Dejándola correr, quien vuelve se la encuentra hecha, y el requisito de
+  que salir no sea un fallo se cumple sin escribir nada porque no hay cancelación que reportar. Lo único
+  que cancela de verdad es salir de la publicación. **Y son dos limpiezas en `onCleared()` del detalle,
+  no una**: el documento lo suelta un caso de uso y la conversación otro, porque son dos repositorios y
+  uno solo escondería que hay dos dueños.
+- **`AiDocumentPreparer` es el único sitio donde se prepara el documento, y por eso se tocó código de la
+  010.** Encierra copia local → cuenta de páginas → apertura de sesión, con el invariante dentro: **se
+  cuentan las páginas antes de subir**, que es lo que mantiene un PDF protegido dentro del dispositivo.
+  Copiar esos treinta líneas en el chat habría copiado el invariante, y un invariante duplicado se
+  cumple hasta que alguien arregla una de las dos copias.
+- **El chat usa `AiSummaryConstants.MODEL_ID` a propósito.** Dos constantes que tienen que valer lo
+  mismo son dos constantes que un día valdrán cosas distintas, y la escapatoria ante una caída de
+  capacidad tiene que seguir siendo **una línea**. Las otras dos —versión de prompt y de esquema— siguen
+  siendo solo del resumen, porque son la procedencia de una fila almacenada y el chat no almacena nada.
+- **Preguntar y resumir se estorban, y es correcto.** `serialised { }` mantiene **una** petición a la
+  vez en toda la aplicación, así que pedir un resumen mientras hay una pregunta en el aire pone a la
+  segunda a esperar. La cuota es del plan, no de la funcionalidad. Se anota porque en el chat la espera
+  se nota más y se diagnostica mal como cuelgue.
 - **La librería oficial de Kotlin de Google NO se puede usar en esta aplicación, y conviene saberlo
   antes de volver a intentarlo.** `com.google.genai:google-genai-kotlin` llegó a 1.0.0 el 2 de
   septiembre de 2026 y la feature 010 la adoptó: catálogo, Java 17, exclusiones de empaquetado, tres
@@ -700,6 +740,23 @@ gemini: no model_output, 1 step(s), status=failed
 gemini: blank summary: plainLanguageSummary=0 keyPoints=6 …, status=completed, 240 output tokens
 pages failed: DeadObjectException
 summary failed: Unknown
+```
+
+Y desde la feature 011, la conversación, con el prefijo `chat:`. Se registran la fase, cuántos mensajes
+viajan, **el ámbito que declaró la respuesta** y el motivo del fallo. El ámbito sí, y a propósito: es lo
+único que permite saber sobre un móvil de verdad si la defensa está actuando, y es un enumerado de tres
+valores que no puede filtrar nada. **Nunca el texto de la pregunta ni el de la respuesta.**
+
+```
+prepare: document ready, counting pages
+prepare: 54 pages
+chat: asking with 3 message(s)
+chat: answer scope=OUT_OF_SCOPE, 0 source(s)
+chat: 2 citation(s) dropped, document has 9 pages
+chat: blank answer from the service
+chat: HTTP 429, retry in 37s
+chat: network: SocketException: Software caused connection abort
+chat: discarded boc:440124
 ```
 
 **Nunca la credencial ni el contenido del documento**: de una respuesta se registra su *forma* —nombres

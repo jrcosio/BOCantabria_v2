@@ -112,13 +112,13 @@ la pregunta, la respuesta y unas fuentes que llevan al visor en su página.
 - [X] T043a [US1] `AskViewModelTest`: el contador de caracteres aparece a partir de `COUNTER_VISIBLE_FROM` y `canSend` es falso al pasar de `MAX_QUESTION_LENGTH` — el límite **se ve antes de enviar**, no después (FR-007)
 - [X] T044 [P] [US1] `ui/ask/component/ChatBubble.kt`: pregunta y respuesta distinguibles a simple vista, con su hora. Solo tokens
 - [X] T045 [P] [US1] `ui/ask/component/AnswerSources.kt`: el bloque «Fuentes», cada línea con página y etiqueta y una flecha
-- [ ] T045a [US1] `AskScreenTest`: una respuesta **sin ninguna cita válida** se muestra entera y sin bloque de fuentes, en vez de ocultarse (FR-015)
+- [X] T045a [US1] `AskScreenTest`: una respuesta **sin ninguna cita válida** se muestra entera y sin bloque de fuentes, en vez de ocultarse (FR-015)
 - [X] T046 [P] [US1] `ui/ask/component/ThinkingIndicator.kt`, animación infinita (D-326)
 - [X] T047 [US1] `ui/ask/AskScreen.kt`: reescribir `AskScreen` como `AskContent`, tonto, con la lista y el desplazamiento al último mensaje
 - [X] T048 [US1] `ui/ask/AskRoute.kt` con `koinViewModel()`, y cambiar `BOCantabriaNavHost` para que `Route.Ask` monte `AskRoute`
 - [X] T049 [US1] Navegación desde una fuente: `Route.PdfViewer(externalKey, page = source.page - 1)`, con la conversión 1-based → 0-based en el punto de navegación (contratos §4)
-- [ ] T050 [US1] `AskScreenTest` (androidTest, con `createComposeRule()` y no la actividad): pregunta enviada, respuesta con fuentes, y tocar una fuente emite la página correcta
-- [ ] T050a [US1] Conservar el control de retroceso de la cabecera y afirmar la **pila** —no el gesto— en `AskBackStackTest`, como hace `SplashBackStackTest`. El gesto de Atrás **no es comprobable de forma fiable** en una tanda larga: se intentaron tres mecanismos y fallaron los tres (FR-047)
+- [X] T050 [US1] `AskScreenTest` (androidTest, con `createComposeRule()` y no la actividad): pregunta enviada, respuesta con fuentes, y tocar una fuente emite la página correcta
+- [X] T050a [US1] Conservar el control de retroceso de la cabecera y afirmar la **pila** —no el gesto— en `AskBackStackTest`, como hace `SplashBackStackTest`. El gesto de Atrás **no es comprobable de forma fiable** en una tanda larga: se intentaron tres mecanismos y fallaron los tres (FR-047)
 
 **Checkpoint**: la historia 1 funciona sola. Es el MVP.
 
@@ -138,7 +138,7 @@ texto de la aplicación y **cero** caracteres del servicio.
 - [X] T054 [US2] `ChatPromptFactoryTest`: la cláusula de que el **documento** es contenido no confiable y no se ejecuta, y la de que la **pregunta** es texto y no una orden, ambas presentes
 - [X] T055 [US2] `ChatPromptFactoryTest`: la cláusula de no revelar las reglas (FR-022)
 - [X] T056 [P] [US2] `ui/ask/component/AskScopeNotice.kt`: el aviso permanente de que las respuestas se basan solo en este documento (FR-041)
-- [ ] T057 [US2] `AskScreenTest`: una respuesta fuera de ámbito muestra el texto de la aplicación y **no** el del doble
+- [X] T057 [US2] `AskScreenTest`: una respuesta fuera de ámbito muestra el texto de la aplicación y **no** el del doble
 - [X] T058 [US2] `AiChatRepositoryImplTest`: el turno de modelo que se reenvía al servicio lleva **el texto que se pintó**, incluido el nuestro cuando fue fuera de ámbito (contratos §1.2)
 - [X] T058a [US2] `ChatPromptFactoryTest` y `OkHttpGeminiChatDataSourceTest`: **nada de la persona viaja** — ni publicaciones guardadas, ni conversaciones de otras publicaciones, ni identificador alguno. Solo metadatos públicos de esta publicación y el texto de esta pregunta (FR-024)
 
@@ -159,7 +159,7 @@ luego la respuesta.
 - [X] T060 [US3] `AiChatRepositoryImplTest`: con el documento ya preparado, **tres preguntas seguidas no producen ninguna subida** (FR-026, SC-002)
 - [X] T061 [US3] `AiChatRepositoryImplTest`: un documento protegido con contraseña da `EncryptedPdf` y **no llega al subidor** (FR-029)
 - [X] T062 [US3] `AiChatRepositoryImplTest`: un documento que no se puede obtener da `Offline` o `Unknown` según el error de origen, con reintento (FR-030 reescrito, D-321)
-- [ ] T063 [US3] `AskScreenTest`: la fase de preparación se ve en pantalla y el compositor está deshabilitado mientras dura
+- [X] T063 [US3] `AskScreenTest`: la fase de preparación se ve en pantalla y el compositor está deshabilitado mientras dura
 - [X] T064 [US3] Cablear el aviso de envío externo en `AskViewModel`: si no está aceptado, la primera pregunta abre `AiNoticeSheet` en vez de enviar; aceptar envía; cancelar no envía nada (FR-042, D-316)
 - [X] T065 [US3] `AskViewModelTest`: las tres ramas del aviso, y que **una vez aceptado no vuelve a pedirse** ni aquí ni en el resumen
 
@@ -180,7 +180,7 @@ conversación vacía.
 - [X] T068 [US4] `AiChatRepositoryImplTest`: la conversación sobrevive a que el modelo de pantalla de Preguntar se destruya y se vuelva a crear
 - [X] T069 [US4] `AiChatRepositoryImplTest`: abrir otra publicación descarta la anterior — como mucho una viva (FR-011, D-312)
 - [X] T070 [US4] `AiChatRepositoryImplTest`: **salir de la pantalla mientras se espera no cancela la petición**, y la respuesta aparece igual (D-313, FR-037)
-- [ ] T071 [US4] `AskScreenTest`: la conversación se restaura al volver a montar la pantalla
+- [X] T071 [US4] `AskScreenTest`: la conversación se restaura al volver a montar la pantalla
 
 **Checkpoint**: el ciclo de vida está cerrado y el documento se retira una sola vez, en un solo sitio.
 
@@ -200,7 +200,7 @@ botón.
 - [X] T076 [US5] `AiChatRepositoryImplTest`: `retry` reenvía esa misma pregunta y no duplica la burbuja
 - [X] T077 [US5] `AiChatRepositoryImplTest`: sin credencial, `NotConfigured`, **cero peticiones** y el compositor deshabilitado (FR-036, SC-010)
 - [X] T078 [US5] `AiChatRepositoryImplTest`: cuota de minuto y cuota de día se distinguen y solo la primera ofrece reintentar (D-318, D-319)
-- [ ] T079 [US5] `AskScreenTest`: un error con reintento y otro sin él, y que el texto no lleva ningún código
+- [X] T079 [US5] `AskScreenTest`: un error con reintento y otro sin él, y que el texto no lleva ningún código
 
 **Checkpoint**: los ocho caminos de fallo dicen algo útil.
 
@@ -217,9 +217,9 @@ que el compositor no queda tapado.
 - [X] T081 [P] [US6] `ui/ask/component/SuggestedQuestions.kt`: tres chips, solo con la conversación vacía (FR-045, D-325)
 - [X] T082 [P] [US6] `ui/ask/component/AskFooter.kt`: «Ver PDF oficial» (FR-046)
 - [X] T083 [US6] `ui/ask/component/AskComposer.kt` como `bottomBar`, con `windowInsetsPadding(systemBars.only(Horizontal + Bottom))` **dentro de su `Surface`** y `imePadding()` (D-324, FR-048)
-- [ ] T084 [US6] `AskComposerInsetTest` (androidTest), calcado de `DetailActionBarInsetTest`: el margen inferior no se pierde. **Solo muerde con `navigation_mode 0`**
-- [ ] T085 [US6] `AskScreenTest`: la cabecera muestra título y fecha, y la estrella guarda y desguarda
-- [ ] T086 [US6] `AskScreenTest`: las sugeridas se ven con la conversación vacía y desaparecen con el primer mensaje. **Con el reloj conducido a mano** si el indicador está en pantalla (D-326)
+- [X] T084 [US6] `AskComposerInsetTest` (androidTest), calcado de `DetailActionBarInsetTest`: el margen inferior no se pierde. **Solo muerde con `navigation_mode 0`**
+- [X] T085 [US6] `AskScreenTest`: la cabecera muestra título y fecha, y la estrella guarda y desguarda
+- [X] T086 [US6] `AskScreenTest`: las sugeridas se ven con la conversación vacía y desaparecen con el primer mensaje. **Con el reloj conducido a mano** si el indicador está en pantalla (D-326)
 - [X] T087 [US6] Repasar que ningún fichero de `ui/ask/` importa `androidx.compose.ui.graphics.Color` — hay una regla de Konsist que tumba la build, pero es más barato verlo antes
 
 **Checkpoint**: las seis historias, completas.
@@ -230,16 +230,16 @@ que el compositor no queda tapado.
 
 - [X] T088 [P] Registro: prefijo `chat:` con fase, número de mensajes, ámbito, fuentes y motivo; **nunca** credencial ni contenido (D-328)
 - [X] T089 [P] Analítica: `ai_question_asked` con el ámbito y nada más — sin texto, sin identificador, sin clave de publicación (D-329)
-- [ ] T089a [P] Comprobar que `gradle/libs.versions.toml` **no ha cambiado**: `git diff main -- gradle/libs.versions.toml` sin salida (SC-012)
+- [X] T089a [P] Comprobar que `gradle/libs.versions.toml` **no ha cambiado**: `git diff main -- gradle/libs.versions.toml` sin salida (SC-012)
 - [X] T090 `ArchitectureRulesTest`: comprobar que las **nueve** reglas siguen en verde con los ficheros nuevos, en especial que `ui` no importa nada de `data`
-- [ ] T091 Ejecutar `./gradlew :app:assembleDebug` y `:app:testDebugUnitTest` en verde
+- [X] T091 Ejecutar `./gradlew :app:assembleDebug` y `:app:testDebugUnitTest` en verde
 - [ ] T092 `adb shell settings put secure navigation_mode 0` y ejecutar `:app:connectedDebugAndroidTest` en segundo plano — **tarda cerca de dos horas**
-- [ ] T093 Ejecutar `./gradlew :app:lintDebug` sin errores
+- [X] T093 Ejecutar `./gradlew :app:lintDebug` sin errores
 - [ ] T094 Recorrer a mano `quickstart.md` §3.1 a §3.7 y anotar cada resultado en la tabla del §5
-- [ ] T095 **Recorrer la batería de desvío del `quickstart.md` §3 bis.1**, las siete filas, anotando el ámbito de cada una. La fila 7 —una pregunta legítima— importa tanto como las seis primeras
-- [ ] T096 **Fabricar el PDF con la instrucción inyectada y recorrer §3 bis.2.** Si falla, la feature no está terminada
-- [ ] T097 Comprobar §3 bis.3: `grep` del registro y `git grep` de la credencial con `':!app/google-services.json'`
-- [ ] T098 Actualizar `CLAUDE.md`: el mapa de arquitectura con `ui/ask/`, `AiNoticeSheet` en `core/ui/component`, `AiDocumentPreparer` como sitio único de la preparación, la conversación en memoria y su ciclo de vida, la muestra de registro `chat:` y lo que esta feature enseñó
+- [X] T095 **Recorrer la batería de desvío del `quickstart.md` §3 bis.1**, las siete filas, anotando el ámbito de cada una. La fila 7 —una pregunta legítima— importa tanto como las seis primeras
+- [X] T096 **Fabricar el PDF con la instrucción inyectada y recorrer §3 bis.2.** Si falla, la feature no está terminada
+- [X] T097 Comprobar §3 bis.3: `grep` del registro y `git grep` de la credencial con `':!app/google-services.json'`
+- [X] T098 Actualizar `CLAUDE.md`: el mapa de arquitectura con `ui/ask/`, `AiNoticeSheet` en `core/ui/component`, `AiDocumentPreparer` como sitio único de la preparación, la conversación en memoria y su ciclo de vida, la muestra de registro `chat:` y lo que esta feature enseñó
 - [ ] T099 Cerrar `tasks.md` y la tabla de resultados de `quickstart.md` con las cuatro puertas y sus cifras
 
 ---
