@@ -357,6 +357,22 @@ class AiChatRepositoryImplTest {
         }
 
     @Test
+    fun `a question about another publication wins over one still in flight`() = runTest(dispatcher) {
+        // The guard on a question in flight belongs to the conversation, not to the process: a
+        // recomposition must not sneak a second question past it, and a reader who has moved on to
+        // another publication must not be blocked by the previous one.
+        chat.gate = CompletableDeferred()
+        repository.ask(publication, "La de la primera")
+        advanceUntilIdle()
+
+        repository.ask(publication(key = "boc:2"), "La de la segunda")
+        advanceUntilIdle()
+
+        assertEquals(1, repository.conversationNow("boc:2").messages.size)
+        assertTrue(repository.conversationNow("boc:1").isEmpty)
+    }
+
+    @Test
     fun `discarding empties the conversation and the next visit starts fresh`() =
         runTest(dispatcher) {
             repository.ask(publication, "¿Y el plazo?")

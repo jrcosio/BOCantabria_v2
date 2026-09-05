@@ -101,11 +101,16 @@ class AiChatRepositoryImpl(
 
     override fun ask(publication: Publication, question: String) {
         val text = question.trim().take(AiChatConstants.MAX_QUESTION_LENGTH)
-        // FR-006 and FR-005, in one place. A recomposition or a rotation cannot get past this either,
-        // which is FR-050.
-        if (text.isBlank() || inFlight?.isActive == true) return
+        if (text.isBlank()) return
 
         val key = publication.externalKey
+        // **The in-flight guard belongs to the conversation, not to the process** (FR-005, FR-050). A
+        // recomposition or a rotation cannot get a second question past this, which is what it is for;
+        // but a question about **another** publication means the reader has moved on, and it wins. The
+        // guard used to cover every key, which quietly made the cancellation in [currentFor]
+        // unreachable — it could only ever cancel a job that had already finished.
+        if (conversation.value?.externalKey == key && inFlight?.isActive == true) return
+
         val open = currentFor(key)
         val asked = AiChatMessage.Question(
             id = "q-${time.nowMillis()}-${open.messages.size}",
@@ -152,7 +157,8 @@ class AiChatRepositoryImpl(
     private fun currentFor(externalKey: String): AiConversation {
         val open = conversation.value
         if (open != null && open.externalKey == externalKey) return open
-        // Another publication. At most one lives at a time, so the previous one goes.
+        // Another publication. At most one lives at a time, so the previous one goes — and its
+        // request with it, which is the one cancellation this class performs besides [discard].
         if (open != null) inFlight?.cancel()
         prepared = null
         return AiConversation(externalKey)
