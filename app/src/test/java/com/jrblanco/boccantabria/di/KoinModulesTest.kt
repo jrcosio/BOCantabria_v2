@@ -37,7 +37,18 @@ import com.jrblanco.boccantabria.data.source.remote.SummaryValidator
 import com.jrblanco.boccantabria.domain.repository.AiSummaryRepository
 import com.jrblanco.boccantabria.domain.repository.AppConfigRepository
 import com.jrblanco.boccantabria.domain.usecase.AcceptAiNoticeUseCase
+import com.jrblanco.boccantabria.data.source.remote.AiDocumentPreparer
+import com.jrblanco.boccantabria.data.source.remote.ChatAnswerValidator
+import com.jrblanco.boccantabria.data.source.remote.ChatPromptFactory
+import com.jrblanco.boccantabria.data.source.remote.GeminiChatDataSource
+import com.jrblanco.boccantabria.domain.repository.AiChatRepository
+import com.jrblanco.boccantabria.domain.usecase.AskAboutDocumentUseCase
+import com.jrblanco.boccantabria.domain.usecase.DiscardAiConversationUseCase
+import com.jrblanco.boccantabria.domain.usecase.ObserveAiAvailabilityUseCase
+import com.jrblanco.boccantabria.domain.usecase.ObserveAiConversationUseCase
 import com.jrblanco.boccantabria.domain.usecase.ReleaseAiDocumentSessionUseCase
+import com.jrblanco.boccantabria.domain.usecase.RetryLastQuestionUseCase
+import com.jrblanco.boccantabria.ui.ask.AskViewModel
 import com.jrblanco.boccantabria.domain.usecase.GenerateAiSummaryUseCase
 import com.jrblanco.boccantabria.domain.usecase.ObserveAiNoticeAcceptedUseCase
 import com.jrblanco.boccantabria.domain.usecase.ObserveAiSummaryUseCase
@@ -214,6 +225,18 @@ class KoinModulesTest {
         koin.get<ObserveAiNoticeAcceptedUseCase>()
         koin.get<AcceptAiNoticeUseCase>()
         koin.get<ReleaseAiDocumentSessionUseCase>()
+        koin.get<AiDocumentPreparer>()
+
+        // Preguntar al BOC (feature 011)
+        koin.get<AiChatRepository>()
+        koin.get<GeminiChatDataSource>()
+        koin.get<ChatPromptFactory>()
+        koin.get<ChatAnswerValidator>()
+        koin.get<ObserveAiConversationUseCase>()
+        koin.get<ObserveAiAvailabilityUseCase>()
+        koin.get<AskAboutDocumentUseCase>()
+        koin.get<RetryLastQuestionUseCase>()
+        koin.get<DiscardAiConversationUseCase>()
 
         koin.get<DispatcherProvider>()
         koin.get<TimeProvider>()
@@ -285,6 +308,18 @@ class KoinModulesTest {
             GeminiApiKeyProvider::class,
             GeminiRateLimitCoordinator::class,
             GeminiSummaryDataSource::class,
+            AiDocumentPreparer::class,
+            // Preguntar al BOC (feature 011)
+            AiChatRepository::class,
+            GeminiChatDataSource::class,
+            ChatPromptFactory::class,
+            ChatAnswerValidator::class,
+            ObserveAiConversationUseCase::class,
+            ObserveAiAvailabilityUseCase::class,
+            AskAboutDocumentUseCase::class,
+            RetryLastQuestionUseCase::class,
+            DiscardAiConversationUseCase::class,
+            AskViewModel::class,
             SearchRepository::class,
             SearchPublicationsUseCase::class,
             GetSearchIssuersUseCase::class,

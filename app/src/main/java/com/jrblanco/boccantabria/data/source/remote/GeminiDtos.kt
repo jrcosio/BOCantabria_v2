@@ -114,3 +114,17 @@ internal data class GeminiError(
     val status: String = "",
     val details: List<JsonObject> = emptyList(),
 )
+
+/**
+ * The wire's token counts, in ours.
+ *
+ * `internal` and here rather than private in the summary's file, because since feature 011 two data
+ * sources build a `SummaryUsage` from the same response shape.
+ */
+internal fun GeminiGenerateResponse.toUsage(): SummaryUsage = SummaryUsage(
+    totalInputTokens = usageMetadata?.promptTokenCount ?: 0,
+    totalOutputTokens = usageMetadata?.candidatesTokenCount ?: 0,
+    totalTokens = usageMetadata?.totalTokenCount ?: 0,
+    // Should be low or zero. If it grows, the thinking level is not being applied.
+    totalThoughtTokens = usageMetadata?.thoughtsTokenCount ?: 0,
+)

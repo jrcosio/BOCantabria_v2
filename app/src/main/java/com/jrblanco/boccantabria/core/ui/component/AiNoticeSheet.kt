@@ -1,4 +1,4 @@
-package com.jrblanco.boccantabria.ui.detail.component
+package com.jrblanco.boccantabria.core.ui.component
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -28,9 +28,15 @@ const val TAG_AI_NOTICE_CANCEL: String = "ai_notice_cancel"
 /**
  * Told once, before anything leaves the device.
  *
- * The text of the document goes to a service outside the phone, and finding that out afterwards is
- * finding out too late. Shown on the **first** «generate» and never again; cancelling sends nothing
- * (FR-043, FR-044, FR-045).
+ * The official document goes to a service outside the phone, and finding that out afterwards is
+ * finding out too late. Shown on the **first** AI action and never again; cancelling sends nothing
+ * (007 FR-043, FR-044, FR-045).
+ *
+ * It lived in `ui/detail/component` while the summary was the only thing that sent anything. Since
+ * feature 011 two screens open it — the summary and the conversation — and one acceptance covers
+ * both, so it belongs where this house keeps shared stateless composables. Making the chat import it
+ * from another screen's package would be the kind of dependency that ends in a tangle
+ * (011 research.md D-316).
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable

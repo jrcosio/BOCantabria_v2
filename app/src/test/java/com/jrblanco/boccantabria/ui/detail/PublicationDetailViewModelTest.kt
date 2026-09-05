@@ -13,6 +13,7 @@ import com.jrblanco.boccantabria.domain.repository.ConnectivityRepository
 import com.jrblanco.boccantabria.domain.usecase.GetBocSectionsUseCase
 import com.jrblanco.boccantabria.domain.usecase.ObserveOfficialDocumentUseCase
 import com.jrblanco.boccantabria.domain.usecase.AcceptAiNoticeUseCase
+import com.jrblanco.boccantabria.domain.usecase.DiscardAiConversationUseCase
 import com.jrblanco.boccantabria.domain.usecase.ReleaseAiDocumentSessionUseCase
 import com.jrblanco.boccantabria.domain.usecase.GenerateAiSummaryUseCase
 import com.jrblanco.boccantabria.domain.usecase.ObserveAiNoticeAcceptedUseCase
@@ -25,6 +26,7 @@ import com.jrblanco.boccantabria.domain.usecase.ShareOfficialDocumentUseCase
 import com.jrblanco.boccantabria.fake.FakeDocumentRepository
 import com.jrblanco.boccantabria.ui.share.ShareState
 import com.jrblanco.boccantabria.fake.FakePublicationRepository
+import com.jrblanco.boccantabria.fake.FakeAiChatRepository
 import com.jrblanco.boccantabria.fake.FakeAiSummaryRepository
 import com.jrblanco.boccantabria.fake.FakeSavedPublicationRepository
 import com.jrblanco.boccantabria.fake.RecordingAnalyticsTracker
@@ -578,6 +580,30 @@ class PublicationDetailViewModelTest {
     }
 
     /**
+     * **011 FR-009.** Y con el documento se va la conversación. Son dos limpiezas y no una porque son
+     * dos repositorios; un caso de uso que hiciera las dos escondería que hay dos dueños
+     * (011 research.md D-314).
+     */
+    @Test
+    fun `leaving the publication also discards the conversation`() = runTest {
+        val model = viewModel(key = "boc:439765")
+
+        model.callOnCleared()
+
+        assertEquals(listOf("boc:439765"), aiChat.discarded)
+    }
+
+    @Test
+    fun `the conversation is not discarded while the screen is alive`() = runTest {
+        val model = viewModel(key = "boc:439765")
+
+        model.onGenerateSummary()
+        advanceUntilIdle()
+
+        assertEquals(emptyList<String>(), aiChat.discarded)
+    }
+
+    /**
      * Y no lo suelta antes de tiempo: mientras la pantalla vive, el documento tiene que seguir ahí
      * para que regenerar —o preguntar— no vuelva a subirlo (FR-008).
      */
@@ -598,6 +624,8 @@ class PublicationDetailViewModelTest {
             .apply { isAccessible = true }
             .invoke(this)
     }
+
+    private val aiChat = FakeAiChatRepository()
 
     private fun viewModel(
         stored: List<com.jrblanco.boccantabria.domain.model.Publication> = listOf(publication("boc:439765")),
@@ -628,6 +656,7 @@ class PublicationDetailViewModelTest {
             observeAiNoticeAccepted = ObserveAiNoticeAcceptedUseCase(aiSummaries),
             acceptAiNotice = AcceptAiNoticeUseCase(aiSummaries),
             releaseAiDocumentSession = ReleaseAiDocumentSessionUseCase(aiSummaries),
+            discardAiConversation = DiscardAiConversationUseCase(aiChat),
             getSections = GetBocSectionsUseCase(BocSectionRepositoryImpl()),
             analytics = analytics,
         )

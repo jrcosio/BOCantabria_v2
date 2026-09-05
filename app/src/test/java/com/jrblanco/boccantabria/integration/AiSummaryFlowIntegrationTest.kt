@@ -9,6 +9,7 @@ import com.jrblanco.boccantabria.core.util.TimeProvider
 import com.jrblanco.boccantabria.data.repository.AiSummaryRepositoryImpl
 import com.jrblanco.boccantabria.data.source.local.AiPreferences
 import com.jrblanco.boccantabria.data.source.local.BocDatabase
+import com.jrblanco.boccantabria.data.source.remote.AiDocumentPreparer
 import com.jrblanco.boccantabria.data.source.remote.AiDocumentSessionStore
 import com.jrblanco.boccantabria.data.source.remote.SummaryPromptFactory
 import com.jrblanco.boccantabria.data.source.remote.SummaryValidator
@@ -136,14 +137,24 @@ class AiSummaryFlowIntegrationTest {
         assertTrue(coverage.complete)
     }
 
-    private fun repository(): AiSummaryRepository = AiSummaryRepositoryImpl(
-        documents = documents,
-        pages = counter,
-        sessions = AiDocumentSessionStore(
+    /** One store for the preparer and the repository, as in production. */
+    private val sessions by lazy {
+        AiDocumentSessionStore(
             uploader = uploader,
             dispatchers = TestDispatcherProvider(dispatcher),
             crashReporter = NoOpCrashReporter(),
+        )
+    }
+
+    private fun repository(): AiSummaryRepository = AiSummaryRepositoryImpl(
+        documents = documents,
+        preparer = AiDocumentPreparer(
+            documents = documents,
+            pages = counter,
+            sessions = sessions,
+            crashReporter = NoOpCrashReporter(),
         ),
+        sessions = sessions,
         prompts = SummaryPromptFactory(),
         summaries = service,
         validator = SummaryValidator(),

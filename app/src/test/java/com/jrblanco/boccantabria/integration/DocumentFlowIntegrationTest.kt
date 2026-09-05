@@ -15,6 +15,7 @@ import com.jrblanco.boccantabria.data.repository.BocSectionRepositoryImpl
 import com.jrblanco.boccantabria.domain.usecase.ObserveOfficialDocumentUseCase
 import com.jrblanco.boccantabria.domain.usecase.ObservePublicationUseCase
 import com.jrblanco.boccantabria.domain.usecase.AcceptAiNoticeUseCase
+import com.jrblanco.boccantabria.domain.usecase.DiscardAiConversationUseCase
 import com.jrblanco.boccantabria.domain.usecase.ReleaseAiDocumentSessionUseCase
 import com.jrblanco.boccantabria.domain.usecase.GenerateAiSummaryUseCase
 import com.jrblanco.boccantabria.domain.usecase.ObserveAiNoticeAcceptedUseCase
@@ -24,6 +25,7 @@ import com.jrblanco.boccantabria.domain.usecase.OpenOfficialDocumentUseCase
 import com.jrblanco.boccantabria.domain.usecase.SetPublicationSavedUseCase
 import com.jrblanco.boccantabria.domain.usecase.ShareOfficialDocumentUseCase
 import com.jrblanco.boccantabria.fake.FakePublicationRepository
+import com.jrblanco.boccantabria.fake.FakeAiChatRepository
 import com.jrblanco.boccantabria.fake.FakeAiSummaryRepository
 import com.jrblanco.boccantabria.fake.FakeSavedPublicationRepository
 import com.jrblanco.boccantabria.fake.RecordingAnalyticsTracker
@@ -193,6 +195,7 @@ class DocumentFlowIntegrationTest {
             observeAiNoticeAccepted = ObserveAiNoticeAcceptedUseCase(FakeAiSummaryRepository()),
             acceptAiNotice = AcceptAiNoticeUseCase(FakeAiSummaryRepository()),
             releaseAiDocumentSession = ReleaseAiDocumentSessionUseCase(FakeAiSummaryRepository()),
+            discardAiConversation = DiscardAiConversationUseCase(FakeAiChatRepository()),
             getSections = GetBocSectionsUseCase(BocSectionRepositoryImpl()),
             analytics = RecordingAnalyticsTracker(),
         )

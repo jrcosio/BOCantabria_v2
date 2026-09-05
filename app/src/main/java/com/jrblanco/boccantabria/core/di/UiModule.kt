@@ -1,5 +1,6 @@
 package com.jrblanco.boccantabria.core.di
 
+import com.jrblanco.boccantabria.ui.ask.AskViewModel
 import com.jrblanco.boccantabria.ui.detail.PublicationDetailViewModel
 import com.jrblanco.boccantabria.ui.home.HomeViewModel
 import com.jrblanco.boccantabria.ui.info.InfoViewModel
@@ -23,6 +24,7 @@ val uiModule = module {
     viewModelOf(::SavedViewModel)
     viewModelOf(::SearchViewModel)
     viewModelOf(::InfoViewModel)
+    viewModelOf(::AskViewModel)
 
     // Built through a factory function declared in `ui/pdf` for the same reason Room and OkHttp
     // are: the viewer library is a third-party SDK, and only that package is allowed to name it.
