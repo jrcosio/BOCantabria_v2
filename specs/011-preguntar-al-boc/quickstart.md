@@ -222,7 +222,7 @@ empezando por `AQ.A`. Una comprobación que falla siempre es una comprobación q
 |---|---|---|
 | `assembleDebug` | 5 sep 2026 | ✅ |
 | `testDebugUnitTest` | 5 sep 2026 | ✅ **936 pruebas, 0 fallos** |
-| `connectedDebugAndroidTest` | 5 sep 2026 | ✅ **177 pruebas, 0 fallos, 134 minutos** |
+| `connectedDebugAndroidTest` | 5 sep 2026 | ✅ **177 pruebas, 0 fallos, 134 minutos**, más `AskScreenTest` reejecutada tras el arreglo del §3.7: **26 pruebas, 0 fallos** |
 | `lintDebug` | 5 sep 2026 | ✅ 16 avisos, **0 errores** |
 | §3.1 pregunta y respuesta | 5 sep 2026 | ✅ con sus fuentes |
 | §3.2 las fuentes llevan a su página | 5 sep 2026 | ✅ el visor abrió en la 2, no en la 1 |

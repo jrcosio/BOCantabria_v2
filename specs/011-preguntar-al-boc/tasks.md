@@ -307,7 +307,7 @@ travesía manual, que **no es opcional**: es la única comprobación que existe 
 |---|---|
 | `assembleDebug` | ✅ |
 | `testDebugUnitTest` | ✅ **938 pruebas, 0 fallos** (761 antes de la feature) |
-| `connectedDebugAndroidTest` | ✅ **177 pruebas, 0 fallos, 134 minutos** (153 antes) |
+| `connectedDebugAndroidTest` | ✅ **177 pruebas, 0 fallos, 134 minutos** (153 antes). `AskScreenTest` se reejecutó tras el último arreglo de pantalla —26 pruebas, 0 fallos—, porque dar por verde una clase cuya pantalla se ha tocado después es exactamente lo que la 010 enseñó a no hacer |
 | `lintDebug` | ✅ 16 avisos, **0 errores** |
 
 Y la travesía del §3 bis, que es la única comprobación que existe de la User Story 2: la batería de
