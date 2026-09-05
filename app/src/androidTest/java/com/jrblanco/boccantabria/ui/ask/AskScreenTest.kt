@@ -284,11 +284,30 @@ class AskScreenTest {
         }
     }
 
+    /**
+     * **FR-036, both halves.**
+     *
+     * The composer being dead is only half of it. Walking a build with no credential is what showed
+     * the other half was missing: nothing worked and nothing said why, so somebody would type a
+     * question and find the button inert with no explanation.
+     */
     @Test
-    fun without_a_credential_nothing_can_be_sent() {
+    fun without_a_credential_nothing_can_be_sent_and_the_screen_says_why() {
         setContent(state(draft = "¿Y el plazo?", isServiceConfigured = false))
 
         composeRule.onNodeWithTag(TAG_COMPOSER_SEND).assertIsNotEnabled()
+        composeRule.onNodeWithTag(TAG_CHAT_ERROR).assertIsDisplayed()
+        composeRule.onNodeWithText("Preguntar no está disponible en esta aplicación.")
+            .assertIsDisplayed()
+        // No retry: a build without a credential does not grow one by asking again.
+        composeRule.onAllNodesWithTagCount(TAG_CHAT_RETRY, expected = 0)
+    }
+
+    @Test
+    fun with_a_credential_the_unavailable_notice_is_not_there() {
+        setContent(state())
+
+        composeRule.onAllNodesWithTagCount(TAG_CHAT_ERROR, expected = 0)
     }
 
     // ---------- La cabecera, las sugeridas y el pie ----------

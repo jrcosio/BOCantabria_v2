@@ -222,18 +222,50 @@ empezando por `AQ.A`. Una comprobación que falla siempre es una comprobación q
 |---|---|---|
 | `assembleDebug` | 5 sep 2026 | ✅ |
 | `testDebugUnitTest` | 5 sep 2026 | ✅ **936 pruebas, 0 fallos** |
-| `connectedDebugAndroidTest` | 5 sep 2026 | pendiente de cerrar (177 pruebas en curso) |
+| `connectedDebugAndroidTest` | 5 sep 2026 | ✅ **177 pruebas, 0 fallos, 134 minutos** |
 | `lintDebug` | 5 sep 2026 | ✅ 16 avisos, **0 errores** |
-| §3.1 pregunta y respuesta | | pendiente (emulador ocupado con la tanda) |
-| §3.2 las fuentes llevan a su página | | pendiente |
-| §3.3 una sola subida por visita | | pendiente |
-| §3.4 la conversación dura la visita | | pendiente |
-| §3.5 salir mientras espera | | pendiente |
-| §3.6 sin conexión | | pendiente |
-| §3.7 sin credencial | | pendiente |
+| §3.1 pregunta y respuesta | 5 sep 2026 | ✅ con sus fuentes |
+| §3.2 las fuentes llevan a su página | 5 sep 2026 | ✅ el visor abrió en la 2, no en la 1 |
+| §3.3 una sola subida por visita | 5 sep 2026 | ✅ **3 preguntas, 1 `upload: sending`** |
+| §3.4 la conversación dura la visita | 5 sep 2026 | ✅ sobrevive al ir y volver; se descarta al salir |
+| §3.5 salir mientras espera | 5 sep 2026 | ✅ **sin error, y la respuesta estaba hecha al volver** |
+| §3.6 sin conexión | 5 sep 2026 | ✅ frase sin códigos, y reintentar reenvía la misma |
+| §3.7 sin credencial | 5 sep 2026 | ⚠️ **destapó media FR-036 sin cumplir** — ver abajo |
 | **§3 bis.1 batería de desvío (7 filas)** | 5 sep 2026 | ✅ **7/7** — ver abajo |
 | **§3 bis.2 documento con instrucción inyectada** | 5 sep 2026 | ✅ **no se obedece** — ver abajo |
 | §3 bis.3 nada filtrado | 5 sep 2026 | ✅ `git grep` sin resultados |
+
+### Lo que destapó el recorrido a mano
+
+**§3.7 encontró un requisito cumplido a medias.** Sin credencial el compositor quedaba muerto y las
+preguntas sugeridas desaparecían —FR-036 en su mitad de «no permitir enviar»—, pero **la pantalla no
+decía por qué**. Quien escribiera una pregunta se encontraría el botón inerte sin explicación. Ninguna
+prueba lo veía porque ninguna miraba lo que *no* estaba. Arreglado con una fila que lo dice, sin
+reintentar —una build sin clave no consigue una preguntando otra vez—, y con prueba instrumentada.
+
+**Y una trampa de la conducción, no de la aplicación.** `adb shell input text "varias palabras"`
+**corta en el primer espacio**: una pregunta tecleada así llegó al chat como «Que», y el modelo
+respondió muy razonablemente que el documento no contiene una pregunta clara. Parecía un defecto y no
+lo era. Los espacios van como `%s`.
+
+### El registro de la visita, tal cual
+
+```
+prepare: document ready, counting pages
+prepare: 2 pages
+upload: sending 346 KB
+upload: ready after 0 poll(s)
+chat: asking with 1 message(s)
+chat: answer scope=FROM_DOCUMENT, 2 source(s)
+chat: asking with 3 message(s)          ← segunda pregunta, sin subir nada
+chat: answer scope=FROM_DOCUMENT, 1 source(s)
+chat: asking with 5 message(s)          ← tercera
+chat: answer scope=OUT_OF_SCOPE, 0 source(s)
+chat: discarded boc:440134              ← al salir de la publicación
+session: released boc:440134
+```
+
+Ni la credencial ni el contenido del documento ni el texto de las preguntas aparecen en ninguna línea.
 
 ### Lo que devolvió el servicio real
 

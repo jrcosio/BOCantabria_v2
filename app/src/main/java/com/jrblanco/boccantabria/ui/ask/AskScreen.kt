@@ -31,6 +31,7 @@ import com.jrblanco.boccantabria.R
 import com.jrblanco.boccantabria.core.ui.component.AiNoticeSheet
 import com.jrblanco.boccantabria.core.ui.theme.BocTheme
 import com.jrblanco.boccantabria.domain.model.AiAnswerSource
+import com.jrblanco.boccantabria.domain.model.AiChatError
 import com.jrblanco.boccantabria.domain.model.AiChatMessage
 import com.jrblanco.boccantabria.domain.model.AiChatStatus
 import com.jrblanco.boccantabria.ui.ask.component.AnswerBubble
@@ -150,6 +151,18 @@ fun AskContent(
                 }
 
                 item(key = "scope") { AskScopeNotice() }
+
+                // **Said, not merely enforced.** Without a credential the composer is already
+                // disabled, which is half of FR-036; the other half is saying why. Found by walking
+                // the screen on a build with no key: nothing worked and nothing explained it.
+                if (!state.isServiceConfigured) {
+                    item(key = "unavailable") {
+                        ChatErrorRow(
+                            message = stringResource(AiChatError.NotConfigured.messageRes()),
+                            onRetry = null,
+                        )
+                    }
+                }
 
                 if (state.showSuggestions) {
                     item(key = "suggestions") {

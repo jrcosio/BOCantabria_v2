@@ -679,6 +679,11 @@ Si añades una clase de dominio sin test, la build falla.
   dos tiempos agotados y un `HTTP 500: gemini-3.5-flash-lite is currently experiencing high demand`.
   Es decir: el `MAX_ATTEMPTS = 3` con backoff **se gana el sueldo**, no es decoración. Y en pantalla
   todo eso es «No se ha podido generar el resumen» con reintento, que es lo correcto (FR-027).
+- **`adb shell input text` con espacios corta en el primer espacio, y el resultado parece un defecto de
+  la aplicación.** Tecleando «Que plazo hay para recurrir» en el compositor de Preguntar llegó al chat
+  la palabra «Que» a secas, y el modelo respondió con toda la razón que el documento no contenía una
+  pregunta clara. Se pierden diez minutos buscando el fallo en el sitio equivocado. Los espacios van
+  como `%s`: `adb shell input text 'Que%splazo%shay'`.
 - **Conducir la interfaz con coordenadas fijas no funciona en el detalle de publicación.** La altura de
   la cabecera cambia con la longitud del título, así que la fila de pestañas se mueve entre una
   publicación y otra: unas coordenadas que valen para un anuncio caen en «Descripción» en el siguiente.

@@ -233,14 +233,14 @@ que el compositor no queda tapado.
 - [X] T089a [P] Comprobar que `gradle/libs.versions.toml` **no ha cambiado**: `git diff main -- gradle/libs.versions.toml` sin salida (SC-012)
 - [X] T090 `ArchitectureRulesTest`: comprobar que las **nueve** reglas siguen en verde con los ficheros nuevos, en especial que `ui` no importa nada de `data`
 - [X] T091 Ejecutar `./gradlew :app:assembleDebug` y `:app:testDebugUnitTest` en verde
-- [ ] T092 `adb shell settings put secure navigation_mode 0` y ejecutar `:app:connectedDebugAndroidTest` en segundo plano — **tarda cerca de dos horas**
+- [X] T092 `adb shell settings put secure navigation_mode 0` y ejecutar `:app:connectedDebugAndroidTest` en segundo plano — **tarda cerca de dos horas**
 - [X] T093 Ejecutar `./gradlew :app:lintDebug` sin errores
-- [ ] T094 Recorrer a mano `quickstart.md` §3.1 a §3.7 y anotar cada resultado en la tabla del §5
+- [X] T094 Recorrer a mano `quickstart.md` §3.1 a §3.7 y anotar cada resultado en la tabla del §5
 - [X] T095 **Recorrer la batería de desvío del `quickstart.md` §3 bis.1**, las siete filas, anotando el ámbito de cada una. La fila 7 —una pregunta legítima— importa tanto como las seis primeras
 - [X] T096 **Fabricar el PDF con la instrucción inyectada y recorrer §3 bis.2.** Si falla, la feature no está terminada
 - [X] T097 Comprobar §3 bis.3: `grep` del registro y `git grep` de la credencial con `':!app/google-services.json'`
 - [X] T098 Actualizar `CLAUDE.md`: el mapa de arquitectura con `ui/ask/`, `AiNoticeSheet` en `core/ui/component`, `AiDocumentPreparer` como sitio único de la preparación, la conversación en memoria y su ciclo de vida, la muestra de registro `chat:` y lo que esta feature enseñó
-- [ ] T099 Cerrar `tasks.md` y la tabla de resultados de `quickstart.md` con las cuatro puertas y sus cifras
+- [X] T099 Cerrar `tasks.md` y la tabla de resultados de `quickstart.md` con las cuatro puertas y sus cifras
 
 ---
 
@@ -295,6 +295,47 @@ travesía manual, que **no es opcional**: es la única comprobación que existe 
 - Commits en español, imperativo, con prefijo Conventional Commits
 - `--tests` **no existe** en `connectedDebugAndroidTest`; para una sola clase,
   `-Pandroid.testInstrumentationRunnerArguments.class=…`
+
+
+---
+
+## Cómo quedó
+
+**107 tareas, 107 hechas.** Las cuatro puertas:
+
+| Puerta | Resultado |
+|---|---|
+| `assembleDebug` | ✅ |
+| `testDebugUnitTest` | ✅ **938 pruebas, 0 fallos** (761 antes de la feature) |
+| `connectedDebugAndroidTest` | ✅ **177 pruebas, 0 fallos, 134 minutos** (153 antes) |
+| `lintDebug` | ✅ 16 avisos, **0 errores** |
+
+Y la travesía del §3 bis, que es la única comprobación que existe de la User Story 2: la batería de
+siete preguntas **7/7** y un PDF con la instrucción inyectada dentro que **no se obedece**.
+
+### Cinco defectos que encontró escribir las pruebas y recorrer la app, no la revisión
+
+Se anotan porque un defecto encontrado y corregido en silencio parece un defecto que nunca existió:
+
+1. **`orNotAvailable()` en `ChatPromptFactory` no tenía forma de ejecutarse**: los tres campos que
+   interpola son siempre no vacíos. Retirado, no dejado vivo (principio V).
+2. **Tocar una sugerencia leía `uiState` antes de que se recompusiera**, así que enviaba el borrador
+   anterior. Una carrera real, no un artefacto de la prueba. Ahora viaja el valor.
+3. **`saveFailed` llegaba al estado y nadie lo mostraba**: guardar podía fallar en silencio desde
+   Preguntar. Cableado `SaveFailureToast`, que ya existía para las otras tres pantallas.
+4. **La guarda de «una pregunta a la vez» era del proceso y no de la conversación**, lo que dejaba
+   inalcanzable la cancelación al cambiar de publicación.
+5. **FR-036 estaba cumplido a medias, y lo destapó recorrer la app sin credencial**: el compositor
+   quedaba muerto y nada decía por qué. Ninguna prueba lo veía porque ninguna miraba lo que *no*
+   estaba.
+
+### Una traza sin explicar
+
+Al terminar la tanda instrumentada, Gradle vuelca `Logcat of last crash` con un
+`RuntimeException: Unable to get provider androidx.startup.InitializationProvider` en el proceso
+**de pruebas** (`com.jrblanco.boccantabria.test`). Las 177 pruebas pasaron y ninguna falló por ello.
+El proveedor lo declara el manifiesto fusionado de la aplicación, no esta feature. **No se ha
+establecido cuándo empezó a aparecer**, y anotarlo así es preferible a inventarle una causa.
 
 ---
 
