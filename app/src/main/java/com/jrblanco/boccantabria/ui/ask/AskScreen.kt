@@ -45,7 +45,6 @@ import com.jrblanco.boccantabria.ui.ask.component.ThinkingIndicator
 
 const val TAG_ASK_SCREEN: String = "ask_screen"
 const val TAG_ASK_BACK: String = "ask_back"
-const val TAG_ASK_MESSAGES: String = "ask_messages"
 
 /**
  * The conversation about the official document.
@@ -135,8 +134,7 @@ fun AskContent(
                 state = listState,
                 modifier = Modifier
                     .weight(1f)
-                    .fillMaxWidth()
-                    .testTag(TAG_ASK_MESSAGES),
+                    .fillMaxWidth(),
                 contentPadding = PaddingValues(BocTheme.spacing.screenMargin),
                 verticalArrangement = Arrangement.spacedBy(BocTheme.spacing.space4),
             ) {

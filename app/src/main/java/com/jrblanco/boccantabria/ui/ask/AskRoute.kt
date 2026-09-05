@@ -4,6 +4,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.jrblanco.boccantabria.core.ui.component.SaveFailureToast
 import com.jrblanco.boccantabria.R
 import com.jrblanco.boccantabria.domain.model.AiChatError
 import org.koin.androidx.compose.koinViewModel
@@ -24,6 +25,11 @@ fun AskRoute(
     viewModel: AskViewModel = koinViewModel(),
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
+
+    // Saving is offered here too, so the failure has to be said here too. A write that fails in
+    // silence is the worst of the three outcomes: the icon stays as it was, which is correct, and
+    // nobody finds out why (007 FR-009).
+    SaveFailureToast(failed = state.saveFailed, onConsumed = viewModel::onSaveFailureShown)
 
     AskContent(
         state = state,

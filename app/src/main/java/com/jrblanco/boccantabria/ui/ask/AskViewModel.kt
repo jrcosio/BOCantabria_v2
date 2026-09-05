@@ -4,8 +4,6 @@ import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.jrblanco.boccantabria.domain.model.AiChatConstants
-import com.jrblanco.boccantabria.domain.model.AiChatMessage
-import com.jrblanco.boccantabria.domain.model.AiChatStatus
 import com.jrblanco.boccantabria.domain.model.AppResult
 import com.jrblanco.boccantabria.domain.model.Publication
 import com.jrblanco.boccantabria.domain.usecase.AcceptAiNoticeUseCase
@@ -209,13 +207,6 @@ class AskViewModel(
         draft.value = ""
         askAboutDocument(publication, question.trim().take(AiChatConstants.MAX_QUESTION_LENGTH))
     }
-
-    /** The last question, so a failed turn can be retried without retyping it. */
-    val lastQuestion: AiChatMessage.Question?
-        get() = uiState.value.messages.filterIsInstance<AiChatMessage.Question>().lastOrNull()
-
-    val canRetry: Boolean
-        get() = (uiState.value.status as? AiChatStatus.Failed)?.retryableQuestionId != null
 
     companion object {
         const val ARG_EXTERNAL_KEY = "externalKey"

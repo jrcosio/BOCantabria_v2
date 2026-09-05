@@ -367,6 +367,30 @@ class AskViewModelTest {
         }
     }
 
+    /**
+     * A write that fails in silence is the worst of the three outcomes: the icon stays as it was,
+     * which is correct, and nobody finds out why. The signal has to reach the state so `AskRoute` can
+     * say it (007 FR-009).
+     */
+    @Test
+    fun `a save that fails raises the signal and can be cleared once said`() = runTest(dispatcher) {
+        saved.failWrites = true
+        val model = viewModel()
+        model.uiState.test {
+            awaitItem()
+            advanceUntilIdle()
+
+            model.onToggleSaved()
+            advanceUntilIdle()
+            assertTrue(expectMostRecentItem().saveFailed)
+
+            model.onSaveFailureShown()
+            advanceUntilIdle()
+            assertFalse(expectMostRecentItem().saveFailed)
+            cancelAndIgnoreRemainingEvents()
+        }
+    }
+
     @Test
     fun `saving from here marks the publication`() = runTest(dispatcher) {
         val model = viewModel()
