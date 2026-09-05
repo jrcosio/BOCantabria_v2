@@ -452,6 +452,30 @@ class OkHttpGeminiSummaryDataSourceTest {
         assertFalse("no puede citar el contenido", said.contains("Punto 1"))
     }
 
+    /**
+     * **FR-040.** Dos fallos que en pantalla son la misma frase tienen que dejar líneas **distintas**
+     * en el registro, o no hay forma de saber cuál ocurrió.
+     *
+     * Estos dos son el caso más difícil: un cuerpo que no parsea y una respuesta sin texto ninguno
+     * llegan ambos como `Malformed` y el lector ve «no se ha podido construir un resumen fiable» en
+     * los dos. Son problemas opuestos.
+     */
+    @Test
+    fun `two failures that share a message on screen do not share a line in the log`() = runTest {
+        server.enqueue(jsonResponse(200, generation("{no es json")))
+        dataSource().summarise("sistema", "usuario", DOCUMENT)
+        val unparseable = crashReporter.messages.joinToString(" ")
+
+        crashReporter.messages.clear()
+        server.enqueue(jsonResponse(200, EMPTY_GENERATION))
+        dataSource().summarise("sistema", "usuario", DOCUMENT)
+        val noText = crashReporter.messages.joinToString(" ")
+
+        assertTrue(unparseable, unparseable.contains("unparseable answer"))
+        assertTrue(noText, noText.contains("no text"))
+        assertFalse("y no se confunden entre sí", noText.contains("unparseable answer"))
+    }
+
     @Test
     fun `every log line is tagged with the service`() = runTest {
         server.enqueue(jsonResponse(500, errorBody("boom", "INTERNAL")))

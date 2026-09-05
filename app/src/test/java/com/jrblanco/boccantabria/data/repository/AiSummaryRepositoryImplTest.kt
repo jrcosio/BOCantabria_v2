@@ -190,7 +190,9 @@ class AiSummaryRepositoryImplTest {
         repository.generate(publication("boc:439765"), force = false)
         advanceUntilIdle()
 
-        assertEquals(1, service.calls)
+        assertEquals("no se vuelve a preguntar", 1, service.calls)
+        assertEquals("ni se vuelven a contar las páginas", 1, counter.calls)
+        assertEquals("ni se vuelve a subir", 1, uploader.uploads)
     }
 
     @Test
@@ -294,6 +296,63 @@ class AiSummaryRepositoryImplTest {
         assertFailure(GeminiRefusal.QuotaDay, AiSummaryError.QuotaDay)
         assertFailure(GeminiRefusal.QuotaMinute(42), AiSummaryError.QuotaMinute(42))
         assertFailure(GeminiRefusal.HttpError(500), AiSummaryError.Unknown)
+    }
+
+    // ---------- El documento viaja una vez, y se suelta al salir ----------
+
+    /**
+     * **FR-008 y SC-005.** Rehacer un resumen sin salir de la publicación no vuelve a subir el
+     * documento. Es lo que hace que la funcionalidad no cueste el doble de lo necesario, y lo que la
+     * pantalla Preguntar reutilizará.
+     *
+     * Se comprueba con `force = true` las dos veces, porque con `force = false` la segunda llamada
+     * ni siquiera llega a la sesión: la corta la fila guardada.
+     */
+    @Test
+    fun `regenerating within the same visit does not upload the document again`() =
+        runTest(dispatcher) {
+            val repository = repository()
+
+            repository.generate(publication("boc:439765"), force = true)
+            advanceUntilIdle()
+            repository.generate(publication("boc:439765"), force = true)
+            advanceUntilIdle()
+
+            assertEquals("se pregunta dos veces", 2, service.calls)
+            assertEquals("y se sube una", 1, uploader.uploads)
+        }
+
+    /** **FR-009 y SC-006.** Salir de la publicación retira el documento del servicio. */
+    @Test
+    fun `releasing the session deletes the document from the service`() = runTest(dispatcher) {
+        val repository = repository()
+        repository.generate(publication("boc:439765"), force = false)
+        advanceUntilIdle()
+
+        repository.releaseDocumentSession("boc:439765")
+        advanceUntilIdle()
+
+        assertEquals(listOf("files/fake-1"), uploader.deleted)
+    }
+
+    /**
+     * **FR-029.** Un rechazo de la **subida** no es lo mismo que uno de la **generación**, aunque el
+     * transporte los llame igual: el primero significa que el servicio no ha podido leer el
+     * documento y no se reintenta; el segundo, que la respuesta no valía.
+     */
+    @Test
+    fun `a document the service cannot process is reported as unreadable`() = runTest(dispatcher) {
+        uploader.rejection = GeminiRefusal.Malformed
+        val repository = repository()
+
+        repository.generate(publication("boc:439765"), force = false)
+        advanceUntilIdle()
+
+        assertEquals("no se llega a preguntar", 0, service.calls)
+        assertEquals(
+            AiSummaryStatus.Failed(AiSummaryError.UnreadableDocument),
+            repository.observeSummary("boc:439765").first(),
+        )
     }
 
     /** FR-036: an unusable answer is neither shown nor stored. */

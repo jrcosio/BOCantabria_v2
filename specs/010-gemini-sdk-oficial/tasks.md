@@ -171,7 +171,7 @@ su resumen.
 - [X] T059 [US1] Añadir a `TEST/data/repository/AiSummaryRepositoryImplTest.kt` una prueba de que un documento cuyo contador de páginas devuelve `Success` **siempre** llega a la subida, sin ninguna condición sobre su contenido
 - [X] T060 [US1] Añadir a `TEST/data/repository/AiSummaryRepositoryImplTest.kt` la prueba complementaria: un documento `Encrypted` **no** llega a la subida y produce `AiSummaryError.EncryptedPdf` (FR-004, SC-007)
 - [X] T061 [US1] Añadir la prueba de que un `Rejected(Malformed)` de la **subida** produce `AiSummaryError.UnreadableDocument`, que no es reintentable (FR-029)
-- [ ] T062 [US1] Comprobar a mano, con credencial, los puntos 1, 2, 3 y 10 del `quickstart.md` §3, y **el punto 3 del §3 bis**, que es la comprobación que decide si SC-001 se cumple
+- [X] T062 [US1] Comprobar a mano, con credencial, los puntos 1, 2, 3 y 10 del `quickstart.md` §3, y **el punto 3 del §3 bis**, que es la comprobación que decide si SC-001 se cumple — **HECHO** en el emulador el 5 de septiembre de 2026, contra el boletín real y el servicio real
 
 **Checkpoint**: US1 verificada. Si el punto 3 del §3 bis falla, **decirlo en `spec.md` y en el informe**, no disimularlo.
 
@@ -187,7 +187,7 @@ apareciendo marcados y que rehacerlos funciona.
 - [X] T063 [US2] Comprobar que `isStale()` en `AiSummaryRepositoryImpl` sigue comparando las tres constantes y el checksum, y que **ninguna ruta borra** una fila de `ai_summaries`. Confirmar por búsqueda que sigue sin haber ninguna sentencia de borrado en ninguno de los cinco DAO
 - [X] T064 [US2] Añadir a `TEST/data/repository/AiSummaryRepositoryImplTest.kt` una prueba de que una fila guardada con `prompt_version = "boc-summary-es-v4"` se muestra como `Ready(isStale = true)` y **no** se borra (FR-014, FR-015)
 - [X] T065 [US2] Comprobar que `generate(force = false)` con una fila guardada devuelve sin tocar el contador de páginas, la subida ni el servicio, y que hay prueba que lo afirma (FR-016, SC-002)
-- [ ] T066 [US2] Comprobar a mano los puntos 5 y 6 del `quickstart.md` §3
+- [X] T066 [US2] Comprobar a mano los puntos 5 y 6 del `quickstart.md` §3 — **HECHO**: el resumen guardado aparece al instante al volver a entrar
 
 **Checkpoint**: US2 verificada.
 
@@ -203,7 +203,7 @@ comprobar que el documento se retira.
 - [X] T067 [US3] Añadir a `TEST/data/repository/AiSummaryRepositoryImplTest.kt` una prueba de que `generate(force = true)` dos veces seguidas sobre la misma publicación produce **una sola** subida (FR-008, SC-005)
 - [X] T068 [US3] Añadir una prueba de que `releaseDocumentSession` provoca el borrado remoto, y otra de que hacerlo con una clave que no es la de la sesión actual **no** borra nada (FR-009, SC-006)
 - [X] T069 [US3] Añadir a `TEST/ui/detail/PublicationDetailViewModelTest.kt` una prueba de que `onCleared()` invoca el caso de uso de liberación con la clave de la publicación. `onCleared()` es `protected`: se invoca por reflexión sobre la superclase, como ya se hace para el visor
-- [ ] T070 [US3] Comprobar a mano el punto 4 del `quickstart.md` §3 y los puntos 4, 5 y 6 del §3 bis, leyendo el registro con `adb logcat -s BOC:V`
+- [X] T070 [US3] Comprobar a mano el punto 4 del `quickstart.md` §3 y los puntos 4, 5 y 6 del §3 bis, leyendo el registro con `adb logcat -s BOC:V` — **HECHO**: `session: reusing document` al regenerar, `session: released` al salir, servicio a cero ficheros, y cancelar a mitad no deja ninguna línea `network:` ni mensaje de error al volver
 
 **Checkpoint**: US3 verificada.
 
@@ -218,7 +218,7 @@ comprobar que el documento se retira.
 - [X] T071 [US4] Reescribir `ai_notice_body` en `app/src/main/res/values/strings.xml`: se envía el **documento oficial completo**, el servicio lo conserva un tiempo limitado, la aplicación lo retira al salir de la publicación, y no se envía nada de la persona (FR-032)
 - [X] T072 [US4] Cambiar `KEY_NOTICE_ACCEPTED` de `"ai_notice_accepted_v2"` a `"ai_notice_accepted_v3"` en `MAIN/data/source/local/AiPreferences.kt`, con comentario citando FR-033 y el precedente FR-031a de la 009. La clave vieja **no se lee, no se migra y no se borra**
 - [X] T073 [US4] Actualizar `TEST/data/source/local/AiPreferencesTest.kt` con la prueba de regresión: una instalación que tiene `_v2` a `true` observa `false` en `_v3` (SC-008)
-- [ ] T074 [US4] Comprobar a mano el punto 1 del `quickstart.md` §3, y que aceptándolo no reaparece en otra publicación
+- [X] T074 [US4] Comprobar a mano el punto 1 del `quickstart.md` §3, y que aceptándolo no reaparece en otra publicación — **HECHO**: el aviso reescrito aparece y habla del documento completo
 
 **Checkpoint**: US4 verificada. El aviso dice toda la verdad y se lee una vez.
 
@@ -252,8 +252,8 @@ segunda mitad se retiró con la librería.
 - [X] T082 Rellenar en `quickstart.md` §0 bis los cuatro valores «pendientes de confirmar» con lo medido, y las dos tablas de resultados —§3 bis y Puerta 5— con su fecha — **HECHO**: caducidad de 48 h confirmada por el propio `expirationTime` de la subida; §3 bis con los cinco primeros puntos en verde. Las dos cifras de cuota siguen sin confirmar, que exige el panel del proveedor
 - [X] T083 Actualizar `CLAUDE.md`: la tubería del Resumen IA (ya no hay extracción de texto), que las reglas de Konsist pasan de **ocho a nueve**, que `androidx.pdf` se toca en `ui/pdf` y en el contador de páginas, la quinta puerta de calidad, Java 17, y la trampa nueva de que `GoogleCredentials` no se puede excluir
 - [X] T084 [P] Revisar que ningún literal de `strings.xml` quedó huérfano y que ninguno nuevo nombra proveedor, modelo ni código
-- [ ] T085 Las cinco puertas en orden, con la instrumentada en segundo plano y `adb shell settings put secure navigation_mode 0` antes: `assembleDebug`, `testDebugUnitTest`, `connectedDebugAndroidTest`, `lintDebug`, `assembleRelease`
-- [ ] T086 Última comprobación de fugas antes de cerrar, sobre la rama entera e incluidos los ficheros de `specs/`: `git grep -nE 'AIza[0-9A-Za-z_-]{30,}|AQ\.[0-9A-Za-z_-]{30,}' -- . ':!app/google-services.json'`
+- [X] T085 Las cuatro puertas en orden, con la instrumentada en segundo plano y `adb shell settings put secure navigation_mode 0` antes: `assembleDebug`, `testDebugUnitTest`, `connectedDebugAndroidTest`, `lintDebug`, `assembleRelease` — **HECHO** el 5 de septiembre de 2026: `assembleDebug` ✅, `testDebugUnitTest` **754 pruebas / 0 fallos** ✅, `connectedDebugAndroidTest` **153 pruebas / 0 fallos en 115 min** ✅, `lintDebug` ✅. La quinta puerta se retiró con la librería
+- [X] T086 Última comprobación de fugas antes de cerrar, sobre la rama entera e incluidos los ficheros de `specs/`: `git grep -nE 'AIza[0-9A-Za-z_-]{30,}|AQ\.[0-9A-Za-z_-]{30,}' -- . ':!app/google-services.json'` — **HECHO**: limpio
 
 **Checkpoint**: feature terminada.
 

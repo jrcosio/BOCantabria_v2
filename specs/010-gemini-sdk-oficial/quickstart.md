@@ -120,17 +120,20 @@ En este orden, las de la constitución.
 
 Con credencial, en un dispositivo o emulador.
 
-1. Abrir una publicación con documento y pulsar **Generar resumen**. Debe aparecer el aviso
-   **reescrito** —aunque ya se hubiera aceptado el anterior—, hablando del documento completo.
-2. Aceptar. Deben verse en orden «Obteniendo el documento oficial…», «Preparando el documento…» y
-   «Generando el resumen…». **No** debe aparecer «Leyendo el texto del documento…».
-3. El resumen sale con su prosa, sus secciones y sus chips de página. Tocar un chip abre el visor por
-   esa página.
-4. Pulsar **Volver a generar** sin salir. La fase «Preparando el documento…» **no** debe reaparecer:
-   el documento ya está preparado (SC-005).
-5. Salir al boletín y volver a entrar. El resumen aparece al instante y sin red.
-6. Abrir una publicación ya resumida **antes** de actualizar. El resumen se ve, marcado como hecho con
-   una versión anterior.
+**Recorrido del 5 de septiembre de 2026 en el emulador**, contra el boletín real del día (39
+anuncios) y el servicio real. Los puntos 1 a 6 están comprobados; el resto queda para el propietario.
+
+1. ✅ Abrir una publicación con documento y pulsar **Generar resumen**. Aparece el aviso **reescrito**
+   —«envía el documento oficial completo… lo conserva un tiempo limitado… lo retira al salir»—.
+2. ✅ Aceptar. Se ve «Preparando el documento…» y después «Generando el resumen…». **No** aparece
+   «Leyendo el texto del documento…», que ya no existe.
+3. ✅ El resumen sale con su prosa, sus secciones —importes incluidos— y sus chips de página, con la
+   descripción accesible «Abrir en el documento oficial la página 1».
+4. ✅ Pulsar **Volver a generar** sin salir: el registro dice `session: reusing document`, sin subida.
+5. ✅ Salir al boletín y volver a entrar. El resumen aparece al instante.
+6. ✅ Un documento de **54 páginas y 981 KB** sube y queda `ACTIVE` sin un solo sondeo.
+7. Abrir una publicación ya resumida **antes** de actualizar. El resumen se ve, marcado como hecho con
+   una versión anterior. _Pendiente: exige una instalación previa a esta versión._
 7. Abrir una publicación **sin** documento. El botón no ofrece generar nada.
 8. Pulsar Generar y salir de la pantalla a mitad. Al volver, ningún mensaje de error.
 9. Poner el móvil en modo avión y pulsar Generar. Mensaje de sin conexión, con reintento.

@@ -108,3 +108,39 @@ nueve.
 
 La lista pasa de 86 a 90 tareas. Cobertura tras las correcciones: **55 de 55** requisitos con al menos
 una tarea que los implementa o los verifica.
+
+### Verificación posterior a la implementación — 5 de septiembre de 2026
+
+**Una de las cinco decisiones del plan no sobrevivió, y no fue por un error de diseño.**
+`com.google.genai:google-genai-kotlin` se adoptó entera —catálogo, Java 17, exclusiones de
+empaquetado, tres clases escritas contra ella, APK compilando— y el primer test que **construyó** el
+cliente reveló que su artefacto de Android lleva un `throw` incondicional si se le da una credencial.
+La forma de la dependencia se había verificado a fondo antes de escribir una línea: README, código
+fuente de cada tipo, POM, bytecode del AAR. Nada de eso enseña un `throw` dentro de una función
+`actual` de `androidMain`. Está en `research.md` D-227, y es la lección que esta feature deja:
+**verificar la forma de una dependencia no es lo mismo que ejecutarla**.
+
+Lo que eso obligó a retirar: FR-041 y FR-042 —la optimización del empaquetado y su comprobación
+manual— porque su única causa era la cola de dependencias, y SC-011 con ellos. Se sustituyó por
+FR-044 y un SC-011 nuevo: cero dependencias nuevas. **El resto de la feature no se movió**: retirar
+la librería tocó cuatro ficheros de `data/source/remote/` y ni uno de `domain` ni de `ui`.
+
+**Tres tareas estaban marcadas como hechas sin estarlo**, y se descubrió al recorrer la aplicación en
+el emulador: el aviso seguía diciendo «envía el texto de este documento» (T071), la clave de la
+preferencia seguía en `_v2` (T072), y faltaban tres pruebas del repositorio (T061, T067, T068). Se
+hicieron después, con su prueba de regresión. Marcarlas en bloque fue el error; la comprobación manual
+fue lo que lo destapó, que es exactamente para lo que existe.
+
+**Lo comprobado de verdad, y no solo con dobles:**
+
+| Qué | Cómo |
+|---|---|
+| SC-001, el único criterio que podía caerse | Un PDF **rasterizado sin capa de texto** —verificado: cero operadores `BT`, cobrado por el servicio como `modality: IMAGE`— produce el resumen completo, con organismo, fecha y plazo leídos de los píxeles |
+| La caducidad de 48 h | El propio `expirationTime` de la respuesta de subida, 48 h exactas después de `createTime` |
+| El documento viaja una vez | En el emulador: «Volver a generar» da `session: reusing document` y **cero** líneas `upload: sending` |
+| El documento se retira | Pulsar Atrás da `session: released`, y el listado del servicio queda a cero ficheros |
+| La cancelación no miente | Salir con «Generando el resumen…» en pantalla no deja ninguna línea `network:`, y al volver no hay mensaje de error |
+| El registro no filtra nada | Cinco líneas en una generación completa, todas de fase y tamaño |
+
+**Las dos cifras de cuota siguen sin confirmar**, y siguen exigiendo el panel del proveedor. Es lo
+único que esta feature hereda de la 009 sin resolver.

@@ -70,6 +70,28 @@ class AiPreferencesTest {
         )
     }
 
+    /**
+     * **Regresión, 010 FR-032 y FR-033.** Y esta vez el cambio es mayor que una frase: lo que sale
+     * del dispositivo deja de ser el **texto** que extraíamos y pasa a ser el **documento**, que el
+     * servicio conserva un tiempo. Aceptar «se envía el texto» no era aceptar eso.
+     *
+     * Se comprueba con la clave de la 009, que es la que tiene instalada quien viene de la versión
+     * anterior. La de la 007 sigue cubierta por la prueba de arriba: ninguna de las dos se lee.
+     */
+    @Test
+    fun `an acceptance stored under the feature 009 key is not read either`() = runTest(dispatcher) {
+        val context = ApplicationProvider.getApplicationContext<Application>()
+        context.getSharedPreferences("boc_ai", Application.MODE_PRIVATE)
+            .edit()
+            .putBoolean("ai_notice_accepted_v2", true)
+            .commit()
+
+        assertFalse(
+            "el aviso debe volver a mostrarse una vez: ahora viaja el documento, no su texto",
+            preferences().observeNoticeAccepted().first(),
+        )
+    }
+
     private fun preferences() = aiPreferences(
         context = ApplicationProvider.getApplicationContext<Application>(),
         dispatchers = TestDispatcherProvider(dispatcher),

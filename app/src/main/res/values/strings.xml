@@ -256,7 +256,7 @@
 
     <!-- El aviso de la primera vez -->
     <string name="ai_notice_title">El texto se envía a un servicio externo</string>
-    <string name="ai_notice_body">Para generar el resumen, la aplicación envía el texto de este documento oficial a un servicio de inteligencia artificial fuera del dispositivo. No se envía nada tuyo: ni lo que has guardado, ni lo que has leído. El servicio puede usar el texto de este documento público para mejorar sus modelos.</string>
+    <string name="ai_notice_body">Para generar el resumen, la aplicación envía el documento oficial completo a un servicio de inteligencia artificial fuera del dispositivo. El servicio lo conserva un tiempo limitado, y la aplicación lo retira al salir de esta publicación. No se envía nada tuyo: ni lo que has guardado, ni lo que has leído. El servicio puede usar el contenido de este documento público para mejorar sus modelos.</string>
     <string name="ai_notice_continue">Continuar</string>
     <string name="ai_notice_cancel">Cancelar</string>
 
