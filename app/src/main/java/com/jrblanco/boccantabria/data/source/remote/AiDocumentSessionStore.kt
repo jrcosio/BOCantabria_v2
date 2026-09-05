@@ -92,12 +92,18 @@ class AiDocumentSessionStore(
      * `onCleared()` must not take away the session of the publication the reader has just opened.
      */
     fun release(externalKey: String) {
-        val open = current ?: return
-        if (open.externalKey != externalKey) return
-        current = null
+        // The whole thing runs inside the lock, on the cleanup scope. Reading `current` out here
+        // first would look simpler and would leave a window: an upload that finished after the read
+        // would set a session nobody is going to release, and the file would sit in the service until
+        // it expired. Narrow, and free to close.
         cleanup.launch {
-            crashReporter.log("session: released $externalKey")
-            uploader.delete(open.document.remoteName)
+            lock.withLock {
+                val open = current ?: return@withLock
+                if (open.externalKey != externalKey) return@withLock
+                current = null
+                crashReporter.log("session: released $externalKey")
+                uploader.delete(open.document.remoteName)
+            }
         }
     }
 

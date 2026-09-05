@@ -593,7 +593,16 @@ class OkHttpGeminiSummaryDataSourceTest {
     }
 
     private companion object {
-        const val API_KEY = "AQ.Aclave-de-prueba-que-no-existe"
+        /**
+         * A fake credential that **deliberately does not look like a real one**.
+         *
+         * The check that hunts for leaked keys in the repository looks for `AIza…` and `AQ.…` with
+         * thirty-odd characters after them, which is exactly what a real Gemini key looks like. A
+         * fixture shaped like that makes the check cry wolf on every run, and a check that always
+         * fails is a check that stops being read. The assertions here only need a string the log must
+         * not contain.
+         */
+        const val API_KEY = "clave-de-prueba-que-no-es-una-clave"
 
         val DOCUMENT = UploadedDocument(
             remoteName = "files/abc123",

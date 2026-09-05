@@ -48,13 +48,13 @@ SC-010). Solo el §3 y el §3 bis la necesitan.
 
 ### 0 bis. Datos pendientes de confirmar
 
-| Qué | Valor documentado | Cómo se confirma |
+| Qué | Valor | Estado |
 |---|---|---|
-| Conservación del fichero subido | 48 h | §3 bis, punto 6 |
+| Conservación del fichero subido | **48 h exactas** | **CONFIRMADO** el 5 de septiembre de 2026: el servicio devuelve `expirationTime` en la propia respuesta de la subida, exactamente 48 h después de `createTime` |
 | Tamaño máximo por fichero | 2 GB | No se comprueba: el descargador ya capa en 25 MB |
-| Peticiones por minuto / por día | 30 / 1.500 | Panel del proveedor. Heredado de la 009, sigue sin confirmar |
-| ¿La subida cuenta como petición de cuota? | Se supone que no | §3 bis, punto 7 |
-| ¿`gemini-3.1-flash-lite` acepta `file_data` y `responseJsonSchema` a la vez? | Sin confirmar | §3 bis, puntos 1 y 2. **Hasta comprobarlo, el modelo no se da por fijado** |
+| Peticiones por minuto / por día | 30 / 1.500 | Panel del proveedor. Heredado de la 009, **sigue sin confirmar** |
+| ¿La subida cuenta como petición de cuota? | Se supone que no | Sin confirmar. No cambia el diseño si resulta falso: bastaría con envolver también la subida |
+| ¿`gemini-3.1-flash-lite` acepta `file_data` y `responseJsonSchema` a la vez? | Sí | **CONFIRMADO**, §3 bis puntos 1 y 2 |
 
 ---
 
@@ -158,20 +158,30 @@ ciclo de estados y sus propios modos de fallo.
 adb -s <serie> logcat -s BOC:V
 ```
 
-| # | Riesgo | Qué se comprueba | Resultado |
-|---|---|---|---|
-| 1 | El modelo elegido no acepta una parte de tipo fichero | Un resumen completo de un PDF normal, de punta a punta | _pendiente_ |
-| 2 | El modelo no respeta `responseJsonSchema` | El JSON llega y decodifica; la prosa **no** viene vacía; `finishReason=STOP` | _pendiente_ |
-| 3 | **El servicio no sabe leer un escaneado** (SC-001) | Un PDF sin capa de texto produce un resumen con prosa y al menos una página citada | _pendiente_ |
-| 4 | La subida falla o se queda colgada | El registro muestra `upload: ready` y cuántos sondeos hicieron falta | _pendiente_ |
-| 5 | Se sube dos veces sin querer | Regenerar dentro de la misma visita **no** produce una segunda línea `upload:` | _pendiente_ |
-| 6 | El fichero no se retira | Salir del detalle produce `session: released`; el fichero deja de estar disponible | _pendiente_ |
-| 7 | La subida consume cuota de generación | Varias subidas seguidas sin generar: ¿aparece un 429? | _pendiente_ |
-| 8 | Se filtra la credencial o el documento | `logcat` completo de una generación: cero apariciones de la clave y cero de texto del documento | _pendiente_ |
-| 9 | La cancelación se clasifica como fallo de red (D-218) | Pulsar Atrás mientras genera: **ningún** «No hay conexión» al volver | _pendiente_ |
+**Travesía del 5 de septiembre de 2026**, hecha con `curl` contra el servicio real y la credencial
+del propietario, antes de tocar la interfaz. Los cinco primeros puntos no necesitan la aplicación
+instalada: lo que comprueban es el protocolo, y hacerlo así los separa de cualquier defecto de UI.
 
-**Si el punto 3 falla**, SC-001 no se cumple y hay que decirlo en `spec.md` y en el informe, no
-disimularlo. Es el único criterio de éxito de esta feature que depende de algo que no controlamos.
+| # | Riesgo | Qué se comprobó | Resultado |
+|---|---|---|---|
+| 1 | El modelo no acepta una parte de tipo fichero | `generateContent` con `file_data` sobre un PDF subido | ✅ **HTTP 200 en 3,1 s** |
+| 2 | El modelo no respeta `responseJsonSchema` | Esquema estricto con `additionalProperties: false` | ✅ devolvió exactamente los campos pedidos, `finishReason=STOP` |
+| 3 | **El servicio no sabe leer un escaneado** (SC-001) | Un PDF **rasterizado a imagen**, sin capa de texto —comprobado: cero operadores `BT`, y el servicio lo cobra como `modality: IMAGE`— | ✅ **resumen completo**: organismo, fecha, plazo de quince días hábiles y páginas citadas, todo leído de los píxeles |
+| 4 | El protocolo de subida reanudable no funciona como se implementó | Las tres llamadas: `start` → cabecera `x-goog-upload-url` → `upload, finalize` | ✅ y el fichero llega **directamente a `ACTIVE`** para un PDF pequeño, sin pasar por `PROCESSING` |
+| 5 | El fichero no se retira | `DELETE /v1beta/files/<nombre>` sobre los tres de prueba | ✅ HTTP 200 los tres; el listado queda a cero |
+| 6 | Se sube dos veces sin querer | Regenerar dentro de la misma visita **no** produce una segunda línea `upload:` | _pendiente: exige la aplicación instalada_ |
+| 7 | La subida consume cuota de generación | Varias subidas seguidas sin generar: ¿aparece un 429? | _pendiente_ |
+| 8 | Se filtra la credencial o el documento | `logcat` completo de una generación: cero apariciones de la clave y cero de texto del documento | _pendiente: exige la aplicación instalada_ |
+| 9 | La cancelación se clasifica como fallo de red (D-218) | Pulsar Atrás mientras genera: **ningún** «No hay conexión» al volver | _pendiente: exige la aplicación instalada_ |
+
+**Un 404 que apareció una vez y no se ha vuelto a reproducir.** El primer intento del punto 1 devolvió
+`HTTP 404` en 0,1 s con el cuerpo vacío; el mismo cuerpo, contra la misma URL y con la misma clave,
+devolvió 200 un minuto después, y el modelo aparece en `GET /v1beta/models`. No hay explicación
+comprobada, así que no se inventa una: queda anotado por si vuelve.
+
+**El punto 3 era el único criterio de éxito que dependía de algo que no controlamos, y se cumple.**
+Un boletín escaneado se resume. Si algún día dejara de cumplirse, hay que decirlo en `spec.md` y en el
+informe, no disimularlo.
 
 **Si los puntos 1 o 2 fallan**, la salida es `AiSummaryConstants.MODEL_ID`, que está ahí exactamente
 para esto (D-213).

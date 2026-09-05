@@ -32,8 +32,10 @@ import java.io.IOException
  * 3. `GET /v1beta/files/<name>` until the state stops being `PROCESSING`, because the service indexes
  *    the document before letting anyone ask about it.
  *
- * The file is read whole into memory, which is measured rather than lazy: `OkHttpDocumentDownloader`
- * already refuses anything over 25 MB, so the worst case is bounded.
+ * The bytes are **streamed** from disk with `File.asRequestBody`, not read into memory first. The
+ * research for this feature reasoned that reading it whole would be acceptable —
+ * `OkHttpDocumentDownloader` already refuses anything over 25 MB — and that is true, but OkHttp
+ * streams for free and there was no reason to hold a bulletin in the heap to prove a point.
  */
 class OkHttpGeminiDocumentUploader(
     client: OkHttpClient,

@@ -105,6 +105,10 @@ obligaría a un segundo mapa de traducción sin ganar nada. El único caso propi
 servicio no consiga procesar el fichero, entra como `GeminiRefusal.Malformed`, que es literalmente lo
 que significa: lo que se mandó no sirve.
 
+Implementado por `OkHttpGeminiDocumentUploader`, que habla el protocolo de subida reanudable a mano
+sobre el cliente compartido —tres llamadas, con los bytes **transmitidos** desde el disco y no
+cargados en memoria— porque la librería oficial no se puede usar en Android (D-227).
+
 ### 3.3 La sesión
 
 ```kotlin

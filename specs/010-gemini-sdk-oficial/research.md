@@ -142,19 +142,21 @@ comprobarlo.
 
 ---
 
-### D-206 — El documento se sube en memoria, no por trozos
+### D-206 — Los bytes se transmiten, no se cargan en memoria
 
-**Decisión**: leer el fichero local con `readBytes()` y usar la sobrecarga de subida que toma un
-`ByteArray`.
+**Decisión**: los bytes se **transmiten** desde el disco, con `File.asRequestBody` de OkHttp.
 
-**Motivo**: `OkHttpDocumentDownloader` ya rechaza cualquier documento de más de **25 MB**, así que el
-peor caso está acotado y es perfectamente manejable en un móvil con `minSdk 28`. La sobrecarga por
-canal existe y sube en trozos de 8 MB sin cargar todo, pero obliga a importar tipos de Ktor
-(`toByteReadChannel`) en nuestro código, y acoplarnos al motor HTTP interno de la librería es
-exactamente lo que la librería debería evitarnos.
+> **Corregida al implementar.** Esta decisión decía «leer el fichero con `readBytes()` y usar la
+> sobrecarga que toma un `ByteArray`», y el razonamiento era correcto —`OkHttpDocumentDownloader` ya
+> rechaza cualquier documento de más de **25 MB**, así que el peor caso estaba acotado y es
+> manejable— pero se apoyaba en una limitación que ya no aplica: la sobrecarga por canal de la
+> librería obligaba a importar tipos de Ktor en nuestro código, y acoplarnos a su motor HTTP interno
+> era exactamente lo que la librería debía evitarnos. Retirada la librería (D-227), OkHttp transmite
+> sin coste ni acoplamiento, y no hay razón para tener un boletín entero en el montón para demostrar
+> nada.
 
-**Si el tope de descarga subiera algún día**, esta decisión hay que revisarla, y por eso queda
-escrita con su número.
+**Consecuencia**: si el tope de descarga subiera algún día, esta decisión **ya no** hay que
+revisarla.
 
 ---
 
@@ -609,3 +611,41 @@ de medición de la línea de partida.
 **Y una que sí se pierde**: `HttpOptions(baseUrl = …)` era el argumento que desbloqueaba adoptar un
 SDK. Sin SDK vuelve a ser irrelevante, y las pruebas vuelven a MockWebServer **sobre TLS**, como el
 resto del proyecto, con lo que D-224 también se retira.
+
+---
+
+### D-228 — `release` corre entera bajo el cerrojo, no solo el borrado
+
+**Decisión**: `AiDocumentSessionStore.release` lanza **todo** —la lectura de la sesión, la comparación
+de la clave, el vaciado y el borrado— dentro del `Mutex`, sobre su propio ámbito.
+
+**Motivo**: salió al releer el código ya escrito. La primera versión leía `current` fuera del cerrojo
+y solo lanzaba el borrado, que parece más simple y deja una ventana: una subida que terminara justo
+después de esa lectura dejaría una sesión que ya nadie va a soltar, y el fichero se quedaría en el
+servicio hasta caducar. Es estrecha —haría falta que `onCleared()` y el final de una subida se
+crucen— y la caducidad de 48 h la cubre, pero cerrarla es gratis y la firma no cambia: `release`
+sigue sin ser suspendida, que es su requisito real (D-208).
+
+---
+
+### D-229 — La comprobación de fugas excluye `google-services.json`, y la clave de prueba no parece una clave
+
+**Decisión**: la búsqueda de credenciales filtradas se hace con
+`git grep -nE 'AIza…|AQ\.…' -- . ':!app/google-services.json'`, y la constante de las pruebas se
+llama `clave-de-prueba-que-no-es-una-clave`.
+
+**Motivo**: dos falsos positivos, y los dos convertían la comprobación en ruido.
+
+El primero es de nacimiento: `app/google-services.json` lleva un `current_key` que empieza por `AIza`
+y **está versionado a propósito** desde el commit base. Es la clave de Android de Firebase,
+restringida en la consola por paquete y huella de firma, y el fichero tiene que estar en el
+repositorio para que la build funcione. No es la de Gemini —comprobado: 53 caracteres empezando por
+`AQ.A` frente a 39 empezando por `AIza`—.
+
+El segundo lo introduje yo: la constante de las pruebas se escribió con forma de clave real para que
+resultara verosímil, y hacía saltar la comprobación en cada ejecución. Las aserciones solo necesitan
+una cadena que el registro no debe contener; parecerse a una clave no aporta nada y cuesta la
+comprobación entera.
+
+**Y ese es el punto**: una comprobación que falla siempre es una comprobación que se deja de mirar, y
+así es exactamente como se da por limpio un repositorio que no lo está.
