@@ -1,19 +1,22 @@
 package com.jrblanco.boccantabria.data.source.remote
 
+import com.jrblanco.boccantabria.core.util.DispatcherProvider
 import com.jrblanco.boccantabria.core.util.RandomProvider
+import com.jrblanco.boccantabria.fake.RealDispatchers
 import com.jrblanco.boccantabria.fake.TestDispatcherProvider
+import com.jrblanco.boccantabria.fake.TlsMockWebServer
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.test.runTest
 import mockwebserver3.MockResponse
 import mockwebserver3.MockWebServer
 import okhttp3.OkHttpClient
-import okhttp3.tls.HandshakeCertificates
-import okhttp3.tls.HeldCertificate
-import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
-import org.junit.Before
+import org.junit.Rule
 import org.junit.Test
-import java.net.InetAddress
 import java.util.concurrent.TimeUnit
 
 /**
@@ -21,44 +24,59 @@ import java.util.concurrent.TimeUnit
  *
  * The waits between retries run on virtual time, so verifying a policy of two, five and fifteen
  * seconds costs microseconds instead of twenty-two seconds of a real suite.
+ *
+ * The catalogue only accepts https addresses, and that invariant is worth keeping, so the test server
+ * speaks TLS with a certificate the test client trusts. Relaxing the invariant to fit the test would
+ * be testing something the application does not do.
  */
 class OkHttpPublicationRemoteDataSourceTest {
 
-    private lateinit var server: MockWebServer
-    private lateinit var trustingClient: OkHttpClient
+    @get:Rule
+    val tls = TlsMockWebServer()
+
+    private val server: MockWebServer get() = tls.server
+    private val trustingClient: OkHttpClient get() = tls.client
 
     /** Fixed jitter: the policy has to be verifiable, and randomness is the enemy of that. */
     private val fixedRandom = object : RandomProvider {
         override fun nextLong(bound: Long): Long = 0
     }
 
-    @Before
-    fun setUp() {
-        // The catalogue only accepts https addresses, and that invariant is worth keeping, so the
-        // test server speaks TLS with a certificate the test client trusts. Relaxing the
-        // invariant to fit the test would be testing something the application does not do.
-        val localhost = InetAddress.getByName("localhost").canonicalHostName
-        val certificate = HeldCertificate.Builder().addSubjectAlternativeName(localhost).build()
-        val serverCertificates = HandshakeCertificates.Builder()
-            .heldCertificate(certificate)
-            .build()
-        val clientCertificates = HandshakeCertificates.Builder()
-            .addTrustedCertificate(certificate.certificate)
-            .build()
+    // ---------- Cancellation (feature 014, PERF-002) ----------
 
-        server = MockWebServer()
-        server.useHttps(serverCertificates.sslSocketFactory())
-        server.start()
+    /**
+     * Before feature 014 a cancelled fetch came out of `execute()` as an `IOException` once the socket
+     * gave up, was classified `NETWORK` — which is retryable — and the retry loop went round again.
+     * Cancelling could cost up to three attempts. Real dispatchers: the property is a race.
+     */
+    @Test
+    fun `cancelling mid-request is a cancellation, never a network failure nor a retry`() = runBlocking {
+        server.enqueue(
+            MockResponse.Builder()
+                .code(200)
+                .setHeader("Content-Type", "text/xml;charset=UTF-8")
+                .headersDelay(30, TimeUnit.SECONDS)
+                .body(FEED_BODY)
+                .build(),
+        )
 
-        trustingClient = OkHttpClient.Builder()
-            .sslSocketFactory(clientCertificates.sslSocketFactory(), clientCertificates.trustManager)
-            .retryOnConnectionFailure(false)
-            .build()
-    }
+        var outcome: Any? = null
+        val job = launch(Dispatchers.IO) {
+            outcome = runCatching { dataSource(dispatchers = RealDispatchers).fetchFeed(definition(), knownBodyHash = null) }
+                .getOrElse { it }
+        }
+        while (server.requestCount == 0) Thread.sleep(10)
+        Thread.sleep(100)
 
-    @After
-    fun tearDown() {
-        server.close()
+        val started = System.nanoTime()
+        job.cancel()
+        job.join()
+        val elapsedMillis = (System.nanoTime() - started) / 1_000_000
+
+        assertTrue("tardó $elapsedMillis ms en volver", elapsedMillis < 5_000)
+        assertTrue("una cancelación no es un fallo de red, fue: $outcome", outcome is CancellationException)
+        assertEquals("una cancelación no se reintenta", 1, server.requestCount)
+        assertTrue("la llamada no se canceló", tls.calls.last().isCanceled())
     }
 
     @Test
@@ -240,13 +258,15 @@ class OkHttpPublicationRemoteDataSourceTest {
         assertEquals(0, server.requestCount)
     }
 
-    private fun dataSource(client: OkHttpClient = trustingClient) =
-        OkHttpPublicationRemoteDataSource(
-            client = client,
-            parser = BocRssParser(),
-            dispatchers = TestDispatcherProvider(),
-            random = fixedRandom,
-        )
+    private fun dataSource(
+        client: OkHttpClient = trustingClient,
+        dispatchers: DispatcherProvider = TestDispatcherProvider(),
+    ) = OkHttpPublicationRemoteDataSource(
+        client = client,
+        parser = BocRssParser(),
+        dispatchers = dispatchers,
+        random = fixedRandom,
+    )
 
     private fun definition() = BocFeedDefinition(
         feedId = "6802081",

@@ -6,12 +6,12 @@ import com.jrblanco.boccantabria.domain.model.EditionType
 import com.jrblanco.boccantabria.domain.model.IdSource
 import com.jrblanco.boccantabria.domain.model.SearchQuery
 import com.jrblanco.boccantabria.domain.model.SearchSort
+import app.cash.turbine.test
 import com.jrblanco.boccantabria.fake.RecordingCrashReporter
 import com.jrblanco.boccantabria.fake.TestDispatcherProvider
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flow
-import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
@@ -119,16 +119,23 @@ class SearchRepositoryImplTest {
 
     /**
      * A screen with no state at all reads as a frozen application. So the flow survives, the
-     * failure is recorded where somebody can see it, and the screen gets an empty answer.
+     * failure is recorded where somebody can see it, the screen gets an empty answer — and, since
+     * feature 014, the answer that comes after the store recovers (STAB-004). The old version of this
+     * test used `.first()` and could not see that the flow completed after the empty list.
      */
     @Test
-    fun `a read failure is recorded and emits empty instead of terminating the flow`() = runTest {
-        dao.failWith = IllegalStateException("la base de datos está corrupta")
+    fun `a read failure is recorded and the search keeps observing`() = runTest {
+        dao.failFor = 1
+        dao.rows = listOf(entity("boc:1"))
 
-        val found = repository.search(SearchQuery(text = "pielagos"), limit = 10).first()
+        repository.search(SearchQuery(text = "pielagos"), limit = 10).test {
+            assertEquals(emptyList<String>(), awaitItem().map { it.externalKey })
+            assertEquals(listOf("boc:1"), awaitItem().map { it.externalKey })
+            cancelAndIgnoreRemainingEvents()
+        }
 
-        assertEquals(emptyList<String>(), found.map { it.externalKey })
         assertEquals(1, crashReporter.nonFatals.size)
+        assertEquals(2, dao.subscriptions)
     }
 
     @Test
@@ -139,11 +146,31 @@ class SearchRepositoryImplTest {
     }
 
     @Test
-    fun `a failure reading the issuers is an empty list, not a broken sheet`() = runTest {
-        dao.failWith = IllegalStateException("no se puede leer")
+    fun `a failure reading the issuers is an empty list first and the sheet afterwards`() = runTest {
+        dao.failFor = 1
+        dao.issuers = listOf("Gobierno de Cantabria")
 
-        assertEquals(emptyList<String>(), repository.observeIssuers().first())
+        repository.observeIssuers().test {
+            assertEquals(emptyList<String>(), awaitItem())
+            assertEquals(listOf("Gobierno de Cantabria"), awaitItem())
+            cancelAndIgnoreRemainingEvents()
+        }
+
         assertEquals(1, crashReporter.nonFatals.size)
+    }
+
+    /** The wiring proof: the repository's flows carry the bounded budget, not an endless retry. */
+    @Test
+    fun `a permanent failure gives up after three retries`() = runTest {
+        dao.failFor = Int.MAX_VALUE
+
+        repository.observeIssuers().test {
+            repeat(4) { assertEquals(emptyList<String>(), awaitItem()) }
+            awaitComplete()
+        }
+
+        assertEquals(4, dao.subscriptions)
+        assertTrue(crashReporter.messages.last().startsWith("reads: issuers gave up"))
     }
 
     private fun entity(key: String) = PublicationEntity(
@@ -170,7 +197,13 @@ class SearchRepositoryImplTest {
     private class RecordingSearchDao : PublicationSearchDao {
         var rows: List<PublicationEntity> = emptyList()
         var issuers: List<String> = emptyList()
-        var failWith: Throwable? = null
+
+        /**
+         * How many subscriptions fail before the store answers. Counted inside the flow builder,
+         * because the recovery re-collects the same `Flow` object rather than asking the DAO again.
+         */
+        var failFor: Int = 0
+        var subscriptions: Int = 0
 
         val calls: MutableList<String> = mutableListOf()
         var lastPattern: String? = null
@@ -203,8 +236,13 @@ class SearchRepositoryImplTest {
         ): Flow<List<PublicationEntity>> =
             record("oldest", pattern, sectionCode, subsectionCode, issuer, from, to, limit)
 
-        override fun observeIssuers(): Flow<List<String>> =
-            failWith?.let { cause -> flow<List<String>> { throw cause } } ?: flowOf(issuers)
+        override fun observeIssuers(): Flow<List<String>> = answer { issuers }
+
+        private fun <T> answer(value: () -> T): Flow<T> = flow {
+            subscriptions++
+            if (subscriptions <= failFor) throw IllegalStateException("la base de datos está corrupta")
+            emit(value())
+        }
 
         @Suppress("LongParameterList")
         private fun record(
@@ -225,7 +263,7 @@ class SearchRepositoryImplTest {
             lastFrom = from
             lastTo = to
             lastLimit = limit
-            return failWith?.let { cause -> flow { throw cause } } ?: flowOf(rows)
+            return answer { rows }
         }
     }
 }

@@ -3,8 +3,10 @@ package com.jrblanco.boccantabria.data.repository
 import android.app.Application
 import androidx.room.Room
 import androidx.test.core.app.ApplicationProvider
+import app.cash.turbine.test
 import com.jrblanco.boccantabria.core.telemetry.NoOpCrashReporter
 import com.jrblanco.boccantabria.core.util.TimeProvider
+import com.jrblanco.boccantabria.data.source.local.AlertMatchDao
 import com.jrblanco.boccantabria.data.source.local.BocDatabase
 import com.jrblanco.boccantabria.data.source.local.toEntity
 import com.jrblanco.boccantabria.di.ROBOLECTRIC_SDK
@@ -15,7 +17,11 @@ import com.jrblanco.boccantabria.domain.model.KeywordMatchMode
 import com.jrblanco.boccantabria.fake.RecordingAnalyticsTracker
 import com.jrblanco.boccantabria.fake.TestDispatcherProvider
 import com.jrblanco.boccantabria.fake.publication
+import io.mockk.every
+import io.mockk.mockk
+import kotlinx.coroutines.flow.emitAll
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.test.runTest
 import org.junit.After
 import org.junit.Assert.assertEquals
@@ -116,8 +122,28 @@ class AlertRepositoryImplTest {
         val first = repository.recordMatches(listOf(AlertMatch(id, "boc:1", 1L), AlertMatch(id, "boc:1", 1L)))
         val second = repository.recordMatches(listOf(AlertMatch(id, "boc:1", 2L), AlertMatch(id, "boc:2", 2L)))
 
-        assertEquals(listOf("boc:1"), first.map { it.externalKey })
-        assertEquals(listOf("boc:2"), second.map { it.externalKey })
+        assertEquals(listOf("boc:1"), (first as AppResult.Success).data.map { it.externalKey })
+        assertEquals(listOf("boc:2"), (second as AppResult.Success).data.map { it.externalKey })
+    }
+
+    /**
+     * Feature 014 (STAB-003). The chunked loop of 900 was what broke the atomicity: chunk one
+     * committed, chunk two threw, and the pairs of chunk one were recorded but never delivered — and
+     * the unique index then hid them for ever. One insert is one transaction: all or nothing, and a
+     * failure is a failure, not "nothing new".
+     */
+    @Test
+    fun `a batch that cannot be recorded whole records nothing and reports the failure`() = runTest {
+        val repository = repository()
+        val id = (repository.save(draft, null) as AppResult.Success).data
+        // 900 valid pairs, then one for a rule that does not exist: `INSERT OR IGNORE` does not ignore
+        // a foreign-key violation, so the last row makes the whole statement fail.
+        val batch = (1..900).map { AlertMatch(id, "boc:$it", 1L) } + AlertMatch("ghost-rule", "boc:901", 1L)
+
+        val result = repository.recordMatches(batch)
+
+        assertTrue("debía ser Failure, fue: $result", result is AppResult.Failure)
+        assertEquals(0, database.alertMatchDao().count())
     }
 
     @Test
@@ -179,9 +205,34 @@ class AlertRepositoryImplTest {
         assertEquals("true", analytics.events.first().parameters["has_organization"])
     }
 
-    private fun repository() = AlertRepositoryImpl(
+    /**
+     * Feature 014 (STAB-004). The bell's badge is the one flow of the application that is never
+     * re-subscribed: `MainShellViewModel` lives for the whole session. One transient read failure
+     * used to mean a badge at zero for the rest of the process.
+     */
+    @Test
+    fun `the unread count survives a read failure`() = runTest {
+        val repository = repository()
+        val id = (repository.save(draft, null) as AppResult.Success).data
+        repository.recordMatches(listOf(AlertMatch(id, "boc:1", 1L)))
+        val real = database.alertMatchDao()
+        var attempts = 0
+        val flaky = mockk<AlertMatchDao>()
+        every { flaky.observeUnreadCount() } returns flow {
+            if (attempts++ == 0) throw IllegalStateException("base ocupada")
+            emitAll(real.observeUnreadCount())
+        }
+
+        repository(matchDao = flaky).observeUnreadCount().test {
+            assertEquals(0, awaitItem())
+            assertEquals(1, awaitItem())
+            cancelAndIgnoreRemainingEvents()
+        }
+    }
+
+    private fun repository(matchDao: AlertMatchDao = database.alertMatchDao()) = AlertRepositoryImpl(
         ruleDao = database.alertRuleDao(),
-        matchDao = database.alertMatchDao(),
+        matchDao = matchDao,
         sections = BocSectionRepositoryImpl(),
         time = object : TimeProvider { override fun nowMillis(): Long = now },
         dispatchers = TestDispatcherProvider(),

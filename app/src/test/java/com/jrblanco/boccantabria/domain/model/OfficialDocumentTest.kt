@@ -1,7 +1,9 @@
 package com.jrblanco.boccantabria.domain.model
 
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertThrows
+import org.junit.Assert.assertTrue
 import org.junit.Test
 
 /**
@@ -41,6 +43,22 @@ class OfficialDocumentTest {
     @Test
     fun `a lower case hexadecimal checksum of the right length is accepted`() {
         assertEquals("a".repeat(64), document(checksum = "a".repeat(64)).checksum)
+    }
+
+    /**
+     * Feature 014: the cache validates a stored sidecar with the model's own rule, so the two can
+     * never disagree on what a checksum is — which is exactly how STAB-001 happened.
+     */
+    @Test
+    fun `isValidChecksum agrees with the constructor`() {
+        assertTrue(OfficialDocument.isValidChecksum("a".repeat(64)))
+        assertTrue(OfficialDocument.isValidChecksum(OfficialDocument.UNKNOWN_CHECKSUM))
+        assertEquals("0".repeat(64), OfficialDocument.UNKNOWN_CHECKSUM)
+
+        listOf("", "abc", "a".repeat(63), "A".repeat(64), " " + "a".repeat(64)).forEach { invalid ->
+            assertFalse("«$invalid» debería rechazarse", OfficialDocument.isValidChecksum(invalid))
+            assertThrows(IllegalArgumentException::class.java) { document(checksum = invalid) }
+        }
     }
 
     private fun document(

@@ -18,18 +18,15 @@ import kotlinx.serialization.json.JsonNull
 import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
+import com.jrblanco.boccantabria.fake.TlsMockWebServer
 import mockwebserver3.MockResponse
 import mockwebserver3.MockWebServer
 import okhttp3.OkHttpClient
-import okhttp3.tls.HandshakeCertificates
-import okhttp3.tls.HeldCertificate
-import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
-import org.junit.Before
+import org.junit.Rule
 import org.junit.Test
-import java.net.InetAddress
 import java.util.concurrent.TimeUnit
 
 /**
@@ -48,31 +45,11 @@ class OkHttpGeminiChatDataSourceTest {
 
     private val crashReporter = RecordingCrashReporter()
 
-    private lateinit var server: MockWebServer
-    private lateinit var client: OkHttpClient
+    @get:Rule
+    val tls = TlsMockWebServer()
 
-    @Before
-    fun setUp() {
-        val localhost = InetAddress.getByName("localhost").canonicalHostName
-        val certificate = HeldCertificate.Builder().addSubjectAlternativeName(localhost).build()
-        val serverCertificates = HandshakeCertificates.Builder().heldCertificate(certificate).build()
-        val clientCertificates = HandshakeCertificates.Builder()
-            .addTrustedCertificate(certificate.certificate)
-            .build()
-
-        server = MockWebServer()
-        server.useHttps(serverCertificates.sslSocketFactory())
-        server.start()
-        client = OkHttpClient.Builder()
-            .sslSocketFactory(clientCertificates.sslSocketFactory(), clientCertificates.trustManager)
-            .retryOnConnectionFailure(false)
-            .build()
-    }
-
-    @After
-    fun tearDown() {
-        runCatching { server.close() }
-    }
+    private val server: MockWebServer get() = tls.server
+    private val client: OkHttpClient get() = tls.client
 
     // ---------- Lo que vuelve ----------
 
@@ -367,6 +344,10 @@ class OkHttpGeminiChatDataSourceTest {
         // cancelled**: it tears the socket down and an IOException comes out. Without
         // `ensureActive()` as the first line of that catch, leaving the screen is reported as «no
         // connection» for a failure that never happened. Seen on a real phone in feature 009.
+        //
+        // Feature 014 (PERF-002) adds the other half: cancelling has to **cancel the call** and come
+        // back promptly. Before, the thread stayed blocked until the body arrived or the read timed
+        // out, and the single AI request the application allows at a time stayed occupied with it.
         server.enqueue(
             MockResponse.Builder()
                 .code(200)
@@ -376,6 +357,7 @@ class OkHttpGeminiChatDataSourceTest {
         )
 
         var outcome: Any? = null
+        var elapsedMillis = 0L
         runBlocking {
             val job = launch(Dispatchers.IO) {
                 outcome = try {
@@ -386,14 +368,18 @@ class OkHttpGeminiChatDataSourceTest {
             }
             while (server.requestCount == 0) Thread.sleep(10)
             Thread.sleep(100)
+            val started = System.nanoTime()
             job.cancel()
             job.join()
+            elapsedMillis = (System.nanoTime() - started) / 1_000_000
         }
 
         assertTrue(
             "una cancelación no puede salir como fallo de red, era: $outcome",
             outcome is CancellationException || outcome == null,
         )
+        assertTrue("tardó $elapsedMillis ms en volver", elapsedMillis < 5_000)
+        assertTrue("la llamada no se canceló", tls.calls.last().isCanceled())
     }
 
     // ---------- El registro ----------

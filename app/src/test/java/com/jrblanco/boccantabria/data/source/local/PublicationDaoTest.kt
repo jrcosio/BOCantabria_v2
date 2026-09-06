@@ -78,11 +78,61 @@ class PublicationDaoTest {
     }
 
     @Test
-    fun `rows are read back by key, and the newest come first`() = runTest {
+    fun `the newest rows come first`() = runTest {
         dao.upsertAll(listOf(entity("boc:1", date = LocalDate.of(2026, 8, 1)), entity("boc:2", date = LocalDate.of(2026, 8, 27))))
 
-        assertEquals(setOf("boc:1", "boc:2"), dao.byKeys(listOf("boc:1", "boc:2", "boc:9")).map { it.externalKey }.toSet())
         assertEquals(listOf("boc:2"), dao.newest(1).map { it.externalKey })
+    }
+
+    // ---------- The pending mark of the alerts (feature 014, STAB-003) ----------
+
+    /**
+     * The sibling of the `saved_at` guard below: the mark rides the INSERT and is absent from the
+     * allow-list of `updateColumns`, so a correction from the source never turns an old announcement
+     * back into news. If someone adds the column to that UPDATE, this is what goes red.
+     */
+    @Test
+    fun `a row the source brings for the first time is pending evaluation, and a correction does not re-flag it`() =
+        runTest {
+            dao.upsertAll(listOf(entity("boc:1", pending = true)))
+            assertEquals(listOf("boc:1"), dao.pendingAlertEvaluation().map { it.externalKey })
+
+            dao.markAlertsEvaluated(listOf("boc:1"))
+            dao.upsertAll(listOf(entity("boc:1", title = "Corregido", pending = true)))
+
+            assertTrue(dao.pendingAlertEvaluation().isEmpty())
+            assertEquals("Corregido", dao.observePublication("boc:1").first()?.title)
+        }
+
+    /** A row the unique `blob_id` index rejected was never stored, so it cannot be pending either. */
+    @Test
+    fun `a row the blob id index rejected is not pending`() = runTest {
+        dao.upsertAll(listOf(entity("boc:1", blobId = "1")))
+
+        dao.upsertAll(
+            listOf(
+                entity("boc:1", blobId = "1", title = "Corregido", pending = true),
+                entity("boc:2", blobId = "2", pending = true),
+                entity("otra-clave", blobId = "2", pending = true),
+            ),
+        )
+
+        assertEquals(listOf("boc:2"), dao.pendingAlertEvaluation().map { it.externalKey })
+    }
+
+    @Test
+    fun `marking evaluated clears only the given keys and touches nothing else`() = runTest {
+        dao.upsertAll(listOf(entity("boc:1", pending = true, searchText = "uno"), entity("boc:2", pending = true)))
+        database.savedPublicationDao().setSavedAt("boc:1", 5_000L)
+
+        val cleared = dao.markAlertsEvaluated(listOf("boc:1"))
+
+        assertEquals(1, cleared)
+        assertEquals(listOf("boc:2"), dao.pendingAlertEvaluation().map { it.externalKey })
+        val stored = dao.observePublication("boc:1").first()!!
+        assertEquals(java.lang.Long.valueOf(5_000L), stored.savedAt)
+        assertEquals("uno", stored.searchText)
+        assertEquals(1_000L, stored.firstSeenAt)
     }
 
     @Test
@@ -334,6 +384,7 @@ class PublicationDaoTest {
         date: LocalDate = LocalDate.of(2026, 8, 27),
         seenAt: Long = 1_000,
         searchText: String = "ayuntamiento de pielagos aprobacion definitiva",
+        pending: Boolean = false,
     ) = PublicationEntity(
         externalKey = externalKey,
         blobId = blobId,
@@ -352,5 +403,6 @@ class PublicationDaoTest {
         firstSeenAt = seenAt,
         lastSeenAt = seenAt,
         searchText = searchText,
+        pendingAlertEvaluation = pending,
     )
 }

@@ -205,12 +205,34 @@ Composable → ViewModel → UseCase → Repository (interfaz en domain)
   capa de presentación.
 - Las excepciones **no** salen de `data`: se capturan y se traducen ahí. `CancellationException`
   se repropaga siempre.
+- **Los nueve Flows de lectura de Room se recuperan de un fallo transitorio con `recoverReads`
+  (feature 014, STAB-004).** El `.catch { emit(vacío) }` de antes cumplía la mitad de la promesa: emitía
+  vacío, pero `catch` corre cuando el upstream **ya ha terminado**, así que la pantalla combinaba ese
+  vacío para siempre —y la campana, cuyo `MainShellViewModel` vive toda la sesión, se quedaba a cero el
+  resto del proceso—. `data/repository/ReadRecovery.kt` reporta, emite el fallback, espera (1 s, 5 s,
+  30 s) y **se vuelve a suscribir**; un éxito repone el presupuesto y al agotarse completa en silencio
+  (una base corrupta no se sondea sin fin). **Va SIEMPRE el último, después de `flowOn(io)`**: así el
+  `delay` corre en el contexto del colector, que es el que `runTest` avanza; bajo `flowOn(io)` viviría en
+  el planificador propio del `UnconfinedTestDispatcher` de `TestDispatcherProvider`, que nadie avanza, y
+  Turbine agotaría su espera real. Por decisión del propietario la pantalla sigue mostrando vacío
+  mientras dura el fallo: no hay estado «no se ha podido leer».
 
 ### Capa de datos
 
 - **Persistencia: Room.** `BocDatabase` es la única fuente de verdad de lo que la pantalla
   muestra. La pantalla observa la base de datos; la sincronización solo escribe.
 - **Red: OkHttp a secas**, sin Retrofit. Diecinueve GET de XML crudo, máximo cuatro simultáneos.
+- **Ninguna llamada de red es `Call.execute()`: las ocho pasan por `Call.await` (feature 014).** Cambiar
+  de dispatcher no hace cancelable una E/S bloqueante: la auditoría midió `Call.isCanceled=false` tras
+  cancelar, con el socket y el hilo ocupados hasta la respuesta o el timeout —hasta tres minutos en un
+  PDF—. `data/source/remote/CancellableCall.kt` envuelve `enqueue` en `suspendCancellableCoroutine` con
+  `invokeOnCancellation { cancel() }` y **consume el cuerpo dentro del callback**, para que cancelar cubra
+  cabeceras y cuerpo. **Nada puede escapar de `onResponse`**: una excepción que no sea `IOException`
+  saliendo del callback la relanza OkHttp en el hilo de su executor, que en Android es un cierre del
+  proceso; el `catch (Throwable)` de dentro no es defensivo, es obligatorio y tiene prueba. Consecuencia
+  benigna: `enqueue` respeta `maxRequestsPerHost = 5` del cliente compartido —cuatro fuentes más un
+  documento—, así que un segundo PDF durante una sincronización espera unos instantes en vez de fallar.
+  `okhttp-coroutines` y su `executeAsync()` se descartaron: solo cubren la fase de cabeceras.
 - **El XML se analiza con DOM de `javax.xml.parsers`**, no con `XmlPullParser`, para que el
   analizador sea Kotlin puro y sus pruebas corran sin emulador. Va endurecido en dos capas: una
   guarda de texto contra `<!DOCTYPE` y `<!ENTITY` —portátil— y el endurecimiento de la fábrica,
@@ -240,6 +262,10 @@ Composable → ViewModel → UseCase → Repository (interfaz en domain)
   alto porque es justo el `UPDATE` que esta guía protege. Es un dato **derivado de la fuente**: si la
   fuente corrige un título, el texto buscable tiene que corregirse con él. `saved_at` y
   `first_seen_at` siguen fuera, y `SavedPublicationDaoTest` es la prueba que lo vigila.
+- **`pending_alert_evaluation` (feature 014) también queda FUERA de esa lista blanca**, y por la misma
+  razón que `first_seen_at`: una publicación que el almacén ya tenía no es novedad por muchas veces que
+  la fuente la corrija. Si alguien la añade a ese `UPDATE`, toda corrección volvería a disparar los
+  avisos; la guarda es `PublicationDaoTest`, «a correction does not re-flag it».
 - **Una columna nueva deja sin rellenar las filas anteriores, y eso no se ve en una instalación
   limpia.** Tras migrar, todo lo ya almacenado queda con `search_text` vacío, y una sincronización
   solo refresca los últimos cien anuncios de cada fuente: sin relleno, el archivo anterior sería
@@ -251,11 +277,14 @@ Composable → ViewModel → UseCase → Repository (interfaz en domain)
   deriva de la fuente, incluido el relleno; `SavedPublicationDao` escribe lo de la persona; y el de
   búsqueda solo lee. Lleva **dos** sentencias, una por sentido de ordenación, porque Room no
   parametriza la dirección de un `ORDER BY`.
-- **La base de datos está en la versión 5**, con `AutoMigration(1, 2)`, `(2, 3)`, `(3, 4)` y `(4, 5)`
-  contra los esquemas exportados. Las anteriores se conservan: quien se salte versiones tiene que poder
-  llegar de la 1 a la 5 de una vez. La 3→4 añade la tabla `ai_summaries` y la 4→5 las dos de los avisos,
-  `alert_rules` y `alert_matches`; ninguna de las dos **tiene relleno**: una tabla nueva nace vacía y no
-  tener resumen ni avisos es el estado normal de una instalación.
+- **La base de datos está en la versión 6**, con `AutoMigration(1, 2)`, `(2, 3)`, `(3, 4)`, `(4, 5)` y
+  `(5, 6)` contra los esquemas exportados. Las anteriores se conservan: quien se salte versiones tiene que
+  poder llegar de la 1 a la 6 de una vez. La 3→4 añade la tabla `ai_summaries` y la 4→5 las dos de los
+  avisos, `alert_rules` y `alert_matches`; ninguna de las dos **tiene relleno**: una tabla nueva nace
+  vacía y no tener resumen ni avisos es el estado normal de una instalación. La 5→6 (feature 014) añade
+  a `publications` la columna `pending_alert_evaluation INTEGER NOT NULL DEFAULT 0`, con índice, y
+  **tampoco tiene relleno a propósito**: toda fila anterior llega a `0`, que es exactamente lo que
+  significa «la historia no es novedad».
   `bocDatabase()` es un `.build()` limpio a propósito: las migraciones automáticas no necesitan
   `addMigrations`, y `fallbackToDestructiveMigration()` no entra aquí ni como último recurso —pasaría
   la puerta de compilación y vaciaría el boletín de quien ya tiene la aplicación instalada—. Los
@@ -270,16 +299,38 @@ Composable → ViewModel → UseCase → Repository (interfaz en domain)
   filas y **una** notificación; el contador de la campana cuenta `COUNT(DISTINCT external_key)`.
 - **`PublicationDao.upsertAll` devuelve las claves que insertó**, no solo cuántas, y filtra por `rowId`:
   una fila rechazada por el índice único de `blob_id` **no** es nueva. `SyncSummary.newKeys` las
-  transporta y `RunSyncCycleUseCase` evalúa los avisos **solo** contra ellas.
+  transporta para los recuentos y el registro. **Desde la feature 014 los avisos NO se evalúan contra
+  ellas**: se evalúan contra la marca `pending_alert_evaluation` que cada fila nueva lleva en el almacén.
+  La auditoría (STAB-003) demostró que con las claves solo en memoria, si `recordMatches` fallaba o el
+  proceso moría entre guardar el boletín y registrar la coincidencia, el aviso se perdía para siempre: el
+  siguiente ciclo veía el feed como `NotModified`. Ahora la marca **solo se retira cuando las
+  coincidencias han quedado registradas** (`markAlertsEvaluated`, exactamente las claves leídas, también
+  con cero coincidencias), y el siguiente ciclo —incluido uno con la caché fresca que no toca la red—
+  recupera lo pendiente una sola vez, porque el índice único deduplica. Si el registro falla, no se marca;
+  si el marcado falla tras registrar, se entrega igualmente (saltarse la entrega dejaría las coincidencias
+  inentregables para siempre). `byKeys` se retiró. Y **`recordMatches` es UNA inserción**: el troceado de
+  900 era justamente lo que rompía la atomicidad —el trozo 1 confirmaba, el 3 lanzaba y las parejas del 1
+  quedaban registradas y sin entregar—; `@Insert(List)` ya corre en una transacción de Room y el límite
+  de 900 protege listas `IN (...)`, no inserciones. `enabledRules()` y `recordMatches()` devuelven
+  `AppResult`: un fallo de lectura o escritura ya no se disfraza de lista vacía.
 - **La primera sincronización correcta de una instalación es línea base y no avisa de nada.** Se decide
   con `feedSyncStateDao.lastSuccessAt() == null` **una vez, antes** de lanzar los diecinueve feeds —con
   cuatro en paralelo, el segundo en terminar ya vería el éxito del primero— y `refresh()` vacía
   `newKeys` en ese caso, para que ningún consumidor pueda olvidarlo. No con `count() == 0`: una primera
-  respuesta con las diecinueve fuentes vacías también marca éxito.
-- **«Nunca retroactivo» se cumple por el orden del ciclo, no comparando fechas.** `RunSyncCycleUseCase`
-  lee las reglas activas **antes** de sincronizar: toda publicación nueva del ciclo es posterior al
-  `active_since` de cualquier regla de la instantánea, y una regla creada, editada o reactivada durante
-  el ciclo espera al siguiente. `Publication` no gana `firstSeenAt` por eso.
+  respuesta con las diecinueve fuentes vacías también marca éxito. Desde la 014, `isBaseline` baja además
+  a `syncFeed` y las filas de la línea base se insertan **con la marca de pendiente a cero**, en vez de
+  marcarse y limpiarse después: limpiar después tenía una ventana —el proceso muere a mitad, con
+  `last_success_at` ya escrito para los feeds terminados— en la que el siguiente ciclo ya no era línea
+  base y replicaba cientos de filas históricas como novedades.
+- **«Nunca retroactivo» se cumple por el orden del ciclo Y, desde la 014, comparando dos instantes.**
+  `RunSyncCycleUseCase` lee las reglas activas **antes** de sincronizar: toda publicación nueva del ciclo
+  es posterior al `active_since` de cualquier regla de la instantánea, y una regla creada, editada o
+  reactivada durante el ciclo espera al siguiente. Ese argumento no vale para un resto de un ciclo
+  anterior —entre los dos alguien pudo crear una regla—, así que `AlertCandidate.isVisibleTo(rule)` compara
+  `rule.activeSince <= storedAt` (`first_seen_at`). Con `<=`, no `<`: los tests de integración tienen el
+  reloj congelado y los dos instantes coinciden. `Publication` sigue sin ganar `firstSeenAt`: lo lleva el
+  candidato al lado. Caveat aceptado: es una dependencia del reloj que el orden no tenía; si algún día un
+  salto atrás de NTP importa, eximir `newKeys` del filtro es una línea.
 - **La sección la manda la fuente**, no el campo `categorias`, que se guarda en crudo y solo sirve
   para enriquecer y verificar. Razón: el feed 4.3 trae entradas con los componentes permutados.
 - `java.time` es **nativo**: desde la enmienda 1.1.0 de la constitución `minSdk` es 28. El azucarado
@@ -319,6 +370,29 @@ Composable → ViewModel → UseCase → Repository (interfaz en domain)
   **explícitamente** en el catálogo, o `SandboxedPdfLoader` no resuelve.
 - El PDF se guarda en `cacheDir/documents/`, con **caché y no almacén**. La purga corre al terminar
   una sincronización.
+- **El lateral `.sha256` se valida al leer y se escribe atómicamente ANTES que el PDF (feature 014).**
+  La auditoría (STAB-001, severidad alta) demostró que un lateral vacío o truncado —un `writeText` a
+  pelo interrumpido por un disco lleno o la muerte del proceso— hacía que `FileDocumentCache.get()`
+  construyera un `OfficialDocument` con checksum inválido, el `require` lanzara **fuera** del `try` de
+  `ensureLocalCopy`, y la excepción llegara a seis `viewModelScope.launch` sin `try`: la aplicación se
+  cerraba al abrir esa publicación, y otra vez en cada reintento. Dos capas: la caché valida con la regla
+  del modelo (`OfficialDocument.isValidChecksum`) y un lateral inválido es «huella perdida»
+  (`UNKNOWN_CHECKSUM`), igual que uno ausente; y el repositorio mete `cache.get` en su frontera de
+  errores, con lo que una caché ilegible se trata como ausente y la descarga la repara. El orden importa
+  porque **el checksum tiene consumidor**: `AiSummaryRepositoryImpl` lo compara con el `pdfSha256`
+  guardado para decidir si un resumen está obsoleto, y un PDF visible sin lateral marcaba obsoleto un
+  resumen bueno y regenerarlo costaba cuota.
+- **Todo camino de error de `ensureLocalCopy` publica un estado terminal, y la limpieza corre bajo
+  `NonCancellable` (feature 014, STAB-002).** El `catch (Throwable)` devolvía `Failure(Unknown)` pero
+  no publicaba `Failed`, y las pantallas solo observan el estado: el detalle y el visor se quedaban en
+  «cargando» para siempre. Ahora `settle()` descarta el temporal, quita la entrada de `inFlight` y
+  completa o cancela el `Deferred`, bajo `NonCancellable` porque el camino de cancelación corre en una
+  corrutina ya cancelada y un `lock.withLock` que tuviera que suspender ahí dejaría a todos los que
+  esperan esa clave colgados el resto del proceso. Cancelar deja `Absent` (nunca `Failed`: cancelar no
+  es un fallo), guardado con `===` para no pisar a un dueño nuevo. Y **quien espera no hereda la
+  cancelación del dueño**: `onRetry` cancela y relanza, la corrutina nueva podía hacerse *waiter* de un
+  `Deferred` a punto de cancelarse y morir en silencio con la pantalla en `Loading` sin botón; ahora hace
+  `ensureActive()` y, si la cancelación no es la suya, vuelve al lock y se hace dueño.
 - **Avisos existe desde la feature 012, y una coincidencia se entrega por un solo canal.**
   `RunSyncCycleUseCase` es el único camino de sincronización —lo usan `HomeViewModel` y
   `AlertSyncWorker`— y decide **una vez por ciclo**, con `AppVisibilityProvider`, si lo que encontró sale
@@ -765,7 +839,26 @@ Si añades una clase de dominio sin test, la build falla.
   **gana** al resumen almacenado, así que al volver se lee «No hay conexión» de un fallo que no existió.
   El arreglo es `currentCoroutineContext().ensureActive()` como **primera** línea del `catch (IOException)`;
   `generate()` ya sabía qué hacer con una cancelación (FR-006), lo que faltaba era que llegara hasta allí.
-  Cualquier llamada bloqueante dentro de una corrutina tiene este agujero.
+  Cualquier llamada bloqueante dentro de una corrutina tiene este agujero. **La feature 014 completó la
+  lección**: `ensureActive()` decía cómo *clasificar* la cancelación, pero la llamada seguía bloqueada
+  hasta la respuesta o el timeout. Desde entonces las ocho llamadas van por `Call.await`, que cancela la
+  llamada de verdad, y el `ensureActive()` se queda como segunda línea de defensa; se añadió también al
+  descargador y a la RSS, que no lo tenían —en la RSS una cancelación salía como `NETWORK`, que es
+  reintentable, y podía costar tres intentos—.
+- **Una prueba que «funcionaba» porque `execute()` bloqueaba el hilo de la prueba deja de funcionar al
+  hacer la red asíncrona.** `DocumentFlowIntegrationTest` hacía `advanceUntilIdle()` y leía «el estado más
+  reciente»: pasaba porque la descarga entera ocurría de forma síncrona dentro de `onDocumentTabShown()`.
+  Con `Call.await` la respuesta llega en tiempo real, desde otro hilo, y el estado hay que **esperarlo**
+  con `awaitItem()` en bucle, no asumirlo. Si una prueba de red lee el estado tras `advanceUntilIdle()`,
+  sospecha.
+- **`retryWhen` re-colecciona el MISMO objeto `Flow`**, así que un `returnsMany` de MockK no puede modelar
+  «falla y luego funciona» y un `flow { throw }` está roto para siempre: el doble tiene que contar las
+  suscripciones **dentro** del `flow { }`. Y **`.first()` no puede ver que un flujo termina**: toma el
+  primer valor y cancela. Los tests de la rama `.catch` usaban `.first()` y por eso llevaban desde la 005
+  «probando» una promesa que no se cumplía.
+- **Con el reloj congelado, un filtro por fechas es inerte y no se comprueba nada.** Los tests de
+  integración de los avisos almacenan y activan en el mismo instante, así que `isVisibleTo` siempre da
+  `true`; las pruebas que quieren ver actuar el filtro tienen que **avanzar `now`** entre ciclos.
 - **`gemini-3.5-flash-lite` tuvo una caída de capacidad sostenida el 4 de septiembre de 2026, y el
   modelo hermano no.** Medido, no supuesto: una petición **mínima** de 150 bytes sin esquema devolvía
   `HTTP 500: currently experiencing high demand` una y otra vez, mientras la misma petición a
@@ -893,12 +986,30 @@ entregaron. **Nunca un título, una palabra clave ni el nombre de una regla.**
 
 ```
 cycle: baseline (1893 inserted), alerts not evaluated
-cycle: 14 new, 3 rule(s), 2 match(es) on 2 publication(s), delivery=SYSTEM
-cycle: 0 new, 3 rule(s), nothing to evaluate
+cycle: 14 new, 3 pending from earlier, 3 rule(s), 2 match(es) on 2 publication(s), delivery=SYSTEM
+cycle: 0 new, 0 pending, 3 rule(s), nothing to evaluate
+cycle: recording failed, 3 key(s) kept pending
+cycle: 3 key(s) recorded but not cleared
+cycle: rules unreadable, evaluation deferred
+cycle: pending unreadable
 cycle: refresh failed: Network
 alerts: posted 2 notification(s) + summary
 alerts: notifications disabled, 2 match(es) kept
 alerts: worker run, delivery=NONE
+```
+
+Y desde la feature 014, la copia local del documento y la recuperación de lecturas, con los prefijos
+`document:` y `reads:`. Del documento se registra el tipo de fallo y de dónde vino —**nunca la clave**, que
+puede ser una URL entera—; de una lectura, qué lista falló (un nombre fijo) y la clase de la excepción,
+**nunca su mensaje**, que puede llevar una sentencia con lo que alguien escribió.
+
+```
+document: cache read failed: IllegalStateException
+document: checksum sidecar unreadable, served without checksum
+document: fetch threw: IOException: disk full
+document: cleanup failed: IOException
+reads: unread-count failed: SQLiteException, retry in 1000ms
+reads: unread-count gave up after 3 retries
 ```
 
 Y desde la feature 011, la conversación, con el prefijo `chat:`. Se registran la fase, cuántos mensajes

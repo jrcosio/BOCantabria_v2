@@ -5,7 +5,11 @@ package com.jrblanco.boccantabria.domain.model
  */
 sealed interface DocumentStatus {
 
-    /** Never asked for, or evicted from the cache. */
+    /**
+     * Never asked for, evicted from the cache, or its download was cancelled. Since feature 014
+     * `Downloading` always means a download in flight; a cancelled one comes back here, never stays
+     * there (research.md D-605).
+     */
     data object Absent : DocumentStatus
 
     /**

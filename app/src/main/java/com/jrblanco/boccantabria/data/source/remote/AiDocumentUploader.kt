@@ -18,7 +18,10 @@ interface AiDocumentUploader {
      */
     suspend fun upload(localPath: String, displayName: String): UploadResult
 
-    /** Never throws. A deletion that fails must not cover up whatever else was happening. */
+    /**
+     * Never throws, except `CancellationException`. A deletion that fails must not cover up whatever
+     * else was happening; a cancellation is not a failure and travels as it always does (feature 014).
+     */
     suspend fun delete(remoteName: String)
 }
 

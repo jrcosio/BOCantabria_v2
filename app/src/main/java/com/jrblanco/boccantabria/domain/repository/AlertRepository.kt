@@ -18,8 +18,9 @@ import kotlinx.coroutines.flow.Flow
  * Contract, same as the rest of the project:
  * - Nothing here throws. Failures travel as [AppResult.Failure].
  * - `CancellationException` is always rethrown.
- * - The flows do not terminate with an error: a local read failure emits an empty result and stays
- *   alive.
+ * - The flows never fail. A transient local read failure emits an empty result, is retried with a
+ *   bounded budget and keeps observing afterwards; a persistent one leaves that empty result in
+ *   place (feature 014, STAB-004).
  * - Nothing stored is an empty list / zero, never a failure.
  *
  * **This is the one repository of the project that deletes**: [delete] removes a rule and, through
@@ -38,8 +39,14 @@ interface AlertRepository {
 
     suspend fun rule(id: String): AlertRule?
 
-    /** The rules a cycle evaluates. Read **before** synchronising (research.md D-405). */
-    suspend fun enabledRules(): List<AlertRule>
+    /**
+     * The rules a cycle evaluates. Read **before** synchronising (research.md D-405).
+     *
+     * A read that fails is a [AppResult.Failure], not an empty list: the cycle treats «no rules» as
+     * "these publications are evaluated" and would clear them, which is exactly the loss feature 014
+     * repairs (014 research.md D-610).
+     */
+    suspend fun enabledRules(): AppResult<List<AlertRule>>
 
     suspend fun countRules(): Int
 
@@ -61,8 +68,12 @@ interface AlertRepository {
      * Records the matches a cycle found and returns **only the ones that were really new**: a pair
      * already recorded is silently skipped by the store's unique index, and must not be delivered
      * again (FR-042, FR-043).
+     *
+     * All or nothing: if one pair cannot be recorded, none is, and the result is a
+     * [AppResult.Failure] — never an empty list, which would read as «nothing new» and let the cycle
+     * clear publications whose matches were never stored (feature 014, STAB-003; D-611).
      */
-    suspend fun recordMatches(candidates: List<AlertMatch>): List<AlertMatch>
+    suspend fun recordMatches(candidates: List<AlertMatch>): AppResult<List<AlertMatch>>
 
     /** The publications that matched, one row each, newest first. */
     fun observeNews(): Flow<List<AlertNews>>

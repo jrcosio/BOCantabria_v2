@@ -32,6 +32,7 @@ import com.jrblanco.boccantabria.fake.FakeAiSummaryRepository
 import com.jrblanco.boccantabria.fake.FakeSavedPublicationRepository
 import com.jrblanco.boccantabria.fake.RecordingAnalyticsTracker
 import com.jrblanco.boccantabria.fake.TestDispatcherProvider
+import com.jrblanco.boccantabria.fake.TlsMockWebServer
 import com.jrblanco.boccantabria.fake.publication
 import com.jrblanco.boccantabria.ui.detail.PublicationDetailViewModel
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -44,8 +45,6 @@ import kotlinx.coroutines.test.setMain
 import mockwebserver3.MockResponse
 import mockwebserver3.MockWebServer
 import okhttp3.OkHttpClient
-import okhttp3.tls.HandshakeCertificates
-import okhttp3.tls.HeldCertificate
 import okio.Buffer
 import org.junit.After
 import org.junit.Assert.assertArrayEquals
@@ -54,7 +53,6 @@ import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
 import org.junit.rules.TemporaryFolder
-import java.net.InetAddress
 import java.security.MessageDigest
 
 /**
@@ -70,34 +68,21 @@ class DocumentFlowIntegrationTest {
     @get:Rule
     val folder = TemporaryFolder()
 
+    @get:Rule
+    val tls = TlsMockWebServer()
+
     private val dispatcher = StandardTestDispatcher()
-    private lateinit var server: MockWebServer
-    private lateinit var client: OkHttpClient
+    private val server: MockWebServer get() = tls.server
+    private val client: OkHttpClient get() = tls.client
 
     @Before
     fun setUp() {
         Dispatchers.setMain(dispatcher)
-        val localhost = InetAddress.getByName("localhost").canonicalHostName
-        val certificate = HeldCertificate.Builder().addSubjectAlternativeName(localhost).build()
-        val serverCertificates = HandshakeCertificates.Builder().heldCertificate(certificate).build()
-        val clientCertificates = HandshakeCertificates.Builder()
-            .addTrustedCertificate(certificate.certificate)
-            .build()
-
-        server = MockWebServer()
-        server.useHttps(serverCertificates.sslSocketFactory())
-        server.start()
-
-        client = OkHttpClient.Builder()
-            .sslSocketFactory(clientCertificates.sslSocketFactory(), clientCertificates.trustManager)
-            .retryOnConnectionFailure(false)
-            .build()
     }
 
     @After
     fun tearDown() {
         Dispatchers.resetMain()
-        runCatching { server.close() }
     }
 
     @Test
@@ -111,9 +96,15 @@ class DocumentFlowIntegrationTest {
             advanceUntilIdle()
             viewModel.onTabSelected(DetailTab.DOCUMENT)
             viewModel.onDocumentTabShown()
-            advanceUntilIdle()
 
-            val available = expectMostRecentItem().document as DocumentStatus.Available
+            // The network is real — a TLS server on another thread — and since feature 014 the call no
+            // longer blocks the test thread, so the download finishes in wall-clock time, not virtual
+            // time. The state is awaited rather than assumed to be the most recent one.
+            var state = awaitItem()
+            while (state.document !is DocumentStatus.Available) {
+                state = awaitItem()
+            }
+            val available = state.document as DocumentStatus.Available
             assertArrayEquals(body, java.io.File(available.document.localPath).readBytes())
             assertEquals(sha256(body), available.document.checksum)
             assertEquals(body.size.toLong(), available.document.byteCount)

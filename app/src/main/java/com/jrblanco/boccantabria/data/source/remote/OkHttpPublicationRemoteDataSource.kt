@@ -3,7 +3,9 @@ package com.jrblanco.boccantabria.data.source.remote
 import com.jrblanco.boccantabria.core.util.DispatcherProvider
 import com.jrblanco.boccantabria.core.util.RandomProvider
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.withContext
 import okhttp3.OkHttpClient
 import okhttp3.Request
@@ -61,16 +63,19 @@ class OkHttpPublicationRemoteDataSource(
         knownBodyHash: String?,
     ): FeedFetchResult = withContext(dispatchers.io) {
         try {
-            client.newCall(request(definition)).execute().use { response ->
-                readResponse(response, knownBodyHash)
-            }
+            // `await`, not `execute()`: cancelling the coroutine cancels the call (feature 014,
+            // PERF-002; research.md D-617).
+            client.newCall(request(definition)).await { response -> readResponse(response, knownBodyHash) }
         } catch (cancellation: CancellationException) {
             // Never translated into a failure: cancelling a coroutine is not a network problem.
             throw cancellation
-        } catch (_: SocketTimeoutException) {
-            FeedFetchResult.Failed(FeedFailure.TIMEOUT)
-        } catch (_: IOException) {
-            FeedFetchResult.Failed(FeedFailure.NETWORK)
+        } catch (error: IOException) {
+            // A cancelled call surfaces as an IOException on OkHttp's side too, and before feature 014
+            // it was classified NETWORK — which is retryable — so cancelling could cost three attempts.
+            // Only a live coroutine may report a failure. `SocketTimeoutException` is an IOException,
+            // so it is told apart here rather than in a catch of its own that would skip the check.
+            currentCoroutineContext().ensureActive()
+            FeedFetchResult.Failed(if (error is SocketTimeoutException) FeedFailure.TIMEOUT else FeedFailure.NETWORK)
         }
     }
 

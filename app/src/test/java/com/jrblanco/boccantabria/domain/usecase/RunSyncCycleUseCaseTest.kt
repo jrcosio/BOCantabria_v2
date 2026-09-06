@@ -72,19 +72,20 @@ class RunSyncCycleUseCaseTest {
         assertEquals(AlertDelivery.NONE, outcome.delivery)
         assertTrue(notifier.posted.isEmpty())
         assertTrue(alerts.storedMatches.isEmpty())
-        assertTrue(publications.keysAsked.isEmpty())
+        assertEquals(0, publications.pendingReads)
         assertTrue(crashReporter.messages.any { it.startsWith("cycle: baseline") })
     }
 
     @Test
-    fun `a synchronisation without changes evaluates nothing`() = runTest {
+    fun `a synchronisation without changes reads what is pending once and records nothing`() = runTest {
         alerts.emitRules(listOf(alertRule()))
         publications.refreshResult = AppResult.Success(SyncSummary(succeededFeeds = 19, unchangedFeeds = 19))
 
         val outcome = (cycle()(force = true) as AppResult.Success).data
 
         assertEquals(AlertDelivery.NONE, outcome.delivery)
-        assertTrue(publications.keysAsked.isEmpty())
+        assertEquals(1, publications.pendingReads)
+        assertFalse(alerts.calls.any { it.startsWith("recordMatches") })
     }
 
     @Test
@@ -184,7 +185,7 @@ class RunSyncCycleUseCaseTest {
     }
 
     @Test
-    fun `a skipped refresh evaluates nothing`() = runTest {
+    fun `a skipped refresh evaluates only what an earlier cycle left pending`() = runTest {
         alerts.emitRules(listOf(alertRule()))
         publications.stale = false
 
@@ -192,7 +193,142 @@ class RunSyncCycleUseCaseTest {
 
         assertEquals(AlertDelivery.NONE, outcome.delivery)
         assertEquals(0, publications.refreshCount)
+        assertEquals(1, publications.pendingReads)
         assertEquals(1, documents.released)
+    }
+
+    // ---------- Feature 014 (STAB-003): what could not be recorded is not lost ----------
+
+    /**
+     * The audit's reproduction, on the fakes: recording fails, the cycle ends as a success with no
+     * delivery, and the next cycle finds nothing new at the source. Until feature 014 that was the end
+     * of the alert. Now the key stays pending in the store and the next cycle delivers it — once.
+     */
+    @Test
+    fun `what could not be recorded is kept pending and delivered exactly once by the next cycle`() = runTest {
+        alerts.emitRules(listOf(alertRule(keywords = listOf("ganadería"))))
+        refreshReturns(ganaderia)
+        alerts.failRecordMatches = true
+
+        val first = (cycle()(force = true) as AppResult.Success).data
+
+        assertEquals(AlertDelivery.NONE, first.delivery)
+        assertTrue(crashReporter.messages.any { it == "cycle: recording failed, 1 key(s) kept pending" })
+        assertEquals(setOf("boc:1"), publications.pendingKeys.keys)
+
+        alerts.failRecordMatches = false
+        publications.refreshResult = AppResult.Success(SyncSummary(succeededFeeds = 19, unchangedFeeds = 19))
+        val second = (cycle()(force = true) as AppResult.Success).data
+
+        assertEquals(AlertDelivery.SYSTEM, second.delivery)
+        assertEquals(listOf("boc:1"), second.notifications.map { it.publication.externalKey })
+        assertEquals(1, notifier.posted.size)
+        assertTrue(publications.pendingKeys.isEmpty())
+
+        val third = (cycle()(force = true) as AppResult.Success).data
+
+        assertEquals(AlertDelivery.NONE, third.delivery)
+        assertEquals(1, notifier.posted.size)
+        assertEquals(1, alerts.storedMatches.size)
+    }
+
+    /**
+     * «Never retroactive» has to hold for a leftover too. The order of the cycle cannot guarantee it
+     * — the rule was created after the publication was stored, but before it was evaluated — so the
+     * candidate compares dates (D-609). The clock is advanced on purpose: frozen, the filter is inert.
+     */
+    @Test
+    fun `a rule created between two cycles does not fire for what an earlier cycle left pending`() = runTest {
+        publications.now = 10_000L
+        val ganaderiaRule = alertRule(id = "rule-1", name = "Ganadería", keywords = listOf("ganadería"), activeSince = 5_000L)
+        alerts.emitRules(listOf(ganaderiaRule))
+        refreshReturns(ganaderia)
+        alerts.failRecordMatches = true
+        cycle()(force = true)
+
+        alerts.failRecordMatches = false
+        alerts.emitRules(
+            listOf(
+                ganaderiaRule,
+                alertRule(id = "rule-2", name = "Ayudas", keywords = listOf("ayudas"), activeSince = 20_000L),
+            ),
+        )
+        publications.refreshResult = AppResult.Success(SyncSummary(succeededFeeds = 19, unchangedFeeds = 19))
+        val outcome = (cycle()(force = true) as AppResult.Success).data
+
+        assertEquals(listOf("Ganadería"), outcome.notifications.single().ruleNames)
+        assertEquals(listOf("rule-1"), alerts.storedMatches.map { it.ruleId })
+        assertTrue(publications.pendingKeys.isEmpty())
+    }
+
+    /** The most frequent cycle — opening Inicio within the half hour — is also the recovery path. */
+    @Test
+    fun `a leftover is evaluated even when the refresh is skipped`() = runTest {
+        alerts.emitRules(listOf(alertRule(keywords = listOf("ganadería"))))
+        publications.seedPending(ganaderia, storedAt = 1_000_000L)
+        publications.stale = false
+
+        val outcome = (cycle()(force = false) as AppResult.Success).data
+
+        assertEquals(AlertDelivery.SYSTEM, outcome.delivery)
+        assertEquals(0, publications.refreshCount)
+        assertEquals(listOf("boc:1"), outcome.notifications.map { it.publication.externalKey })
+        assertTrue(publications.pendingKeys.isEmpty())
+    }
+
+    @Test
+    fun `with no rules the new publications are cleared, so a rule created later does not see them`() = runTest {
+        refreshReturns(ganaderia)
+        cycle()(force = true)
+        assertTrue(publications.pendingKeys.isEmpty())
+
+        alerts.emitRules(listOf(alertRule(keywords = listOf("ganadería"))))
+        publications.refreshResult = AppResult.Success(SyncSummary(succeededFeeds = 19, unchangedFeeds = 19))
+        val outcome = (cycle()(force = true) as AppResult.Success).data
+
+        assertEquals(AlertDelivery.NONE, outcome.delivery)
+        assertTrue(notifier.posted.isEmpty())
+    }
+
+    /**
+     * The matches are already recorded: skipping the delivery would make them undeliverable for
+     * ever, because the next cycle would find every pair already in the store (D-610).
+     */
+    @Test
+    fun `a failure to clear the flag does not block delivery and does not deliver twice`() = runTest {
+        alerts.emitRules(listOf(alertRule(keywords = listOf("ganadería"))))
+        refreshReturns(ganaderia)
+        publications.failMarkEvaluated = true
+
+        val first = (cycle()(force = true) as AppResult.Success).data
+
+        assertEquals(AlertDelivery.SYSTEM, first.delivery)
+        assertEquals(1, notifier.posted.size)
+        assertTrue(crashReporter.messages.any { it == "cycle: 1 key(s) recorded but not cleared" })
+        assertEquals(setOf("boc:1"), publications.pendingKeys.keys)
+
+        publications.failMarkEvaluated = false
+        publications.refreshResult = AppResult.Success(SyncSummary(succeededFeeds = 19, unchangedFeeds = 19))
+        val second = (cycle()(force = true) as AppResult.Success).data
+
+        assertEquals(AlertDelivery.NONE, second.delivery)
+        assertEquals(1, notifier.posted.size)
+        assertTrue(publications.pendingKeys.isEmpty())
+    }
+
+    /** A rule read that fails is not "no rules": the bulletin still refreshes and nothing is cleared. */
+    @Test
+    fun `when the rules cannot be read the refresh still runs and evaluation waits`() = runTest {
+        alerts.failReads = true
+        refreshReturns(ganaderia)
+
+        val outcome = (cycle()(force = true) as AppResult.Success).data
+
+        assertEquals(AlertDelivery.NONE, outcome.delivery)
+        assertEquals(1, publications.refreshCount)
+        assertEquals(0, publications.pendingReads)
+        assertEquals(setOf("boc:1"), publications.pendingKeys.keys)
+        assertTrue(crashReporter.messages.any { it == "cycle: rules unreadable, evaluation deferred" })
     }
 
     // ---------- Delivery ----------
@@ -243,13 +379,15 @@ class RunSyncCycleUseCaseTest {
     }
 
     @Test
-    fun `only the new keys are read, never the whole store`() = runTest {
+    fun `what is pending is read once and then cleared, never the whole store`() = runTest {
         alerts.emitRules(listOf(alertRule()))
         refreshReturns(ganaderia)
 
         cycle()(force = true)
 
-        assertEquals(listOf(setOf("boc:1")), publications.keysAsked)
+        assertEquals(1, publications.pendingReads)
+        assertEquals(listOf(setOf("boc:1")), publications.markCalls)
+        assertTrue(publications.pendingKeys.isEmpty())
     }
 
     // ---------- Privacy ----------

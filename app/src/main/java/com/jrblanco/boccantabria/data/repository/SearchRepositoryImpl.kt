@@ -9,9 +9,7 @@ import com.jrblanco.boccantabria.domain.model.Publication
 import com.jrblanco.boccantabria.domain.model.SearchQuery
 import com.jrblanco.boccantabria.domain.model.SearchSort
 import com.jrblanco.boccantabria.domain.repository.SearchRepository
-import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.map
 
@@ -45,23 +43,18 @@ class SearchRepositoryImpl(
             )
         }
 
+        // A local read failure must not kill the flow: the screen would be left with no state at all,
+        // which reads as a frozen application rather than as an empty result. Until feature 014 a
+        // `catch` emitted the empty list and the flow was over; the search healed itself on the next
+        // keystroke, because the screen re-queries, but the issuers sheet below did not (STAB-004).
+        // `recoverReads` retries and keeps observing; always the last operator.
         return rows
             .map { entities -> entities.map { it.toDomain() } }
-            // A local read failure must not kill the flow: the screen would be left with no state
-            // at all, which reads as a frozen application rather than as an empty result.
-            .catch { cause -> emitEmptyAfterRecording(cause) }
             .flowOn(dispatchers.io)
+            .recoverReads(fallback = emptyList(), name = "search", crashReporter = crashReporter)
     }
 
     override fun observeIssuers(): Flow<List<String>> = searchDao.observeIssuers()
-        .catch { cause -> emitEmptyAfterRecording(cause) }
         .flowOn(dispatchers.io)
-
-    private suspend fun <T> kotlinx.coroutines.flow.FlowCollector<List<T>>.emitEmptyAfterRecording(
-        cause: Throwable,
-    ) {
-        if (cause is CancellationException) throw cause
-        crashReporter.recordNonFatal(cause)
-        emit(emptyList())
-    }
+        .recoverReads(fallback = emptyList(), name = "issuers", crashReporter = crashReporter)
 }

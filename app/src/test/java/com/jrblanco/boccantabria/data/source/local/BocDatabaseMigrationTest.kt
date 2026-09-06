@@ -5,17 +5,22 @@ import android.database.sqlite.SQLiteDatabase
 import androidx.room.Room
 import androidx.test.core.app.ApplicationProvider
 import com.jrblanco.boccantabria.di.ROBOLECTRIC_SDK
+import com.jrblanco.boccantabria.domain.model.EditionType
+import com.jrblanco.boccantabria.domain.model.IdSource
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
+import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
 import java.io.File
+import java.time.LocalDate
 
 /**
  * The upgrades between stored versions, against databases that already have rows.
@@ -212,6 +217,70 @@ class BocDatabaseMigrationTest {
         }
     }
 
+    // ---------- Version 5 to version 6: the pending mark of the alerts ----------
+
+    /**
+     * One `NOT NULL DEFAULT 0` column, which the automatic migration resolves whole. Every row that
+     * was already there arrives at `0`: history is not news (014 research.md D-607). The alerts a
+     * person already had survive with their matches.
+     */
+    @Test
+    fun `a version 5 database keeps its alerts and its publications are not pending`() = runTest {
+        writeVersionFiveDatabaseWithAlerts()
+
+        val database = openWithRoom()
+        try {
+            val stored = database.publicationDao().observePublication("boc:1").first()
+
+            assertNotNull("la publicación de la versión 5 no sobrevivió a la migración", stored)
+            assertEquals(java.lang.Long.valueOf(9_000L), stored!!.savedAt)
+            assertEquals("ayuntamiento de pielagos aprobacion definitiva", stored.searchText)
+            assertFalse(stored.pendingAlertEvaluation)
+            assertTrue(database.publicationDao().pendingAlertEvaluation().isEmpty())
+            assertEquals("Ganadería", database.alertRuleDao().byId("r1")?.name)
+            assertEquals(1, database.alertMatchDao().count())
+            assertEquals(1, database.alertMatchDao().observeUnreadCount().first())
+        } finally {
+            database.close()
+        }
+    }
+
+    /** Somebody who skipped every release since the first goes from 1 to 6 in one open. */
+    @Test
+    fun `a version 1 database can reach version 6 in one go`() = runTest {
+        writeVersionOneDatabaseWithOnePublication()
+
+        val database = openWithRoom()
+        try {
+            val stored = database.publicationDao().observePublication("boc:1").first()
+
+            assertNotNull("la publicación de la versión 1 no llegó a la versión 6", stored)
+            assertNull(stored!!.savedAt)
+            assertEquals("", stored.searchText)
+            assertFalse(stored.pendingAlertEvaluation)
+            assertNull(database.aiSummaryDao().byExternalKey("boc:1"))
+            assertEquals(0, database.alertRuleDao().count())
+        } finally {
+            database.close()
+        }
+    }
+
+    @Test
+    fun `a publication stored right after the upgrade is pending and can be cleared`() = runTest {
+        writeVersionFiveDatabaseWithAlerts()
+
+        val database = openWithRoom()
+        try {
+            database.publicationDao().upsertAll(listOf(freshEntity("boc:2")))
+
+            assertEquals(listOf("boc:2"), database.publicationDao().pendingAlertEvaluation().map { it.externalKey })
+            assertEquals(1, database.publicationDao().markAlertsEvaluated(listOf("boc:2")))
+            assertTrue(database.publicationDao().pendingAlertEvaluation().isEmpty())
+        } finally {
+            database.close()
+        }
+    }
+
     /**
      * Opens the stored file exactly as the application does: a bare builder, no `addMigrations`
      * —automatic migrations need none— and no destructive fallback. If the migration were missing,
@@ -320,6 +389,64 @@ class BocDatabaseMigrationTest {
             database.close()
         }
     }
+
+    /**
+     * A database exactly as the previous release left it: the version-5 schema, its identity row,
+     * `user_version = 5`, a publication with its saved mark and searchable text, **and an alert with
+     * one match** — the state this migration has to leave untouched.
+     */
+    private fun writeVersionFiveDatabaseWithAlerts() {
+        val database = SQLiteDatabase.openOrCreateDatabase(databaseFile, null)
+        try {
+            VERSION_FIVE_STATEMENTS.forEach(database::execSQL)
+
+            database.execSQL(
+                """
+                INSERT INTO publications VALUES (
+                    'boc:1', '1', 'BLOB_ID', '6802081', '1', NULL,
+                    'AYUNTAMIENTO DE PIÉLAGOS: Aprobación definitiva.', 'Ayuntamiento de Piélagos',
+                    'Ayuntamiento de Piélagos', 'ORDINARY', '2026-08-27',
+                    'https://boc.cantabria.es/boces/verAnuncioAction.do?idAnuBlob=1',
+                    '1.Disposiciones Generales|Ayuntamiento de Piélagos|ORD', '',
+                    1000, 2000, 9000, 'ayuntamiento de pielagos aprobacion definitiva'
+                )
+                """.trimIndent(),
+            )
+            database.execSQL(
+                "INSERT INTO feed_sync_state VALUES ('6802081', 'hash-de-la-version-5', NULL, NULL, 1500, 0)",
+            )
+            database.execSQL(
+                "INSERT INTO alert_rules VALUES ('r1', 'Ganadería', 'ganadería', 'ANY', '', NULL, 1, 1000, 1000, 1000)",
+            )
+            database.execSQL("INSERT INTO alert_matches VALUES (1, 'r1', 'boc:1', 1500, NULL)")
+
+            database.version = 5
+        } finally {
+            database.close()
+        }
+    }
+
+    /** What a synchronisation inserts after the upgrade: a row that the alerts have not seen yet. */
+    private fun freshEntity(externalKey: String) = PublicationEntity(
+        externalKey = externalKey,
+        blobId = externalKey.substringAfter(':'),
+        idSource = IdSource.BLOB_ID,
+        feedId = "6802081",
+        sectionCode = "1",
+        subsectionCode = null,
+        title = "AYUNTAMIENTO DE PIÉLAGOS: Aprobación definitiva.",
+        issuer = "Ayuntamiento de Piélagos",
+        organizationPath = listOf("Ayuntamiento de Piélagos"),
+        editionType = EditionType.ORDINARY,
+        publicationDate = LocalDate.of(2026, 9, 6),
+        documentUrl = "https://boc.cantabria.es/boces/verAnuncioAction.do?idAnuBlob=2",
+        rawCategories = null,
+        warnings = emptySet(),
+        firstSeenAt = 3_000L,
+        lastSeenAt = 3_000L,
+        searchText = "ayuntamiento de pielagos aprobacion definitiva",
+        pendingAlertEvaluation = true,
+    )
 
     private fun summaryEntity() = AiSummaryEntity(
         externalKey = "boc:1",
@@ -443,6 +570,63 @@ class BocDatabaseMigrationTest {
             "CREATE TABLE IF NOT EXISTS room_master_table (id INTEGER PRIMARY KEY, identity_hash TEXT)",
             "INSERT OR REPLACE INTO room_master_table (id, identity_hash) " +
                 "VALUES(42, '68d17e1f4ec1b819c008659604a0bacb')",
+        )
+
+        /**
+         * The version-5 schema, transcribed **verbatim** from
+         * `app/schemas/com.jrblanco.boccantabria.data.source.local.BocDatabase/5.json`, with
+         * `${'$'}{TABLE_NAME}` resolved. That file is frozen, so these statements cannot drift.
+         */
+        val VERSION_FIVE_STATEMENTS = listOf(
+            "CREATE TABLE IF NOT EXISTS `publications` (`external_key` TEXT NOT NULL, " +
+                "`blob_id` TEXT, `id_source` TEXT NOT NULL, `feed_id` TEXT NOT NULL, " +
+                "`section_code` TEXT NOT NULL, `subsection_code` TEXT, `title` TEXT NOT NULL, " +
+                "`issuer` TEXT, `organization_path` TEXT NOT NULL, `edition_type` TEXT NOT NULL, " +
+                "`publication_date` TEXT NOT NULL, `document_url` TEXT NOT NULL, " +
+                "`raw_categories` TEXT, `warnings` TEXT NOT NULL, `first_seen_at` INTEGER NOT NULL, " +
+                "`last_seen_at` INTEGER NOT NULL, `saved_at` INTEGER, " +
+                "`search_text` TEXT NOT NULL DEFAULT '', PRIMARY KEY(`external_key`))",
+            "CREATE UNIQUE INDEX IF NOT EXISTS `index_publications_blob_id` " +
+                "ON `publications` (`blob_id`)",
+            "CREATE INDEX IF NOT EXISTS `index_publications_publication_date` " +
+                "ON `publications` (`publication_date`)",
+            "CREATE INDEX IF NOT EXISTS `index_publications_section_code` " +
+                "ON `publications` (`section_code`)",
+            "CREATE INDEX IF NOT EXISTS `index_publications_subsection_code` " +
+                "ON `publications` (`subsection_code`)",
+            "CREATE INDEX IF NOT EXISTS `index_publications_edition_type` " +
+                "ON `publications` (`edition_type`)",
+            "CREATE INDEX IF NOT EXISTS `index_publications_saved_at` " +
+                "ON `publications` (`saved_at`)",
+            "CREATE INDEX IF NOT EXISTS `index_publications_feed_id_publication_date` " +
+                "ON `publications` (`feed_id`, `publication_date`)",
+            "CREATE TABLE IF NOT EXISTS `feed_sync_state` (`feed_id` TEXT NOT NULL, " +
+                "`body_hash` TEXT, `etag` TEXT, `last_modified` TEXT, `last_success_at` INTEGER, " +
+                "`consecutive_failures` INTEGER NOT NULL, PRIMARY KEY(`feed_id`))",
+            "CREATE TABLE IF NOT EXISTS `ai_summaries` (`external_key` TEXT NOT NULL, " +
+                "`pdf_sha256` TEXT NOT NULL, `model_id` TEXT NOT NULL, `prompt_version` TEXT NOT NULL, " +
+                "`schema_version` TEXT NOT NULL, `summary_json` TEXT NOT NULL, " +
+                "`created_at` INTEGER NOT NULL, `prompt_tokens` INTEGER NOT NULL, " +
+                "`completion_tokens` INTEGER NOT NULL, `total_tokens` INTEGER NOT NULL, " +
+                "`system_fingerprint` TEXT, PRIMARY KEY(`external_key`))",
+            "CREATE TABLE IF NOT EXISTS `alert_rules` (`id` TEXT NOT NULL, `name` TEXT NOT NULL, " +
+                "`keywords` TEXT NOT NULL, `match_mode` TEXT NOT NULL, `section_codes` TEXT NOT NULL, " +
+                "`organization_query` TEXT, `enabled` INTEGER NOT NULL, `created_at` INTEGER NOT NULL, " +
+                "`updated_at` INTEGER NOT NULL, `active_since` INTEGER NOT NULL, PRIMARY KEY(`id`))",
+            "CREATE INDEX IF NOT EXISTS `index_alert_rules_enabled` ON `alert_rules` (`enabled`)",
+            "CREATE TABLE IF NOT EXISTS `alert_matches` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, " +
+                "`rule_id` TEXT NOT NULL, `external_key` TEXT NOT NULL, `matched_at` INTEGER NOT NULL, " +
+                "`read_at` INTEGER, FOREIGN KEY(`rule_id`) REFERENCES `alert_rules`(`id`) " +
+                "ON UPDATE NO ACTION ON DELETE CASCADE )",
+            "CREATE UNIQUE INDEX IF NOT EXISTS `index_alert_matches_rule_id_external_key` " +
+                "ON `alert_matches` (`rule_id`, `external_key`)",
+            "CREATE INDEX IF NOT EXISTS `index_alert_matches_external_key` " +
+                "ON `alert_matches` (`external_key`)",
+            "CREATE INDEX IF NOT EXISTS `index_alert_matches_read_at` ON `alert_matches` (`read_at`)",
+            "CREATE INDEX IF NOT EXISTS `index_alert_matches_rule_id` ON `alert_matches` (`rule_id`)",
+            "CREATE TABLE IF NOT EXISTS room_master_table (id INTEGER PRIMARY KEY, identity_hash TEXT)",
+            "INSERT OR REPLACE INTO room_master_table (id, identity_hash) " +
+                "VALUES(42, '03a5f3bbfafe40bf37a1a8b38f40f610')",
         )
     }
 }

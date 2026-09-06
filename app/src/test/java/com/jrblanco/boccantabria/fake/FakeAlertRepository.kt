@@ -40,6 +40,10 @@ class FakeAlertRepository(
     /** When set, the next write fails. */
     var failWrites: Boolean = false
 
+    /** Feature 014: the two calls the cycle makes can fail on their own, and the cycle must notice. */
+    var failReads: Boolean = false
+    var failRecordMatches: Boolean = false
+
     private var nextId = 1
 
     val storedRules: List<AlertRule> get() = rules.value.values.toList()
@@ -73,9 +77,10 @@ class FakeAlertRepository(
         return rules.value[id]
     }
 
-    override suspend fun enabledRules(): List<AlertRule> {
+    override suspend fun enabledRules(): AppResult<List<AlertRule>> {
         calls += "enabledRules"
-        return rules.value.values.filter { it.isEnabled }
+        if (failReads) return AppResult.Failure(DomainError.Unknown)
+        return AppResult.Success(rules.value.values.filter { it.isEnabled })
     }
 
     override suspend fun countRules(): Int = rules.value.size
@@ -113,13 +118,14 @@ class FakeAlertRepository(
         return AppResult.Success(Unit)
     }
 
-    override suspend fun recordMatches(candidates: List<AlertMatch>): List<AlertMatch> {
+    override suspend fun recordMatches(candidates: List<AlertMatch>): AppResult<List<AlertMatch>> {
         calls += "recordMatches(${candidates.size})"
+        if (failRecordMatches) return AppResult.Failure(DomainError.Unknown)
         val known = matches.value.map { it.match.ruleId to it.match.externalKey }.toSet()
         val fresh = candidates.filter { (it.ruleId to it.externalKey) !in known }
             .distinctBy { it.ruleId to it.externalKey }
         matches.value = matches.value + fresh.map { StoredMatch(it, read = false) }
-        return fresh
+        return AppResult.Success(fresh)
     }
 
     override fun observeNews(): Flow<List<AlertNews>> = matches.map { stored ->
