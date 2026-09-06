@@ -73,12 +73,16 @@ core/
   di/         Módulos Koin (coreModule, dataModule, domainModule, uiModule)
               y appModules, único punto de entrada del grafo
   telemetry/  Contratos AnalyticsTracker y CrashReporter + AnalyticsEvent
+  notification/ AlertIntentExtras: las claves del Intent que escribe una notificación y lee
+              MainActivity. En core porque data no puede nombrar la Activity (feature 012)
   ui/theme/       Sistema de diseño: Color, Type, Spacing, Shape, Elevation, Theme
   ui/component/   Componibles compartidos sin estado, incluida PublicationCard —la usan Inicio y
                   Guardados—, IllustratedMessage, del que ComingSoonMessage es un caso, y AiNoticeSheet,
                   que desde la feature 011 abren dos pantallas y una sola aceptación cubre las dos
   util/       DispatcherProvider, AppVersionProvider, SearchText —la normalización de texto que
-              usan las tres capas— y demás utilidades transversales
+              usan las tres capas—, AppVisibilityProvider —si el proceso está en pantalla, lee
+              ProcessLifecycleOwner—, LocalDay y RelativeTime —«hoy», «ayer», «hace 20 min»— y demás
+              utilidades transversales
 data/
   repository/     Implementaciones de las interfaces de domain
   source/local/   Room: BocDatabase, entidades, DAOs y Converters
@@ -88,6 +92,10 @@ data/
                   pasos que resumen y conversación comparten, y el ÚNICO sitio donde se decide que
                   las páginas se cuentan antes de subir
   telemetry/      Implementaciones de Firebase. ÚNICO sitio que toca el SDK
+  notification/   AndroidAlertNotifier. ÚNICO sitio que toca NotificationManagerCompat: canal,
+                  grupo, resumen y PendingIntent de los avisos (feature 012)
+  background/     AlertSyncWorker y WorkManagerBackgroundSyncScheduler. ÚNICO sitio que toca
+                  androidx.work: la comprobación periódica de los avisos
 domain/
   model/          Modelos de dominio, Kotlin puro (AppResult, DomainError, Publication,
                   BocSection, HomeSelection, SyncSummary…)
@@ -106,7 +114,13 @@ ui/
                   + AskUiState + component/. Se apila ENCIMA del detalle
   search/         Buscar: la búsqueda global sobre todo lo almacenado, con filtros y orden
   saved/          Guardados: la lista de lo que la persona ha marcado
-  navigation/     Rutas tipadas, NavHost exterior y barra inferior
+  alerts/         Avisos: dos pestañas —Novedades y Mis avisos—, y en alerts/form/ el formulario de
+                  crear/editar/duplicar, que vive FUERA del shell con barra azul y Atrás
+  main/           También MainShellViewModel: el badge de la campana, el Snackbar «VER» y la
+                  reconciliación del trabajo periódico al arrancar el shell
+  navigation/     Rutas tipadas, NavHost exterior, barra inferior (cuatro destinos desde la 012) y
+                  PendingNavigationStore: dónde quiere aterrizar una notificación tocada, consumido
+                  DESPUÉS de la portada
 BOCantabriaApp    Application: arranca Koin
 MainActivity      Anfitrión de la navegación Compose
 ```
@@ -198,10 +212,15 @@ Composable → ViewModel → UseCase → Repository (interfaz en domain)
   analizador sea Kotlin puro y sus pruebas corran sin emulador. Va endurecido en dos capas: una
   guarda de texto contra `<!DOCTYPE` y `<!ENTITY` —portátil— y el endurecimiento de la fábrica,
   cada bandera dentro de un `runCatching`, porque la JVM y Android no aceptan las mismas.
-- **Nunca se borra una publicación.** Ningún DAO del proyecto declara una sentencia de borrado, y eso
-  es deliberado: una fuente solo publica sus últimos cien anuncios. Si aparece un `@Query` de borrado
-  en una revisión, hay que rechazarlo. **Desmarcar tampoco borra**: es un `UPDATE ... SET saved_at =
-  NULL`, así que la regla se cumple literalmente y no reinterpretada.
+- **Nunca se borra una publicación.** Ningún DAO sobre `publications` declara una sentencia de
+  borrado, y eso es deliberado: una fuente solo publica sus últimos cien anuncios. Si aparece un
+  `@Query` de borrado sobre esa tabla en una revisión, hay que rechazarlo. **Desmarcar tampoco borra**:
+  es un `UPDATE ... SET saved_at = NULL`, así que la regla se cumple literalmente y no reinterpretada.
+  **La única sentencia `DELETE` del proyecto es `AlertRuleDao.delete`** (feature 012): una regla de
+  aviso es un dato de la persona, se borra a petición suya y detrás de un diálogo de confirmación, y
+  la FK con `CASCADE` se lleva sus coincidencias. `AlertRuleDaoTest` tiene la regresión que demuestra
+  que borrar una regla deja `publications` con las mismas filas. Hasta la 011 la regla se decía
+  «ningún DAO declara borrado»; se reformuló al llegar el primer dato borrable de verdad, no se rodeó.
 - **La marca de guardado es una columna `saved_at` nullable de la tabla `publications`**, y una
   sincronización **no puede pisarla**. No porque nadie la llame: porque `PublicationDao.updateColumns`
   es una lista blanca de columnas y `saved_at` no está en ella, igual que `first_seen_at`. Si alguien
@@ -229,17 +248,35 @@ Composable → ViewModel → UseCase → Repository (interfaz en domain)
   deriva de la fuente, incluido el relleno; `SavedPublicationDao` escribe lo de la persona; y el de
   búsqueda solo lee. Lleva **dos** sentencias, una por sentido de ordenación, porque Room no
   parametriza la dirección de un `ORDER BY`.
-- **La base de datos está en la versión 4**, con `AutoMigration(1, 2)`, `(2, 3)` y `(3, 4)` contra los
-  esquemas exportados. Las anteriores se conservan: quien se salte dos versiones tiene que poder llegar
-  de la 1 a la 4 de una vez. La 3→4 añade la tabla `ai_summaries`, y a diferencia de la 3 **no tiene
-  relleno**: una tabla nueva nace vacía y no tener resumen es el estado normal de una publicación.
+- **La base de datos está en la versión 5**, con `AutoMigration(1, 2)`, `(2, 3)`, `(3, 4)` y `(4, 5)`
+  contra los esquemas exportados. Las anteriores se conservan: quien se salte versiones tiene que poder
+  llegar de la 1 a la 5 de una vez. La 3→4 añade la tabla `ai_summaries` y la 4→5 las dos de los avisos,
+  `alert_rules` y `alert_matches`; ninguna de las dos **tiene relleno**: una tabla nueva nace vacía y no
+  tener resumen ni avisos es el estado normal de una instalación.
   `bocDatabase()` es un `.build()` limpio a propósito: las migraciones automáticas no necesitan
   `addMigrations`, y `fallbackToDestructiveMigration()` no entra aquí ni como último recurso —pasaría
   la puerta de compilación y vaciaría el boletín de quien ya tiene la aplicación instalada—. Los
   esquemas de `app/schemas/` **se versionan**: son el material de la migración siguiente.
-- **Sigue sin haber ninguna sentencia de borrado en el proyecto**, en ninguno de los **cinco** DAO.
-  `AiSummaryDao` solo lee y hace `upsert`: regenerar un resumen sustituye la fila, no la borra y la
-  vuelve a insertar, porque entre las dos operaciones no habría resumen ninguno.
+- **Hay siete DAO y una sola sentencia de borrado**, la de `AlertRuleDao` (ver arriba). Los seis
+  restantes no borran. `AiSummaryDao` solo lee y hace `upsert`: regenerar un resumen sustituye la fila,
+  no la borra y la vuelve a insertar, porque entre las dos operaciones no habría resumen ninguno.
+  `AlertMatchDao` tampoco borra: las coincidencias se van con su regla por la FK.
+- **La deduplicación de los avisos la hace la base de datos, no un `if`.** `alert_matches` lleva
+  `UNIQUE(rule_id, external_key)` y el `insert` es `IGNORE`: una pareja ya registrada devuelve `-1` y el
+  repositorio solo entrega lo que de verdad insertó. Una publicación que coincide con dos reglas es dos
+  filas y **una** notificación; el contador de la campana cuenta `COUNT(DISTINCT external_key)`.
+- **`PublicationDao.upsertAll` devuelve las claves que insertó**, no solo cuántas, y filtra por `rowId`:
+  una fila rechazada por el índice único de `blob_id` **no** es nueva. `SyncSummary.newKeys` las
+  transporta y `RunSyncCycleUseCase` evalúa los avisos **solo** contra ellas.
+- **La primera sincronización correcta de una instalación es línea base y no avisa de nada.** Se decide
+  con `feedSyncStateDao.lastSuccessAt() == null` **una vez, antes** de lanzar los diecinueve feeds —con
+  cuatro en paralelo, el segundo en terminar ya vería el éxito del primero— y `refresh()` vacía
+  `newKeys` en ese caso, para que ningún consumidor pueda olvidarlo. No con `count() == 0`: una primera
+  respuesta con las diecinueve fuentes vacías también marca éxito.
+- **«Nunca retroactivo» se cumple por el orden del ciclo, no comparando fechas.** `RunSyncCycleUseCase`
+  lee las reglas activas **antes** de sincronizar: toda publicación nueva del ciclo es posterior al
+  `active_since` de cualquier regla de la instantánea, y una regla creada, editada o reactivada durante
+  el ciclo espera al siguiente. `Publication` no gana `firstSeenAt` por eso.
 - **La sección la manda la fuente**, no el campo `categorias`, que se guarda en crudo y solo sirve
   para enriquecer y verificar. Razón: el feed 4.3 trae entradas con los componentes permutados.
 - `java.time` es **nativo**: desde la enmienda 1.1.0 de la constitución `minSdk` es 28. El azucarado
@@ -279,6 +316,31 @@ Composable → ViewModel → UseCase → Repository (interfaz en domain)
   **explícitamente** en el catálogo, o `SandboxedPdfLoader` no resuelve.
 - El PDF se guarda en `cacheDir/documents/`, con **caché y no almacén**. La purga corre al terminar
   una sincronización.
+- **Avisos existe desde la feature 012, y una coincidencia se entrega por un solo canal.**
+  `RunSyncCycleUseCase` es el único camino de sincronización —lo usan `HomeViewModel` y
+  `AlertSyncWorker`— y decide **una vez por ciclo**, con `AppVisibilityProvider`, si lo que encontró sale
+  como notificación de Android o como Snackbar «VER» dentro de la aplicación. El Snackbar es un estado
+  pendiente en `InAppAlertStore`, no un evento: si el ciclo acaba con el detalle tapando el shell, se
+  muestra al volver en vez de perderse. Las coincidencias se conservan como novedades con leído/no leído
+  aunque se descarte la notificación; abrir el detalle **desde donde sea** marca la novedad leída
+  (`MarkAlertReadUseCase` en `PublicationDetailViewModel.init`).
+- **El trabajo periódico de WorkManager se construye desde Koin y el inicializador por defecto está
+  retirado del manifest** (`tools:node="remove"` sobre `WorkManagerInitializer`, con `merge` para
+  conservar el de `lifecycle-process`). Consecuencia: cualquier `WorkManager.getInstance` antes de
+  `startKoin` lanza; el único acceso está **dentro de los métodos** de
+  `WorkManagerBackgroundSyncScheduler`, nunca en su constructor. Se encola al existir la primera regla
+  activa, se cancela al quedar cero y `MainShellViewModel` lo reconcilia en cada arranque del shell.
+  Cada 4 h con flex de 30 min, `NetworkType.CONNECTED`, `ExistingPeriodicWorkPolicy.UPDATE`. El Worker
+  devuelve **siempre** `success`: el siguiente periodo es el reintento.
+- **El deep link de la notificación pasa por la portada, a propósito.** No hay `navDeepLink`: saltaría
+  la comprobación de versión mínima y mantenimiento. `MainActivity` escribe en `PendingNavigationStore`
+  —en `onCreate` solo si `savedInstanceState == null`, y en `onNewIntent` gracias a
+  `launchMode="singleTop"`— y lo consume `composable<Route.Home>` (detalle) o `MainShell` (Novedades)
+  **después** de que la portada haya navegado. Si la portada bloquea, nadie consume y no se navega.
+- **Las palabras, el nombre y el organismo de una regla son intereses personales**: nunca a analítica,
+  a Crashlytics ni a Logcat. Solo recuentos y enumerados (`alert_rule_saved{keywords, sections,
+  has_organization, match_mode, is_edit}`, `alert_matches{recorded, publications}`, …). Los nombres de
+  las reglas **sí** van en la notificación, porque esa es su función.
 - **Buscar existe desde la feature 006 y son dos búsquedas, no una.** La lupa de la barra superior de
   Inicio filtra **en memoria** lo que la pantalla ya tiene, sin tocar el almacén ni la red; la pestaña
   Buscar consulta todo lo almacenado, con filtros y orden. Lo único que comparten es
@@ -723,6 +785,40 @@ Si añades una clase de dominio sin test, la build falla.
 - **`onCleared()` es `protected`.** Para comprobar que el visor cierra el documento, la prueba lo
   invoca por reflexión sobre la superclase; en producción quien lo llama es el framework.
 
+- **Inicializar WorkManager en `Application.onCreate` mata el proceso aislado del PDF.** El visor
+  renderiza en `androidx.pdf.service.PdfDocumentServiceImpl`, un proceso **aislado** sin servicios del
+  sistema; `WorkManager.initialize` pide `ConnectivityManager` y lanza un `NullPointerException` antes de
+  que se dibuje una página. El inicializador por defecto nunca lo sufrió porque un `ContentProvider` no
+  corre en procesos aislados; al retirarlo y llamar a `workManagerFactory()` a mano heredamos el deber de
+  no hacerlo ahí: `if (!Process.isIsolated()) workManagerFactory()`. Lo destapó la tanda instrumentada
+  del 6 de septiembre de 2026 —`PdfViewerSmokeTest` colgada dos horas y `AndroidxPdfPageCounterTest`
+  agotando su minuto— y **ninguna prueba unitaria puede verlo**: Robolectric no tiene procesos aislados.
+  Cualquier cosa que se añada al arranque de la `Application` tiene que preguntarse en qué procesos
+  corre.
+- **En Android 13+ «apagar las notificaciones en Ajustes» es revocar el permiso**, y la plataforma lo
+  describe igual que «nunca se pidió». Por eso `AlertsUiState.showsPermissionBanner` muestra el banner
+  con reglas activas y **cualquier** estado distinto de concedido, no solo `DISABLED`; el formulario, en
+  cambio, sigue pidiendo el permiso solo con `NEEDS_REQUEST` y solo en el primer aviso. Lo destapó el
+  recorrido manual: con el permiso revocado por `pm revoke` no salía ningún banner.
+- **`cmd jobscheduler run -f` no ejecuta un Worker periódico de WorkManager antes de su hora.** Llega
+  —hay que pasar `-n androidx.work.systemjobscheduler`, porque WorkManager usa un espacio de nombres—,
+  pero WorkManager lo retrasa: `WorkerWrapper: Delaying execution … because it is being executed before
+  schedule`. Para ejecutar el ciclo del Worker con la fábrica real de Koin hay una prueba instrumentada,
+  `AlertSyncWorkerKoinTest`, que lo construye con `TestListenableWorkerBuilder` y `KoinWorkerFactory`.
+- **`GROUP_CONCAT(r.name, '\u001F')` en una `@Query` de Room NO separa con el carácter de control.** Un
+  raw string de Kotlin no interpreta escapes, así que el separador serían seis caracteres literales y el
+  repositorio, que divide por el carácter real, no los encontraría. Se escribe `char(31)` en el SQL. Y el
+  carácter en sí no puede aparecer en el fuente: la herramienta de edición lo rechaza.
+- **`ShadowNotificationManager.getNotificationChannel` es `protected`.** Se lee el canal por el
+  `NotificationManager` real, que Robolectric sombrea igual.
+- **`viewModelOf(::X)` no sabe qué hacer con un parámetro por defecto que no está en el grafo.**
+  `AlertsViewModel` recibe un `ZoneId` inyectable para las pruebas; en `UiModule` va escrito a mano con
+  `viewModel { }` omitiéndolo.
+- **La barra azul con Atrás sigue copiada cuatro veces** (Info, detalle, formulario de avisos y
+  Guardados/Buscar sin flecha), con `navigationIcon`, `actions` y colores distintos en cada una. Es deuda
+  conocida desde la 012 (research.md D-434); unificarla toca cuatro pantallas con pruebas instrumentadas
+  de 46 s cada una y no salía gratis dentro de una feature.
+
 **Cómo se mira cuando el Resumen IA falla en un móvil.** La pantalla nunca dice códigos, a propósito
 (FR-040), así que el registro es el único sitio donde se distingue qué pasó:
 
@@ -745,6 +841,20 @@ gemini: no model_output, 1 step(s), status=failed
 gemini: blank summary: plainLanguageSummary=0 keyPoints=6 …, status=completed, 240 output tokens
 pages failed: DeadObjectException
 summary failed: Unknown
+```
+
+Y desde la feature 012, el ciclo de sincronización y los avisos, con los prefijos `cycle:` y `alerts:`.
+Se registran cuántas publicaciones nuevas hubo, cuántas reglas, cuántas coincidencias y por qué canal se
+entregaron. **Nunca un título, una palabra clave ni el nombre de una regla.**
+
+```
+cycle: baseline (1893 inserted), alerts not evaluated
+cycle: 14 new, 3 rule(s), 2 match(es) on 2 publication(s), delivery=SYSTEM
+cycle: 0 new, 3 rule(s), nothing to evaluate
+cycle: refresh failed: Network
+alerts: posted 2 notification(s) + summary
+alerts: notifications disabled, 2 match(es) kept
+alerts: worker run, delivery=NONE
 ```
 
 Y desde la feature 011, la conversación, con el prefijo `chat:`. Se registran la fase, cuántos mensajes
