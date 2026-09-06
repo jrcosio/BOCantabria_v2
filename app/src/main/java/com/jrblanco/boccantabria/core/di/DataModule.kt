@@ -3,7 +3,23 @@ package com.jrblanco.boccantabria.core.di
 import com.jrblanco.boccantabria.R
 import com.jrblanco.boccantabria.core.telemetry.AnalyticsTracker
 import com.jrblanco.boccantabria.core.telemetry.CrashReporter
+import com.jrblanco.boccantabria.data.background.AlertSyncWorker
+import com.jrblanco.boccantabria.data.background.WorkManagerBackgroundSyncScheduler
+import com.jrblanco.boccantabria.data.notification.AndroidAlertNotifier
 import com.jrblanco.boccantabria.data.repository.AiChatRepositoryImpl
+import com.jrblanco.boccantabria.data.repository.AlertRepositoryImpl
+import com.jrblanco.boccantabria.data.repository.InMemoryInAppAlertStore
+import com.jrblanco.boccantabria.data.repository.NotificationStatusRepositoryImpl
+import com.jrblanco.boccantabria.data.source.local.AlertMatchDao
+import com.jrblanco.boccantabria.data.source.local.AlertRuleDao
+import com.jrblanco.boccantabria.data.source.local.AndroidNotificationStatusDataSource
+import com.jrblanco.boccantabria.data.source.local.NotificationStatusDataSource
+import com.jrblanco.boccantabria.domain.repository.AlertNotifier
+import com.jrblanco.boccantabria.domain.repository.AlertRepository
+import com.jrblanco.boccantabria.domain.repository.BackgroundSyncScheduler
+import com.jrblanco.boccantabria.domain.repository.InAppAlertStore
+import com.jrblanco.boccantabria.domain.repository.NotificationStatusRepository
+import org.koin.androidx.workmanager.dsl.workerOf
 import com.jrblanco.boccantabria.data.repository.AiSummaryRepositoryImpl
 import com.jrblanco.boccantabria.data.repository.AppConfigRepositoryImpl
 import com.jrblanco.boccantabria.data.repository.BocSectionRepositoryImpl
@@ -84,6 +100,8 @@ val dataModule = module {
     single<SavedPublicationDao> { get<BocDatabase>().savedPublicationDao() }
     single<PublicationSearchDao> { get<BocDatabase>().publicationSearchDao() }
     single<AiSummaryDao> { get<BocDatabase>().aiSummaryDao() }
+    single<AlertRuleDao> { get<BocDatabase>().alertRuleDao() }
+    single<AlertMatchDao> { get<BocDatabase>().alertMatchDao() }
 
     // --- Red ---
     single<OkHttpClient> { bocHttpClient() }
@@ -244,6 +262,29 @@ val dataModule = module {
             crashReporter = get(),
         )
     }
+
+    // --- Avisos (feature 012) ---
+    single<AlertRepository> {
+        AlertRepositoryImpl(
+            ruleDao = get(),
+            matchDao = get(),
+            sections = get(),
+            time = get(),
+            dispatchers = get(),
+            analytics = get(),
+            crashReporter = get(),
+        )
+    }
+    // Como mucho un aviso interno pendiente en todo el proceso: es estado, no evento, para que
+    // sobreviva a que el detalle tape el shell (012 research.md D-416).
+    single<InAppAlertStore> { InMemoryInAppAlertStore() }
+    single<AlertNotifier> { AndroidAlertNotifier(context = androidContext(), crashReporter = get()) }
+    single<BackgroundSyncScheduler> { WorkManagerBackgroundSyncScheduler(context = androidContext()) }
+    single<NotificationStatusDataSource> { AndroidNotificationStatusDataSource(context = androidContext()) }
+    single<NotificationStatusRepository> { NotificationStatusRepositoryImpl(dataSource = get()) }
+    // El Worker se construye desde el grafo: sus dependencias entran por constructor y las verifica
+    // KoinModulesTest. El inicializador por defecto de WorkManager está retirado en el manifest.
+    workerOf(::AlertSyncWorker)
 
     // --- Arranque (feature 002) ---
     single<RemoteConfigDataSource> { firebaseRemoteConfigDataSource() }

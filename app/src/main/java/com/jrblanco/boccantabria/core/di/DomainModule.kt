@@ -26,6 +26,24 @@ import com.jrblanco.boccantabria.domain.usecase.ObserveAiNoticeAcceptedUseCase
 import com.jrblanco.boccantabria.domain.usecase.ObserveAiSummaryUseCase
 import com.jrblanco.boccantabria.domain.usecase.SetPublicationSavedUseCase
 import com.jrblanco.boccantabria.domain.usecase.ShareOfficialDocumentUseCase
+import com.jrblanco.boccantabria.domain.usecase.ConsumeInAppAlertUseCase
+import com.jrblanco.boccantabria.domain.usecase.CountAlertRulesUseCase
+import com.jrblanco.boccantabria.domain.usecase.DeleteAlertRuleUseCase
+import com.jrblanco.boccantabria.domain.usecase.GetAlertRuleUseCase
+import com.jrblanco.boccantabria.domain.usecase.GetLastSyncUseCase
+import com.jrblanco.boccantabria.domain.usecase.GetNotificationStatusUseCase
+import com.jrblanco.boccantabria.domain.usecase.MarkAlertReadUseCase
+import com.jrblanco.boccantabria.domain.usecase.MarkAllAlertsReadUseCase
+import com.jrblanco.boccantabria.domain.usecase.MatchAlertRuleUseCase
+import com.jrblanco.boccantabria.domain.usecase.ObserveAlertNewsUseCase
+import com.jrblanco.boccantabria.domain.usecase.ObserveAlertRulesUseCase
+import com.jrblanco.boccantabria.domain.usecase.ObservePendingInAppAlertUseCase
+import com.jrblanco.boccantabria.domain.usecase.ObserveUnreadAlertCountUseCase
+import com.jrblanco.boccantabria.domain.usecase.PreviewAlertRuleUseCase
+import com.jrblanco.boccantabria.domain.usecase.ReconcileBackgroundSyncUseCase
+import com.jrblanco.boccantabria.domain.usecase.RunSyncCycleUseCase
+import com.jrblanco.boccantabria.domain.usecase.SaveAlertRuleUseCase
+import com.jrblanco.boccantabria.domain.usecase.SetAlertRuleEnabledUseCase
 import org.koin.dsl.module
 
 val domainModule = module {
@@ -62,4 +80,38 @@ val domainModule = module {
     factory { AskAboutDocumentUseCase(repository = get()) }
     factory { RetryLastQuestionUseCase(repository = get()) }
     factory { DiscardAiConversationUseCase(repository = get()) }
+
+    // --- Avisos (feature 012) ---
+    // El comparador es un single: cachea los nombres de sección y no tiene estado mutable.
+    single { MatchAlertRuleUseCase(sections = get()) }
+    factory {
+        RunSyncCycleUseCase(
+            refreshPublications = get(),
+            publications = get(),
+            alerts = get(),
+            matchRule = get(),
+            notifier = get(),
+            inAppAlerts = get(),
+            appVisibility = get(),
+            releaseUnusedDocuments = get(),
+            time = get(),
+            crashReporter = get(),
+        )
+    }
+    factory { ObserveAlertRulesUseCase(repository = get(), time = get()) }
+    factory { GetAlertRuleUseCase(repository = get()) }
+    factory { CountAlertRulesUseCase(repository = get()) }
+    factory { ReconcileBackgroundSyncUseCase(repository = get(), scheduler = get()) }
+    factory { SaveAlertRuleUseCase(repository = get(), reconcileBackgroundSync = get()) }
+    factory { SetAlertRuleEnabledUseCase(repository = get(), reconcileBackgroundSync = get()) }
+    factory { DeleteAlertRuleUseCase(repository = get(), reconcileBackgroundSync = get()) }
+    factory { ObserveAlertNewsUseCase(repository = get()) }
+    factory { ObserveUnreadAlertCountUseCase(repository = get()) }
+    factory { MarkAlertReadUseCase(repository = get()) }
+    factory { MarkAllAlertsReadUseCase(repository = get()) }
+    factory { ObservePendingInAppAlertUseCase(store = get()) }
+    factory { ConsumeInAppAlertUseCase(store = get()) }
+    factory { GetNotificationStatusUseCase(repository = get()) }
+    factory { GetLastSyncUseCase(repository = get()) }
+    factory { PreviewAlertRuleUseCase(publications = get(), matchRule = get(), sections = get()) }
 }

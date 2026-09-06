@@ -5,6 +5,37 @@ import android.content.Context
 import androidx.room.Room
 import androidx.test.core.app.ApplicationProvider
 import com.jrblanco.boccantabria.core.di.appModules
+import com.jrblanco.boccantabria.core.util.AppVisibilityProvider
+import com.jrblanco.boccantabria.data.background.WorkManagerBackgroundSyncScheduler
+import com.jrblanco.boccantabria.data.source.local.AlertMatchDao
+import com.jrblanco.boccantabria.data.source.local.AlertRuleDao
+import com.jrblanco.boccantabria.data.source.local.NotificationStatusDataSource
+import com.jrblanco.boccantabria.domain.repository.AlertNotifier
+import com.jrblanco.boccantabria.domain.repository.AlertRepository
+import com.jrblanco.boccantabria.domain.repository.BackgroundSyncScheduler
+import com.jrblanco.boccantabria.domain.repository.InAppAlertStore
+import com.jrblanco.boccantabria.domain.repository.NotificationStatusRepository
+import com.jrblanco.boccantabria.domain.usecase.ConsumeInAppAlertUseCase
+import com.jrblanco.boccantabria.domain.usecase.CountAlertRulesUseCase
+import com.jrblanco.boccantabria.domain.usecase.DeleteAlertRuleUseCase
+import com.jrblanco.boccantabria.domain.usecase.GetAlertRuleUseCase
+import com.jrblanco.boccantabria.domain.usecase.GetLastSyncUseCase
+import com.jrblanco.boccantabria.domain.usecase.GetNotificationStatusUseCase
+import com.jrblanco.boccantabria.domain.usecase.MarkAlertReadUseCase
+import com.jrblanco.boccantabria.domain.usecase.MarkAllAlertsReadUseCase
+import com.jrblanco.boccantabria.domain.usecase.MatchAlertRuleUseCase
+import com.jrblanco.boccantabria.domain.usecase.ObserveAlertNewsUseCase
+import com.jrblanco.boccantabria.domain.usecase.ObserveAlertRulesUseCase
+import com.jrblanco.boccantabria.domain.usecase.ObservePendingInAppAlertUseCase
+import com.jrblanco.boccantabria.domain.usecase.ObserveUnreadAlertCountUseCase
+import com.jrblanco.boccantabria.domain.usecase.PreviewAlertRuleUseCase
+import com.jrblanco.boccantabria.domain.usecase.ReconcileBackgroundSyncUseCase
+import com.jrblanco.boccantabria.domain.usecase.RunSyncCycleUseCase
+import com.jrblanco.boccantabria.domain.usecase.SaveAlertRuleUseCase
+import com.jrblanco.boccantabria.domain.usecase.SetAlertRuleEnabledUseCase
+import com.jrblanco.boccantabria.fake.FakeAppVisibilityProvider
+import com.jrblanco.boccantabria.fake.FakeBackgroundSyncScheduler
+import com.jrblanco.boccantabria.fake.RecordingAlertNotifier
 import com.jrblanco.boccantabria.core.telemetry.AnalyticsTracker
 import com.jrblanco.boccantabria.core.telemetry.CrashReporter
 import com.jrblanco.boccantabria.core.telemetry.NoOpAnalyticsTracker
@@ -146,6 +177,11 @@ class KoinModulesTest {
                     single<BocDatabase> {
                         Room.inMemoryDatabaseBuilder(context, BocDatabase::class.java).build()
                     }
+                    // Avisos (feature 012): the notifier and the scheduler reach the platform, and
+                    // WorkManager is not initialised here. The bindings are still checked below.
+                    single<AlertNotifier> { RecordingAlertNotifier() }
+                    single<BackgroundSyncScheduler> { FakeBackgroundSyncScheduler() }
+                    single<AppVisibilityProvider> { FakeAppVisibilityProvider() }
                 },
             ),
             allowOverride = true,
@@ -238,6 +274,37 @@ class KoinModulesTest {
         koin.get<RetryLastQuestionUseCase>()
         koin.get<DiscardAiConversationUseCase>()
 
+        // Avisos (feature 012). El formulario y el Worker no se resuelven aquí: el uno lee sus
+        // argumentos de navegación y el otro necesita WorkerParameters; verify() comprueba que las
+        // declaraciones existen. Todo lo que arrastran se resuelve uno a uno.
+        koin.get<AlertRuleDao>()
+        koin.get<AlertMatchDao>()
+        koin.get<AlertRepository>()
+        koin.get<InAppAlertStore>()
+        koin.get<AlertNotifier>()
+        koin.get<BackgroundSyncScheduler>()
+        koin.get<NotificationStatusDataSource>()
+        koin.get<NotificationStatusRepository>()
+        koin.get<AppVisibilityProvider>()
+        koin.get<MatchAlertRuleUseCase>()
+        koin.get<RunSyncCycleUseCase>()
+        koin.get<ObserveAlertRulesUseCase>()
+        koin.get<GetAlertRuleUseCase>()
+        koin.get<CountAlertRulesUseCase>()
+        koin.get<ReconcileBackgroundSyncUseCase>()
+        koin.get<SaveAlertRuleUseCase>()
+        koin.get<SetAlertRuleEnabledUseCase>()
+        koin.get<DeleteAlertRuleUseCase>()
+        koin.get<ObserveAlertNewsUseCase>()
+        koin.get<ObserveUnreadAlertCountUseCase>()
+        koin.get<MarkAlertReadUseCase>()
+        koin.get<MarkAllAlertsReadUseCase>()
+        koin.get<ObservePendingInAppAlertUseCase>()
+        koin.get<ConsumeInAppAlertUseCase>()
+        koin.get<GetNotificationStatusUseCase>()
+        koin.get<GetLastSyncUseCase>()
+        koin.get<PreviewAlertRuleUseCase>()
+
         koin.get<DispatcherProvider>()
         koin.get<TimeProvider>()
         koin.get<RandomProvider>()
@@ -325,6 +392,35 @@ class KoinModulesTest {
             GetSearchIssuersUseCase::class,
             FilterPublicationsUseCase::class,
             SearchViewModel::class,
+            // Avisos (feature 012)
+            androidx.work.WorkerParameters::class,
+            AlertRuleDao::class,
+            AlertMatchDao::class,
+            AlertRepository::class,
+            InAppAlertStore::class,
+            AlertNotifier::class,
+            BackgroundSyncScheduler::class,
+            NotificationStatusDataSource::class,
+            NotificationStatusRepository::class,
+            AppVisibilityProvider::class,
+            MatchAlertRuleUseCase::class,
+            RunSyncCycleUseCase::class,
+            ObserveAlertRulesUseCase::class,
+            GetAlertRuleUseCase::class,
+            CountAlertRulesUseCase::class,
+            ReconcileBackgroundSyncUseCase::class,
+            SaveAlertRuleUseCase::class,
+            SetAlertRuleEnabledUseCase::class,
+            DeleteAlertRuleUseCase::class,
+            ObserveAlertNewsUseCase::class,
+            ObserveUnreadAlertCountUseCase::class,
+            MarkAlertReadUseCase::class,
+            MarkAllAlertsReadUseCase::class,
+            ObservePendingInAppAlertUseCase::class,
+            ConsumeInAppAlertUseCase::class,
+            GetNotificationStatusUseCase::class,
+            GetLastSyncUseCase::class,
+            PreviewAlertRuleUseCase::class,
         )
     }
 }

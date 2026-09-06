@@ -1,13 +1,17 @@
 package com.jrblanco.boccantabria.ui.navigation
 
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.ui.Modifier
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.toRoute
+import com.jrblanco.boccantabria.ui.alerts.form.AlertFormScreen
 import com.jrblanco.boccantabria.ui.ask.AskRoute
 import com.jrblanco.boccantabria.ui.detail.PublicationDetailScreen
 import com.jrblanco.boccantabria.ui.info.InfoScreen
@@ -16,6 +20,7 @@ import com.jrblanco.boccantabria.ui.pdf.PdfViewerScreen
 import com.jrblanco.boccantabria.ui.splash.SplashScreen
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import org.koin.compose.koinInject
 
 /**
  * The outer graph: the cover, and then everything else.
@@ -29,6 +34,7 @@ fun BOCantabriaNavHost(
     modifier: Modifier = Modifier,
     navController: NavHostController = rememberNavController(),
     mainNavController: NavHostController = rememberNavController(),
+    pendingNavigation: PendingNavigationStore = koinInject(),
 ) {
     NavHost(
         navController = navController,
@@ -59,16 +65,37 @@ fun BOCantabriaNavHost(
             )
         }
         composable<Route.Home> {
+            // A tapped notification lands here **after** the cover has done its checks, and only if
+            // it did: a blocked cover never composes this destination, so nothing is consumed and
+            // nothing navigates (FR-049; 012 research.md D-424). The news target is consumed by the
+            // shell, which owns the inner controller.
+            val pending by pendingNavigation.pending.collectAsStateWithLifecycle()
+            LaunchedEffect(pending) {
+                if (pending is PendingNavigation.Publication) {
+                    val target = pendingNavigation.consume() as? PendingNavigation.Publication ?: return@LaunchedEffect
+                    navController.navigate(Route.Detail(target.externalKey))
+                }
+            }
             MainShell(
                 navController = mainNavController,
                 onOpenPublication = { externalKey ->
                     navController.navigate(Route.Detail(externalKey))
                 },
                 onOpenInfo = { navController.navigate(Route.Info) },
+                onOpenAlertForm = { route -> navController.navigate(route) },
+                pendingNavigation = pendingNavigation,
             )
         }
         composable<Route.Info> {
             InfoScreen(onBack = navController::popBackStack)
+        }
+        composable<Route.AlertForm> {
+            AlertFormScreen(
+                onBack = navController::popBackStack,
+                // The preview opens a publication on top of the form, so coming back lands on the
+                // form with the draft intact.
+                onOpenPublication = { externalKey -> navController.navigate(Route.Detail(externalKey)) },
+            )
         }
         composable<Route.Detail> {
             PublicationDetailScreen(

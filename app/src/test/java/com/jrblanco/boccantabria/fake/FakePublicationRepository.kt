@@ -66,6 +66,24 @@ class FakePublicationRepository(
 
     override suspend fun refresh(): AppResult<SyncSummary> {
         refreshCount++
+        onRefresh?.invoke()
         return refreshResult
     }
+
+    /** Runs inside [refresh], so a test can change the world mid-synchronisation. */
+    var onRefresh: (suspend () -> Unit)? = null
+
+    val keysAsked: MutableList<Set<String>> = mutableListOf()
+
+    override suspend fun byKeys(keys: Set<String>): List<Publication> {
+        keysAsked += keys
+        val known = publications.value + publicationsByKey.values
+        return known.filter { it.externalKey in keys }.distinctBy { it.externalKey }
+    }
+
+    override suspend fun newest(limit: Int): List<Publication> = publications.value.take(limit)
+
+    var lastSuccessAt: Long? = null
+
+    override suspend fun lastSuccessfulSyncAt(): Long? = lastSuccessAt
 }

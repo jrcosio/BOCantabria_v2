@@ -156,6 +156,73 @@ class PublicationRepositoryImplTest {
         assertEquals(1, database.publicationDao().count())
     }
 
+    // ---------- Feature 012: what was new, and the baseline ----------
+
+    @Test
+    fun `the first successful synchronisation reports no new keys and marks the baseline`() = runTest {
+        remote.respondWithItems("6802081", "h1", rssItem("1"), rssItem("2"))
+
+        val summary = (repository().refresh() as AppResult.Success).data
+
+        assertTrue(summary.isBaseline)
+        assertTrue(summary.newKeys.isEmpty())
+        assertEquals(2, summary.insertedItems)
+        assertEquals("true", analytics.events.last { it.name == PublicationRepositoryImpl.EVENT_SYNC }.parameters["baseline"])
+    }
+
+    @Test
+    fun `a later synchronisation reports exactly the inserted keys`() = runTest {
+        remote.respondWithItems("6802081", "h1", rssItem("1"))
+        val repository = repository()
+        repository.refresh()
+
+        remote.respondWithItems("6802081", "h2", rssItem("1", title = "Corregido"), rssItem("2"))
+        remote.respondWithItems("6802085", "h3", rssItem("3"))
+        val summary = (repository.refresh() as AppResult.Success).data
+
+        assertFalse(summary.isBaseline)
+        assertEquals(setOf("boc:2", "boc:3"), summary.newKeys)
+        assertEquals(2, repository.byKeys(summary.newKeys).size)
+    }
+
+    @Test
+    fun `a feed that fails contributes no keys`() = runTest {
+        remote.respondWithItems("6802081", "h1", rssItem("1"))
+        val repository = repository()
+        repository.refresh()
+
+        remote.respondWith("6802081", FeedFetchResult.Failed(FeedFailure.SERVER_ERROR))
+        remote.respondWithItems("6802085", "h2", rssItem("2"))
+        val summary = (repository.refresh() as AppResult.Success).data
+
+        assertEquals(setOf("boc:2"), summary.newKeys)
+    }
+
+    @Test
+    fun `the sync event never carries keys`() = runTest {
+        remote.respondWithItems("6802081", "h1", rssItem("1"))
+        val repository = repository()
+        repository.refresh()
+        remote.respondWithItems("6802081", "h2", rssItem("1"), rssItem("2"))
+        repository.refresh()
+
+        val event = analytics.events.last { it.name == PublicationRepositoryImpl.EVENT_SYNC }
+        assertFalse(event.parameters.values.any { it.contains("boc:") })
+        assertEquals("false", event.parameters["baseline"])
+    }
+
+    @Test
+    fun `the newest rows and the last success are readable`() = runTest {
+        remote.respondWithItems("6802081", "h1", rssItem("1", date = "2026-08-01"), rssItem("2", date = "2026-08-27"))
+        val repository = repository()
+        assertEquals(null, repository.lastSuccessfulSyncAt())
+
+        repository.refresh()
+
+        assertEquals(listOf("boc:2"), repository.newest(1).map { it.externalKey })
+        assertEquals(java.lang.Long.valueOf(now), repository.lastSuccessfulSyncAt())
+    }
+
     // ---------- Failure ----------
 
     @Test
@@ -315,7 +382,9 @@ class PublicationRepositoryImplTest {
         val event = analytics.events.single { it.name == PublicationRepositoryImpl.EVENT_SYNC }
         assertEquals("19", event.parameters["succeeded"])
         assertEquals("1", event.parameters["inserted"])
-        assertTrue(event.parameters.values.all { it.toIntOrNull() != null })
+        // Counts, plus the one flag feature 012 added. Never a key, never a title.
+        assertTrue(event.parameters.filterKeys { it != "baseline" }.values.all { it.toIntOrNull() != null })
+        assertEquals("true", event.parameters["baseline"])
     }
 
     // ---------- The searchable text, and the rows that predate it ----------

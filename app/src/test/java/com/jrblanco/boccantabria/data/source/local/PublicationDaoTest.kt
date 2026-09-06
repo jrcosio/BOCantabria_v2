@@ -52,8 +52,37 @@ class PublicationDaoTest {
     fun `inserting reports how many rows were new`() = runTest {
         val counts = dao.upsertAll(listOf(entity("boc:1"), entity("boc:2")))
 
-        assertEquals(UpsertCounts(inserted = 2, updated = 0), counts)
+        assertEquals(UpsertCounts(inserted = 2, updated = 0, insertedKeys = listOf("boc:1", "boc:2")), counts)
         assertEquals(2, dao.count())
+    }
+
+    /**
+     * Feature 012: the keys the alerts are evaluated against. A row the unique `blob_id` index
+     * rejected is **not** new, and an update is not new either.
+     */
+    @Test
+    fun `inserting reports which keys were new, and a blob id collision is not one of them`() = runTest {
+        dao.upsertAll(listOf(entity("boc:1", blobId = "1")))
+
+        val counts = dao.upsertAll(
+            listOf(
+                entity("boc:1", blobId = "1", title = "Corregido"),
+                entity("boc:2", blobId = "2"),
+                entity("otra-clave", blobId = "2"),
+            ),
+        )
+
+        assertEquals(listOf("boc:2"), counts.insertedKeys)
+        assertEquals(1, counts.inserted)
+        assertEquals(1, counts.updated)
+    }
+
+    @Test
+    fun `rows are read back by key, and the newest come first`() = runTest {
+        dao.upsertAll(listOf(entity("boc:1", date = LocalDate.of(2026, 8, 1)), entity("boc:2", date = LocalDate.of(2026, 8, 27))))
+
+        assertEquals(setOf("boc:1", "boc:2"), dao.byKeys(listOf("boc:1", "boc:2", "boc:9")).map { it.externalKey }.toSet())
+        assertEquals(listOf("boc:2"), dao.newest(1).map { it.externalKey })
     }
 
     @Test

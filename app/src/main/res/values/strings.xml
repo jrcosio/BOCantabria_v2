@@ -1,4 +1,4 @@
-<resources>
+<resources xmlns:tools="http://schemas.android.com/tools">
     <string name="app_name">BOCantabria</string>
 
     <!-- Pantalla de inicio -->
@@ -309,4 +309,160 @@
     <string name="ask_error_invalid">No se ha podido construir una respuesta fiable. Puedes consultar el documento oficial.</string>
     <string name="ask_error_unknown">No se ha podido responder. Inténtalo de nuevo.</string>
     <string name="ask_retry">Reintentar</string>
+
+    <!-- ==================== Avisos (feature 012) ==================== -->
+
+    <!-- Barra inferior -->
+    <string name="nav_alerts">Avisos</string>
+
+    <!-- La pantalla -->
+    <string name="alerts_title">Avisos</string>
+    <string name="alerts_settings">Ajustes de avisos</string>
+    <string name="alerts_tab_news">Novedades</string>
+    <string name="alerts_tab_news_count">Novedades %1$d</string>
+    <string name="alerts_tab_rules">Mis avisos</string>
+    <string name="alerts_intro_title">Sigue lo que te importa</string>
+    <string name="alerts_intro_body">Recibe un aviso cuando una nueva publicación coincida con tus intereses.</string>
+    <string name="alerts_create">Crear aviso</string>
+    <string name="alerts_rules_header">Mis avisos</string>
+    <plurals name="alerts_active_count">
+        <item quantity="one">%d activo</item>
+        <item quantity="other">%d activos</item>
+    </plurals>
+    <string name="alerts_rules_empty_title">Aún no tienes avisos</string>
+    <string name="alerts_rules_empty_body">Crea un aviso para saber cuándo aparece una publicación relacionada con tus intereses.</string>
+    <string name="alerts_rules_empty_action">Crear mi primer aviso</string>
+    <string name="alerts_news_empty_title">No tienes avisos nuevos</string>
+    <string name="alerts_news_empty_body">Cuando una publicación nueva coincida con alguno de tus avisos, aparecerá aquí.</string>
+    <string name="alerts_news_mark_all_read">Marcar todas como leídas</string>
+    <string name="alerts_news_matches">Coincide con: %1$s</string>
+    <string name="alerts_news_unread">Sin leer</string>
+    <string name="alerts_day_today">Hoy</string>
+    <string name="alerts_day_yesterday">Ayer</string>
+    <string name="alerts_time_minutes">Hace %1$d min</string>
+    <string name="alerts_time_hours">Hace %1$d h</string>
+    <string name="alerts_time_just_now">Ahora mismo</string>
+
+    <!-- La tarjeta de un aviso -->
+    <string name="alerts_rule_paused">Aviso pausado</string>
+    <string name="alerts_rule_toggle">Activar o pausar el aviso %1$s</string>
+    <string name="alerts_rule_menu">Más opciones de %1$s</string>
+    <string name="alerts_rule_edit">Editar</string>
+    <string name="alerts_rule_duplicate">Duplicar</string>
+    <string name="alerts_rule_delete">Eliminar</string>
+    <string name="alerts_rule_all_sections">Todas las secciones</string>
+    <string name="alerts_rule_section_all_children">%1$s (todas)</string>
+    <string name="alerts_rule_kind_keyword">Palabra clave</string>
+    <plurals name="alerts_rule_kind_keywords">
+        <item quantity="one">%d palabra</item>
+        <item quantity="other">%d palabras</item>
+    </plurals>
+    <string name="alerts_rule_kind_organization">Organismo</string>
+    <plurals name="alerts_matches_today">
+        <item quantity="one">%d coincidencia hoy</item>
+        <item quantity="other">%d coincidencias hoy</item>
+    </plurals>
+    <string name="alerts_rule_last_match">Última coincidencia: %1$s</string>
+    <string name="alerts_rule_no_match">Sin coincidencias todavía</string>
+    <string name="alerts_action_failed">No se ha podido guardar el cambio. Inténtalo de nuevo.</string>
+
+    <!-- Eliminar -->
+    <string name="alerts_delete_title">¿Eliminar este aviso?</string>
+    <string name="alerts_delete_body">Dejarás de recibir novedades que coincidan con «%1$s».</string>
+    <string name="alerts_delete_cancel">Cancelar</string>
+    <string name="alerts_delete_confirm">Eliminar</string>
+
+    <!-- Permiso desactivado -->
+    <string name="alerts_permission_banner">Tus avisos están configurados, pero Android no permite mostrar notificaciones.</string>
+    <string name="alerts_permission_open_settings">Abrir ajustes</string>
+
+    <!-- La hoja de ajustes -->
+    <string name="alerts_settings_title">Ajustes de avisos</string>
+    <string name="alerts_settings_permission_granted">Las notificaciones están activadas.</string>
+    <string name="alerts_settings_permission_needed">Las notificaciones no están activadas. Se piden al guardar el primer aviso; también puedes activarlas en los ajustes de Android.</string>
+    <string name="alerts_settings_permission_disabled">Android no permite mostrar notificaciones de esta aplicación.</string>
+    <string name="alerts_settings_last_check">Última comprobación: %1$s</string>
+    <string name="alerts_settings_never_checked">Todavía no se ha comprobado el boletín.</string>
+    <string name="alerts_settings_periodic" tools:ignore="Typos">La aplicación comprueba el boletín periódicamente mientras tengas algún aviso activo. Android decide el momento exacto.</string>
+
+    <!-- El formulario -->
+    <string name="alert_form_title_create">Crear aviso</string>
+    <string name="alert_form_title_edit">Editar aviso</string>
+    <string name="alert_form_back">Volver</string>
+    <string name="alert_form_intro">Te avisaremos al encontrar una publicación nueva que cumpla estas condiciones.</string>
+    <string name="alert_form_name_label">Nombre del aviso</string>
+    <string name="alert_form_name_hint">Por ejemplo, Ganadería</string>
+    <string name="alert_form_name_error_long" tools:ignore="PluralsCandidate">El nombre no puede tener más de %1$d caracteres.</string>
+    <string name="alert_form_keywords_label">Palabras clave</string>
+    <string name="alert_form_keywords_help">Busca en el título, organismo y categorías del RSS.</string>
+    <string name="alert_form_keywords_hint">Añadir palabra</string>
+    <string name="alert_form_keywords_add">Añadir palabra</string>
+    <string name="alert_form_keyword_remove">Quitar %1$s</string>
+    <string name="alert_form_keyword_rejected_short" tools:ignore="PluralsCandidate">Escribe al menos %1$d caracteres.</string>
+    <string name="alert_form_keyword_rejected_long" tools:ignore="PluralsCandidate">Una palabra o frase no puede tener más de %1$d caracteres.</string>
+    <string name="alert_form_keyword_rejected_duplicate">Esa palabra ya está en el aviso.</string>
+    <string name="alert_form_keyword_rejected_limit" tools:ignore="PluralsCandidate">Como mucho %1$d palabras por aviso.</string>
+    <string name="alert_form_match_label">Coincidencia</string>
+    <string name="alert_form_match_any">Cualquiera de las palabras</string>
+    <string name="alert_form_match_all">Todas las palabras</string>
+    <string name="alert_form_sections_label">Secciones del BOC</string>
+    <string name="alert_form_sections_help">Opcional · Si no eliges ninguna, se buscará en todas.</string>
+    <string name="alert_form_sections_open">Elegir secciones</string>
+    <string name="alert_form_sections_sheet_title">Seleccionar secciones</string>
+    <string name="alert_form_sections_all">Todas las secciones</string>
+    <plurals name="alert_form_sections_selected">
+        <item quantity="one">%d seleccionada</item>
+        <item quantity="other">%d seleccionadas</item>
+    </plurals>
+    <string name="alert_form_sections_apply">Aplicar</string>
+    <string name="alert_form_organization_label">Organismo</string>
+    <string name="alert_form_organization_hint">Cualquier organismo</string>
+    <string name="alert_form_enabled_label">Aviso</string>
+    <string name="alert_form_enabled_help">Notificar al encontrar coincidencias nuevas</string>
+    <string name="alert_form_summary_title">Así funcionará</string>
+    <string name="alert_form_summary_need_criteria">Añade una palabra, una sección o un organismo para saber de qué te avisaremos.</string>
+    <string name="alert_form_summary_any">Te avisaremos de cualquier publicación nueva.</string>
+    <string name="alert_form_summary_any_of_sections">Te avisaremos de cualquier publicación nueva de %1$s.</string>
+    <string name="alert_form_summary_words">Te avisaremos cuando una publicación nueva incluya %1$s.</string>
+    <string name="alert_form_summary_words_in_sections">Te avisaremos cuando una publicación nueva de %1$s incluya %2$s.</string>
+    <string name="alert_form_summary_organization">" del organismo «%1$s»"</string>
+    <string name="alert_form_summary_join_or">" o "</string>
+    <string name="alert_form_summary_join_and">" y "</string>
+    <string name="alert_form_summary_join_comma">", "</string>
+    <plurals name="alert_form_preview_count">
+        <item quantity="one">%d publicación actual coincide con esta configuración</item>
+        <item quantity="other">%d publicaciones actuales coinciden con esta configuración</item>
+    </plurals>
+    <string name="alert_form_preview_none">Ninguna publicación actual coincide con esta configuración. Puedes guardar el aviso igualmente.</string>
+    <string name="alert_form_preview_open">Ver resultados</string>
+    <string name="alert_form_preview_title">Publicaciones que ya coinciden</string>
+    <string name="alert_form_cancel">Cancelar</string>
+    <string name="alert_form_save_create">Guardar aviso</string>
+    <string name="alert_form_save_edit">Guardar cambios</string>
+    <string name="alert_form_save_failed">No se ha podido guardar el aviso. Inténtalo de nuevo.</string>
+
+    <!-- El permiso, en contexto -->
+    <string name="alert_permission_title">Activa las notificaciones</string>
+    <string name="alert_permission_body">Permite que BOC Cantabria te avise cuando aparezcan publicaciones relacionadas con tus intereses.</string>
+    <string name="alert_permission_later">Ahora no</string>
+    <string name="alert_permission_continue">Continuar</string>
+
+    <!-- La notificación de Android -->
+    <string name="alert_notification_channel_name">Avisos del BOC</string>
+    <string name="alert_notification_channel_description">Publicaciones nuevas que coinciden con tus avisos.</string>
+    <string name="alert_notification_title_single">Nueva publicación: %1$s</string>
+    <string name="alert_notification_title_multi">Nueva publicación del BOC</string>
+    <string name="alert_notification_matches">Coincide con %1$s</string>
+    <plurals name="alert_notification_summary">
+        <item quantity="one">%d publicación nueva coincide con tus avisos</item>
+        <item quantity="other">%d publicaciones nuevas coinciden con tus avisos</item>
+    </plurals>
+
+    <!-- El aviso dentro de la aplicación -->
+    <string name="alert_snackbar_single">Una nueva publicación coincide con «%1$s»</string>
+    <plurals name="alert_snackbar_many">
+        <item quantity="one">%d nueva publicación coincide con tus avisos</item>
+        <item quantity="other">%d nuevas publicaciones coinciden con tus avisos</item>
+    </plurals>
+    <string name="alert_snackbar_action">VER</string>
 </resources>

@@ -101,6 +101,35 @@ class PublicationRepositoryImpl(
             )
         }
 
+    override suspend fun byKeys(keys: Set<String>): List<Publication> = withContext(dispatchers.io) {
+        if (keys.isEmpty()) return@withContext emptyList()
+        try {
+            keys.chunked(SQLITE_VARIABLE_LIMIT)
+                .flatMap { chunk -> publicationDao.byKeys(chunk) }
+                .map { it.toDomain() }
+        } catch (cancellation: CancellationException) {
+            throw cancellation
+        } catch (unexpected: Throwable) {
+            crashReporter.recordNonFatal(unexpected)
+            emptyList()
+        }
+    }
+
+    override suspend fun newest(limit: Int): List<Publication> = withContext(dispatchers.io) {
+        try {
+            publicationDao.newest(limit).map { it.toDomain() }
+        } catch (cancellation: CancellationException) {
+            throw cancellation
+        } catch (unexpected: Throwable) {
+            crashReporter.recordNonFatal(unexpected)
+            emptyList()
+        }
+    }
+
+    override suspend fun lastSuccessfulSyncAt(): Long? = withContext(dispatchers.io) {
+        runCatching { feedSyncStateDao.lastSuccessAt() }.getOrNull()
+    }
+
     override suspend fun isCacheStale(): Boolean = withContext(dispatchers.io) {
         val lastSuccess = runCatching { feedSyncStateDao.lastSuccessAt() }.getOrNull()
             ?: return@withContext true
@@ -109,12 +138,26 @@ class PublicationRepositoryImpl(
 
     override suspend fun refresh(): AppResult<SyncSummary> = withContext(dispatchers.io) {
         try {
+            // Decided **once, before** the nineteen sources run: with four in flight, the second to
+            // finish would already see the success the first one wrote, and a per-feed decision
+            // would call thirteen feeds "new" and six "baseline". `lastSuccessAt` rather than
+            // `count()`: an empty first answer still marks success, so a second run with content is
+            // not mistaken for the first (012 research.md D-403).
+            val isBaseline = feedSyncStateDao.lastSuccessAt() == null
+
             val permits = Semaphore(MAX_CONCURRENT_FEEDS)
-            val summary = coroutineScope {
+            val folded = coroutineScope {
                 feeds.filter { it.enabled }
                     .map { definition -> async { permits.withPermit { syncFeed(definition) } } }
                     .awaitAll()
             }.fold(SyncSummary(), SyncSummary::plus)
+
+            // The first successful synchronisation of an installation is history, not news: the
+            // keys are emptied here so that no consumer can forget to.
+            val summary = folded.copy(
+                isBaseline = isBaseline,
+                newKeys = if (isBaseline) emptySet() else folded.newKeys,
+            )
 
             analytics.track(summary.toEvent())
             backfillSearchText()
@@ -190,6 +233,7 @@ class PublicationRepositoryImpl(
                     insertedItems = counts.inserted,
                     updatedItems = counts.updated,
                     rejectedItems = normalized.size - accepted.size,
+                    newKeys = counts.insertedKeys.toSet(),
                 )
             }
         }
@@ -262,7 +306,7 @@ class PublicationRepositoryImpl(
             ?.name
     }
 
-    /** Counts only. The feeds carry no personal data and none is derived here. */
+    /** Counts only. The feeds carry no personal data and none is derived here; never the keys. */
     private fun SyncSummary.toEvent() = AnalyticsEvent(
         name = EVENT_SYNC,
         parameters = mapOf(
@@ -272,6 +316,7 @@ class PublicationRepositoryImpl(
             "inserted" to insertedItems.toString(),
             "updated" to updatedItems.toString(),
             "rejected" to rejectedItems.toString(),
+            "baseline" to isBaseline.toString(),
         ),
     )
 
@@ -284,6 +329,9 @@ class PublicationRepositoryImpl(
 
         /** Big enough that a full archive takes a handful of passes, small enough to stay cheap. */
         const val BACKFILL_BATCH_SIZE = 500
+
+        /** SQLite caps the bound variables of one statement; the `IN` list has to respect it. */
+        const val SQLITE_VARIABLE_LIMIT = 900
 
         const val EVENT_SYNC = "boc_sync"
     }

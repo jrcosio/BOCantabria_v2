@@ -13,8 +13,7 @@ import com.jrblanco.boccantabria.domain.usecase.GetBocSectionsUseCase
 import com.jrblanco.boccantabria.domain.usecase.ObserveBulletinHeaderUseCase
 import com.jrblanco.boccantabria.domain.usecase.ObservePublicationsUseCase
 import com.jrblanco.boccantabria.domain.usecase.ObserveSavedKeysUseCase
-import com.jrblanco.boccantabria.domain.usecase.RefreshPublicationsUseCase
-import com.jrblanco.boccantabria.domain.usecase.ReleaseUnusedDocumentsUseCase
+import com.jrblanco.boccantabria.domain.usecase.RunSyncCycleUseCase
 import com.jrblanco.boccantabria.domain.usecase.SetPublicationSavedUseCase
 import com.jrblanco.boccantabria.domain.usecase.ShareOfficialDocumentUseCase
 import com.jrblanco.boccantabria.ui.share.ShareState
@@ -40,13 +39,12 @@ class HomeViewModel(
     savedStateHandle: SavedStateHandle,
     private val observePublications: ObservePublicationsUseCase,
     private val observeHeader: ObserveBulletinHeaderUseCase,
-    private val refreshPublications: RefreshPublicationsUseCase,
+    private val runSyncCycle: RunSyncCycleUseCase,
     private val getSections: GetBocSectionsUseCase,
     private val filterPublications: FilterPublicationsUseCase,
     private val observeSavedKeys: ObserveSavedKeysUseCase,
     private val setPublicationSaved: SetPublicationSavedUseCase,
     private val shareDocument: ShareOfficialDocumentUseCase,
-    private val releaseUnusedDocuments: ReleaseUnusedDocumentsUseCase,
     private val analytics: AnalyticsTracker,
 ) : ViewModel() {
 
@@ -190,10 +188,13 @@ class HomeViewModel(
 
         refreshJob = viewModelScope.launch {
             syncState.value = syncState.value.copy(isRefreshing = true)
-            syncState.value = when (val result = refreshPublications(force)) {
+            // The whole cycle, not just the refresh: since feature 012 the same call evaluates the
+            // alerts against what was new and tidies the document cache. The home screen only
+            // reads the synchronisation half of the outcome (012 research.md D-404).
+            syncState.value = when (val result = runSyncCycle(force)) {
                 is AppResult.Success -> syncState.value.copy(
                     isRefreshing = false,
-                    isOffline = result.data.allFailed,
+                    isOffline = result.data.summary.allFailed,
                     error = null,
                     hasSynchronised = true,
                 )
@@ -205,10 +206,6 @@ class HomeViewModel(
                     hasSynchronised = true,
                 )
             }
-            // The bulletin has just changed, so yesterday's documents are the ones nobody is about
-            // to open. Done here rather than while one is being read, when deleting the file
-            // underneath the reader would be the obvious risk.
-            releaseUnusedDocuments()
         }
     }
 

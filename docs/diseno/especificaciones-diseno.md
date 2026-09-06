@@ -397,12 +397,17 @@ No utilizar:
 > `Avisos` se aplaza junto con el resto del trabajo de notificaciones: un cuarto destino que solo
 > pudiera prometer algo sería peor que tres que llevan a alguna parte. Cuando existan las
 > notificaciones se recuperará como cuarto destino y el resto de este apartado seguirá valiendo.
+>
+> **Enmienda (6 de septiembre de 2026, feature 012).** Las notificaciones existen y `Avisos` vuelve
+> como **cuarto destino**, con icono de campana y un badge con el número de publicaciones sin leer
+> («9+» por encima de nueve, oculto en cero). El resto del apartado vale tal cual estaba.
 
-La navegación principal tendrá tres destinos:
+La navegación principal tiene cuatro destinos:
 
 - `Inicio`.
 - `Buscar`.
 - `Guardados`.
+- `Avisos`.
 
 ### Medidas
 
@@ -430,7 +435,7 @@ La navegación principal tendrá tres destinos:
 - Borde superior de 1 dp o elevación mínima.
 - No usar una franja roja.
 - No colocar un botón circular central de actualización.
-- No mostrar más de cuatro destinos. Hoy son tres (ver la enmienda del encabezado).
+- No mostrar más de cuatro destinos. Hoy son cuatro (ver las enmiendas del encabezado).
 
 ## 10.2. Barra superior principal
 
@@ -438,6 +443,9 @@ La navegación principal tendrá tres destinos:
 > abre el panel de secciones y termina en Buscar e Información. La campana desaparece mientras no
 > existan las notificaciones: un icono presente que no hace nada es peor que un icono que todavía
 > no está.
+>
+> **Enmienda (6 de septiembre de 2026, feature 012).** La campana vive en la **barra inferior**, como
+> cuarto destino, y no vuelve a la barra superior de Inicio: dos campanas dirían lo mismo dos veces.
 
 Composición:
 
@@ -1271,36 +1279,69 @@ Debajo o encima del campo:
 
 ## 23. Pantalla Avisos
 
+> **Enmienda (6 de septiembre de 2026, feature 012).** Implementada. La pantalla se organiza en **dos
+> pestañas** —`Novedades` y `Mis avisos`— siguiendo el documento de experiencia
+> `Datos_modelo/EXPERIENCIA_NOTIFICACIONES_AVISOS_BOC.md`; los apartados siguientes se reescriben
+> con lo construido. Los mockups `Datos_modelo/screen_*_avisos.png` fueron orientativos.
+
 ## 23.1. Cabecera
 
-- Título `Avisos`.
-- Acción de ajustes.
-- Acción `Marcar como leído` dentro del menú.
+- Barra superior blanca, como Inicio: escudo pequeño y título `Avisos`.
+- Acción de ajustes (icono de deslizadores) que abre una hoja inferior con el estado del permiso de
+  notificaciones, un acceso a los ajustes de Android de la aplicación y la fecha y hora de la última
+  comprobación. **No** se ofrece elegir una frecuencia: Android no la garantiza.
+- Debajo, dos pestañas con indicador de 3 dp (apartado 11.7): `Novedades N` y `Mis avisos`.
 
-## 23.2. Agrupación
+## 23.2. Novedades
 
-- Separadores por fecha: `Hoy`, `Ayer`, `Esta semana`.
-- Tarjetas o filas sobre fondo blanco.
-- Punto azul para aviso no leído.
-- Icono de sección.
-- Título de publicación.
-- Nombre corto de la alerta en un chip pequeño.
-- Hora o fecha alineada a la derecha.
+- Separadores por día: `HOY`, `AYER` y la fecha (`d de MMMM`), en `LabelMedium` y `TextMuted`.
+- Una fila por publicación coincidente, con esquinas de tarjeta estándar.
+- Sin leer: punto azul (`Secondary`) a la izquierda y fondo `PrimaryContainer`. Leída: fondo blanco y
+  sin punto.
+- Título de la publicación sin el prefijo del organismo, «Coincide con: A, B», nombre de la sección en
+  su color de grupo y el momento de detección («Hace 20 min», «Hace 2 h», «Ayer»).
+- Acción `Marcar todas como leídas` al inicio de la lista mientras haya alguna sin leer.
+- Pulsar abre el detalle y marca leída. Entrar en la pestaña **no** marca nada.
+- Vacío: ilustración de campana rellena, `No tienes avisos nuevos`, texto secundario y —cuando no hay
+  ninguna regla— el botón `Crear mi primer aviso`.
 
-## 23.3. Reglas visuales de alerta
+## 23.3. Mis avisos
 
-- Campana rellena azul para activa.
-- Campana outlined gris para inactiva.
-- Interruptor estándar de Material 3.
-- Las palabras clave se muestran como chips.
-- Los bloques de configuración se separan mediante tarjetas discretas.
+- Tarjeta introductoria sobre `PrimaryContainer` con esquinas grandes: campana, `Sigue lo que te
+  importa`, una línea de apoyo y el botón principal `+ Crear aviso`.
+- Cabecera `Mis avisos` en `HeadlineSmall` con `N activos` debajo en `TextMuted`.
+- Una tarjeta por regla: nombre en `TitleLarge` `Primary`, interruptor estándar de Material 3 y menú
+  de tres puntos con `Editar`, `Duplicar` y `Eliminar`; una fila de chips de contorno `Secondary` que
+  dicen qué clase de criterios tiene (`Palabra clave`, `2 palabras`, `Organismo`, o la sección);
+  las palabras separadas por «·» con icono de lupa; las secciones o `Todas las secciones` con icono de
+  documento; y a la derecha `1 coincidencia hoy` en `Secondary`, `Última coincidencia: ayer` en
+  `TextMuted`, o `Aviso pausado`.
+- Banner persistente sobre `SecondaryContainer` con `Abrir ajustes` cuando hay reglas activas y
+  Android no muestra notificaciones. No bloquea y no toca las reglas.
+- Vacío: campana rellena, `Aún no tienes avisos`, texto de apoyo y `Crear mi primer aviso`.
 
-## 23.4. Estado vacío
+## 23.4. Crear y editar aviso
 
-- Ilustración lineal de campana.
-- Título `No tienes avisos nuevos`.
-- Texto secundario.
-- Botón `Crear una alerta` si se desea mostrar.
+- Destino **fuera** del shell, con barra superior azul y flecha Atrás (apartado 10.3). Título `Crear
+  aviso` o `Editar aviso`.
+- Aviso superior sobre `PrimaryContainer`: «Te avisaremos al encontrar una publicación nueva que
+  cumpla estas condiciones».
+- Bloques en este orden, cada uno con su etiqueta en `TitleMedium` `Primary`: nombre; palabras clave
+  (campo con «+», chips `PrimaryContainer` con cruz, ayuda «Busca en el título, organismo y categorías
+  del RSS»); coincidencia (dos radios); secciones (botón de contorno que abre la hoja
+  `Seleccionar secciones` con casillas tri-estado por sección, subsecciones sangradas, `Todas las
+  secciones`, contador y `Aplicar`); organismo (texto libre con sugerencias); interruptor `Aviso`;
+  tarjeta `Así funcionará` sobre `PrimaryContainer`; línea de vista previa «N publicaciones actuales
+  coinciden con esta configuración» con `Ver resultados`.
+- Pie fijo con `Cancelar` (contorno) y `Guardar aviso` / `Guardar cambios` (principal), deshabilitado
+  mientras el formulario no sea válido.
+
+## 23.5. Diálogos y mensajes
+
+- Diálogos solo para dos cosas: `Activa las notificaciones` tras guardar el primer aviso, y
+  `¿Eliminar este aviso?` con la acción destructiva en `Error`.
+- Con la aplicación en pantalla, una coincidencia se anuncia con un Snackbar (apartado 26.6) con la
+  acción `VER`, que abre `Novedades`. Nunca a la vez que una notificación de Android.
 
 ---
 
@@ -1770,7 +1811,7 @@ Icono estándar:         24 dp
 ### Guardados y Avisos
 
 - [ ] Tarjetas compactas. *(Guardados usa la estándar; ver la enmienda del apartado 12.2.)*
-- [x] Estados vacíos. *(Guardados, feature 005. Avisos sigue pendiente.)*
+- [x] Estados vacíos. *(Guardados, feature 005. Avisos, feature 012.)*
 - [ ] Filtros mediante chips. *(Aplazados; ver la enmienda del apartado 22.)*
 - [x] Iconos activos e inactivos coherentes. *(Marcador relleno y contorneado, feature 005.)*
 
@@ -1783,7 +1824,7 @@ El nuevo diseño se considerará correctamente implementado cuando:
 - Toda la aplicación utiliza la misma paleta y escala tipográfica.
 - No aparecen los antiguos turquesa y rojo como grandes superficies.
 - Las tarjetas presentan una jerarquía clara entre organismo, título y metadatos.
-- La navegación inferior contiene exactamente tres destinos *(ver la enmienda del apartado 10.1)*.
+- La navegación inferior contiene exactamente cuatro destinos *(ver las enmiendas del apartado 10.1)*.
 - Las secciones se presentan en un panel lateral sobrio, sin la cabecera de autor del diseño
   antiguo *(ver la enmienda del apartado 16)*.
 - El contenido oficial y el contenido de IA se distinguen visualmente.

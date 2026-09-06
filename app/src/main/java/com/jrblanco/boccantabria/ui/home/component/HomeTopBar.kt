@@ -46,8 +46,8 @@ const val TAG_HOME_SEARCH_CLEAR: String = "home_search_clear"
  * One bar with two faces rather than two bars, and on the same surface colour, so that opening the
  * search reads as the header changing shape and not as landing somewhere else.
  *
- * No bell. Alerts are a later feature, and an icon that exists but does nothing is worse than an
- * icon that is not there yet.
+ * No bell here. Since feature 012 the alerts live in the bottom bar as a fourth destination, with
+ * their badge; a second bell up here would say the same thing twice.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
