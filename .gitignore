@@ -47,3 +47,7 @@ replay_pid*
 # ---------- Proyecto ----------
 # Material de referencia (capturas, modelos de datos) no versionado
 /Datos_modelo
+
+# Auditoría técnica: se versionan solo los informes; los diagnósticos, sus fixtures y logs no
+/docs/auditoria/*
+!/docs/auditoria/*.md
