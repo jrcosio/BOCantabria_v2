@@ -48,8 +48,8 @@ fun sectionToggleTag(code: String): String = "section_toggle_$code"
  *
  * The design document described this as a screen of its own; the owner asked for a panel, and
  * the document has been updated to match. What has not changed is what it contains: a filter
- * field, the nine sections and their subsections. There are no bells and no alerts card — those
- * belong to a feature that does not exist yet, and an inert bell is worse than no bell.
+ * field, the nine sections and their subsections. There are no bells and no alerts card: since
+ * feature 012 the alerts live in the bottom bar, and a rule is created from there, not from a row here.
  */
 @Composable
 fun SectionsDrawerContent(

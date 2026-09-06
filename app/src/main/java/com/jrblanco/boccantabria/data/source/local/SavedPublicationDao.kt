@@ -13,8 +13,9 @@ import kotlinx.coroutines.flow.Flow
  * source would dilute it.
  *
  * **There is deliberately no delete here either.** Unsaving is `setSavedAt(key, null)`: the mark goes
- * and the publication stays exactly where it was. A review that sees a delete statement appear —in
- * this file or any other— should reject it.
+ * and the publication stays exactly where it was. A review that sees a delete statement appear over
+ * `publications` —in this file or any other— should reject it. The one delete of the project is
+ * `AlertRuleDao.delete`, over the person's alert rules, and the reason is written there.
  */
 @Dao
 interface SavedPublicationDao {

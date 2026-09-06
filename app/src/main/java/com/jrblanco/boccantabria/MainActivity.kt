@@ -1,5 +1,6 @@
 package com.jrblanco.boccantabria
 
+import android.content.Intent
 import android.graphics.Color
 import android.os.Bundle
 import androidx.activity.ComponentActivity
@@ -11,12 +12,22 @@ import androidx.compose.ui.Modifier
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import com.jrblanco.boccantabria.core.ui.theme.BOCantabriaTheme
 import com.jrblanco.boccantabria.ui.navigation.BOCantabriaNavHost
+import com.jrblanco.boccantabria.ui.navigation.PendingNavigationStore
+import com.jrblanco.boccantabria.ui.navigation.toPendingNavigation
+import org.koin.android.ext.android.inject
 
 class MainActivity : ComponentActivity() {
+
+    private val pendingNavigation: PendingNavigationStore by inject()
 
     override fun onCreate(savedInstanceState: Bundle?) {
         val splashScreen = installSplashScreen()
         super.onCreate(savedInstanceState)
+
+        // A tapped notification. Only on a fresh start: after a configuration change the same intent
+        // comes back, and consuming it again would reopen the detail on every rotation. The cover is
+        // never skipped — the graph consumes this after it (012 research.md D-424).
+        if (savedInstanceState == null) intent?.toPendingNavigation()?.let(pendingNavigation::set)
 
         // Left to itself, enableEdgeToEdge picks the system bar icon colour from the phone's
         // light/dark setting. This application has a single, light appearance, so on a phone set to
@@ -39,5 +50,11 @@ class MainActivity : ComponentActivity() {
             }
             readyToDraw = true
         }
+    }
+
+    /** `singleTop`: a tap with the application already open lands here instead of in a new activity. */
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        intent.toPendingNavigation()?.let(pendingNavigation::set)
     }
 }

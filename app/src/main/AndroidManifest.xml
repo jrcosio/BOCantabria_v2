@@ -4,6 +4,8 @@
 
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+    <!-- Avisos (feature 012). Se pide en contexto, tras guardar el primer aviso; nunca al arrancar. -->
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
 
     <application
         android:name=".BOCantabriaApp"
@@ -38,9 +40,30 @@
                 android:resource="@xml/file_paths" />
         </provider>
 
+        <!--
+          WorkManager se inicializa desde Koin (`workManagerFactory()`), para que el Worker de avisos
+          reciba sus dependencias por constructor. El inicializador por defecto arrancaría antes que
+          Koin y con su propia fábrica, así que se retira. `merge` conserva el resto de inicializadores
+          —el de `lifecycle-process` entre ellos— (012 research.md D-420).
+        -->
+        <provider
+            android:name="androidx.startup.InitializationProvider"
+            android:authorities="${applicationId}.androidx-startup"
+            android:exported="false"
+            tools:node="merge">
+            <meta-data
+                android:name="androidx.work.WorkManagerInitializer"
+                tools:node="remove" />
+        </provider>
+
+        <!--
+          `singleTop`: tocar una notificación con la aplicación abierta reutiliza la actividad y llega
+          por `onNewIntent`. Con `standard` se apilaría una segunda portada (012 research.md D-424).
+        -->
         <activity
             android:name=".MainActivity"
             android:exported="true"
+            android:launchMode="singleTop"
             android:screenOrientation="portrait"
             tools:ignore="LockedOrientationActivity,DiscouragedApi"
             android:windowSoftInputMode="adjustResize">

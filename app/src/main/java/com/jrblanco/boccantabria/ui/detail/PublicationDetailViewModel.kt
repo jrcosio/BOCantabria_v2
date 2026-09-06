@@ -10,6 +10,7 @@ import com.jrblanco.boccantabria.domain.model.AiSummaryStatus
 import com.jrblanco.boccantabria.domain.model.DetailTab
 import com.jrblanco.boccantabria.domain.model.Publication
 import com.jrblanco.boccantabria.domain.usecase.GetBocSectionsUseCase
+import com.jrblanco.boccantabria.domain.usecase.MarkAlertReadUseCase
 import com.jrblanco.boccantabria.domain.usecase.ObserveOfficialDocumentUseCase
 import com.jrblanco.boccantabria.domain.usecase.AcceptAiNoticeUseCase
 import com.jrblanco.boccantabria.domain.usecase.GenerateAiSummaryUseCase
@@ -58,6 +59,7 @@ class PublicationDetailViewModel(
     private val acceptAiNotice: AcceptAiNoticeUseCase,
     private val releaseAiDocumentSession: ReleaseAiDocumentSessionUseCase,
     private val discardAiConversation: DiscardAiConversationUseCase,
+    private val markAlertRead: MarkAlertReadUseCase,
     getSections: GetBocSectionsUseCase,
     private val analytics: AnalyticsTracker,
 ) : ViewModel() {
@@ -148,6 +150,10 @@ class PublicationDetailViewModel(
     private var hasRead: Boolean = false
 
     init {
+        // Opening the publication reads its news, wherever it was opened from: the notification, the
+        // Novedades tab or the bulletin. Idempotent, and a publication without news is a success
+        // (FR-056; 012 research.md D-426).
+        viewModelScope.launch { markAlertRead(externalKey) }
         analytics.trackScreenView(SCREEN_NAME)
         viewModelScope.launch {
             observePublication(externalKey).collect { hasRead = true }

@@ -29,15 +29,27 @@ import androidx.room.TypeConverters
  * Version 4 adds the AI summaries table. A **new table** is the easiest case an automatic migration
  * resolves, and unlike version 3 there is nothing to backfill: a new table starts empty by
  * definition, and having no summary is the normal state of a publication.
+ *
+ * Version 5 adds the two alert tables —the rules and what they caught— and is the same case as
+ * version 4: two empty tables, nothing to backfill, and having no alerts is the normal state of an
+ * installation. It is also the version that brings the project's **only** delete statement, in
+ * `AlertRuleDao`, and the reason it is allowed is written there (012 research.md D-410, D-412).
  */
 @Database(
-    entities = [PublicationEntity::class, FeedSyncStateEntity::class, AiSummaryEntity::class],
-    version = 4,
+    entities = [
+        PublicationEntity::class,
+        FeedSyncStateEntity::class,
+        AiSummaryEntity::class,
+        AlertRuleEntity::class,
+        AlertMatchEntity::class,
+    ],
+    version = 5,
     exportSchema = true,
     autoMigrations = [
         AutoMigration(from = 1, to = 2),
         AutoMigration(from = 2, to = 3),
         AutoMigration(from = 3, to = 4),
+        AutoMigration(from = 4, to = 5),
     ],
 )
 @TypeConverters(Converters::class)
@@ -52,6 +64,10 @@ abstract class BocDatabase : RoomDatabase() {
     abstract fun savedPublicationDao(): SavedPublicationDao
 
     abstract fun publicationSearchDao(): PublicationSearchDao
+
+    abstract fun alertRuleDao(): AlertRuleDao
+
+    abstract fun alertMatchDao(): AlertMatchDao
 
     companion object {
         const val NAME: String = "boc.db"

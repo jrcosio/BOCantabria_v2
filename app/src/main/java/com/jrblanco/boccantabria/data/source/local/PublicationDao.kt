@@ -12,7 +12,8 @@ import kotlinx.coroutines.flow.Flow
  *
  * **There is deliberately no delete.** Falling out of a source's hundred-item window must not
  * remove anything, and the surest way to guarantee that is for the statement not to exist. A
- * review that sees one appear here should reject it.
+ * review that sees one appear here should reject it. (The project's one delete is `AlertRuleDao.delete`,
+ * over the person's alert rules, never over this table.)
  *
  * Every query orders by date, then by numeric identifier, then by key. The last term is what
  * makes two runs agree even though the nineteen sources answer in a different order each time.
@@ -62,6 +63,20 @@ interface PublicationDao {
 
     @Query("SELECT external_key FROM publications WHERE external_key IN (:keys)")
     suspend fun existingKeys(keys: List<String>): List<String>
+
+    /** The rows behind [keys]. What a synchronisation cycle reads to evaluate the alerts (012). */
+    @Query("SELECT * FROM publications WHERE external_key IN (:keys)")
+    suspend fun byKeys(keys: List<String>): List<PublicationEntity>
+
+    /** The newest rows, for the alert form's preview. Same order as every list of the bulletin. */
+    @Query(
+        """
+        SELECT * FROM publications
+        ORDER BY publication_date DESC, CAST(blob_id AS INTEGER) DESC, external_key DESC
+        LIMIT :limit
+        """,
+    )
+    suspend fun newest(limit: Int): List<PublicationEntity>
 
     @Insert(onConflict = OnConflictStrategy.IGNORE)
     suspend fun insert(items: List<PublicationEntity>): List<Long>
@@ -122,6 +137,10 @@ interface PublicationDao {
     /**
      * Inserts what is new and refreshes what already existed, in one transaction, reporting how
      * many of each so the synchronisation summary can be built without a second pass.
+     *
+     * Since feature 012 it also reports **which** keys were new. They are taken from the rows the
+     * insert really wrote, not from the partition: the unique index on `blob_id` can reject a row
+     * whose key did not exist, and that row is not new (012 research.md D-401).
      */
     @Transaction
     suspend fun upsertAll(items: List<PublicationEntity>): UpsertCounts {
@@ -135,6 +154,9 @@ interface PublicationDao {
         val (toUpdate, toInsert) = items.partition { it.externalKey in existing }
 
         val insertedIds = insert(toInsert)
+        val insertedKeys = toInsert
+            .filterIndexed { index, _ -> insertedIds[index] != IGNORED_ROW_ID }
+            .map { it.externalKey }
         toUpdate.forEach { entity ->
             updateColumns(
                 externalKey = entity.externalKey,
@@ -156,8 +178,9 @@ interface PublicationDao {
             )
         }
         return UpsertCounts(
-            inserted = insertedIds.count { it != IGNORED_ROW_ID },
+            inserted = insertedKeys.size,
             updated = toUpdate.size,
+            insertedKeys = insertedKeys,
         )
     }
 
@@ -183,5 +206,14 @@ interface PublicationDao {
     }
 }
 
-/** How a single upsert broke down. Feeds the synchronisation summary. */
-data class UpsertCounts(val inserted: Int = 0, val updated: Int = 0)
+/**
+ * How a single upsert broke down. Feeds the synchronisation summary.
+ *
+ * [insertedKeys] are the rows that did not exist before — exactly what the alerts are evaluated
+ * against. `inserted` is kept as a count for the callers that only need one.
+ */
+data class UpsertCounts(
+    val inserted: Int = 0,
+    val updated: Int = 0,
+    val insertedKeys: List<String> = emptyList(),
+)

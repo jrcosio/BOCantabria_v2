@@ -104,6 +104,12 @@ dependencies {
     implementation(libs.androidx.lifecycle.runtime.compose)
     implementation(libs.androidx.lifecycle.viewmodel.compose)
     implementation(libs.androidx.navigation.compose)
+    // Visibilidad del proceso: decide si una coincidencia sale como notificación o como Snackbar.
+    implementation(libs.androidx.lifecycle.process)
+
+    // --- Trabajo en segundo plano (feature 012) ---
+    // La comprobación periódica de los avisos. Sin alarmas exactas ni servicio en primer plano.
+    implementation(libs.androidx.work.runtime.ktx)
 
     // --- Persistencia (Room) ---
     implementation(libs.androidx.room.runtime)
@@ -142,6 +148,7 @@ dependencies {
     implementation(platform(libs.koin.bom))
     implementation(libs.koin.android)
     implementation(libs.koin.androidx.compose)
+    implementation(libs.koin.androidx.workmanager)
 
     // --- Tests unitarios y de integración (src/test) ---
     testImplementation(libs.junit)
@@ -159,6 +166,8 @@ dependencies {
     testImplementation(libs.okhttp.mockwebserver)
     // El catálogo de fuentes exige https, así que el servidor de pruebas también lo habla.
     testImplementation(libs.okhttp.tls)
+    // WorkManagerTestInitHelper y TestListenableWorkerBuilder para el planificador y el Worker.
+    testImplementation(libs.androidx.work.testing)
 
     // --- Tests instrumentados y de UI (src/androidTest) ---
     androidTestImplementation(platform(libs.androidx.compose.bom))
@@ -173,6 +182,10 @@ dependencies {
     androidTestImplementation(platform(libs.koin.bom))
     androidTestImplementation(libs.koin.test)
     androidTestImplementation(libs.koin.android.test)
+    // TestListenableWorkerBuilder: construye el Worker de avisos con la fábrica REAL de Koin en el
+    // proceso de la app. Un `cmd jobscheduler run -f` no vale: WorkManager retrasa un periódico que
+    // llegue antes de su hora (012 quickstart §5).
+    androidTestImplementation(libs.androidx.work.testing)
 
     // --- Solo debug ---
     debugImplementation(libs.androidx.compose.ui.test.manifest)

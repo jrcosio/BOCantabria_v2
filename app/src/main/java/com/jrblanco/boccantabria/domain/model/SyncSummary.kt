@@ -7,6 +7,11 @@ package com.jrblanco.boccantabria.domain.model
  * everything worked, some sources failed, and every source failed but the cache still has
  * content. Only the fourth —every source failed and there is nothing stored— is a failure, and
  * that one never produces a summary.
+ *
+ * Since feature 012 it also says **which** publications were new, not just how many: [newKeys] is
+ * what the alerts are evaluated against. [isBaseline] marks the first successful synchronisation of
+ * an installation, whose thousand-odd "new" rows are history, not news — the repository leaves
+ * [newKeys] empty in that case, so no consumer can forget to (research.md D-402, D-403).
  */
 data class SyncSummary(
     val succeededFeeds: Int = 0,
@@ -15,6 +20,8 @@ data class SyncSummary(
     val insertedItems: Int = 0,
     val updatedItems: Int = 0,
     val rejectedItems: Int = 0,
+    val newKeys: Set<String> = emptySet(),
+    val isBaseline: Boolean = false,
 ) {
     init {
         require(
@@ -39,6 +46,8 @@ data class SyncSummary(
         insertedItems = insertedItems + other.insertedItems,
         updatedItems = updatedItems + other.updatedItems,
         rejectedItems = rejectedItems + other.rejectedItems,
+        newKeys = newKeys + other.newKeys,
+        isBaseline = isBaseline || other.isBaseline,
     )
 
     companion object {

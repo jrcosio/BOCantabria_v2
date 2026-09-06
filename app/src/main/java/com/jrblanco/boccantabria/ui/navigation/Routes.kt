@@ -38,6 +38,31 @@ sealed interface Route {
     @Serializable
     data object Saved : Route
 
+    /**
+     * Alerts: the fourth destination of the bottom bar (feature 012).
+     *
+     * [tab] is the name of the tab to open —`NEWS` or `RULES`— or `null` for the default. A tapped
+     * group summary and the in-app «VER» both land on the news tab through it. Navigated **without**
+     * `restoreState` when it carries a value: saved state wins over a route argument, and in
+     * feature 006 that swallowed a handed-over search term without any error at all.
+     *
+     * The property is called `tab` on purpose: it is the key the alerts screen reads from its saved
+     * state, and the name is restored tolerantly — never with `valueOf`.
+     */
+    @Serializable
+    data class Alerts(val tab: String? = null) : Route
+
+    /**
+     * Creating or editing an alert rule.
+     *
+     * Lives in the **outer** graph, beside Info: it has its own blue bar with a back arrow and must not
+     * draw the bottom navigation. `ruleId` means edit; `duplicateOf` means start from a paused copy of
+     * that rule; neither means create. Both at once is a caller's mistake and the screen treats it as
+     * an edit.
+     */
+    @Serializable
+    data class AlertForm(val ruleId: String? = null, val duplicateOf: String? = null) : Route
+
     /** Static application and author information, reached from the bulletin's top bar. */
     @Serializable
     data object Info : Route

@@ -51,4 +51,16 @@ interface PublicationRepository {
      * content, the result is a success whose summary reports it.
      */
     suspend fun refresh(): AppResult<SyncSummary>
+
+    /**
+     * The stored publications behind [keys], in no particular order. What a synchronisation cycle
+     * reads to evaluate the alerts against exactly what was new (012 research.md D-404).
+     */
+    suspend fun byKeys(keys: Set<String>): List<Publication>
+
+    /** The newest [limit] stored publications. What the alert form's preview is run against. */
+    suspend fun newest(limit: Int): List<Publication>
+
+    /** When any source last answered successfully, or `null` if none ever has. */
+    suspend fun lastSuccessfulSyncAt(): Long?
 }

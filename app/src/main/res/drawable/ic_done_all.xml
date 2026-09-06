@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Material Symbols Outlined, tomado de google/material-design-icons sin modificar el trazado.
+  Marcar todas como leídas.
+  Este trazado viene en la convención NUEVA del repositorio: lienzo de 960 con coordenadas
+  positivas, ya desplazado. Por eso NO lleva el grupo `translateY="960"` de los iconos antiguos:
+  ponérselo lo mandaría fuera del lienzo (CLAUDE.md, trampa de ic_ai; 012 research.md D-435).
+-->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp"
+    android:height="24dp"
+    android:viewportWidth="960"
+    android:viewportHeight="960">
+    <path
+        android:fillColor="#FF000000"
+        android:pathData="M268,720L42,494L99,438L269,608L269,608L325,664L268,720ZM494,720L268,494L324,437L494,607L862,239L918,296L494,720ZM494,494L437,438L635,240L692,296L494,494Z" />
+</vector>
