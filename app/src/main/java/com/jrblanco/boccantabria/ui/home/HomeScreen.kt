@@ -149,6 +149,9 @@ fun HomeContent(
                     chips = state.chips,
                     isTodaySelected = state.selection is HomeSelection.TodaysBulletin,
                     onSelect = onSelectSection,
+                    subsections = state.subsections,
+                    sectionCode = (state.selection as? HomeSelection.Section)?.sectionCode,
+                    isWholeSectionSelected = state.isWholeSectionSelected,
                 )
 
                 if (state.isOffline) OfflineBanner()

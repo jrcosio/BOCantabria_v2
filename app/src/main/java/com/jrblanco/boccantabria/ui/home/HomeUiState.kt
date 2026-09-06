@@ -22,6 +22,24 @@ data class HomeUiState(
     val selection: HomeSelection = HomeSelection.TodaysBulletin,
     val header: BulletinHeaderData = BulletinHeaderData.EMPTY,
     val chips: List<SectionChip> = emptyList(),
+    /**
+     * The subsections of the selected section, empty for everything else.
+     *
+     * **Derived from [selection], never remembered.** That is what makes it survive a rotation and
+     * process death without a line of code: the selection already travels as a navigation argument.
+     * An `expandedSection` of its own would be a second thing to keep in step with the list on
+     * screen, and the day the two drifted the symptom would be a row of subsections belonging to a
+     * section nobody is looking at.
+     */
+    val subsections: List<SectionChip> = emptyList(),
+    /**
+     * A section is selected and no subsection within it is.
+     *
+     * Separate from [subsections] for the same reason [chips] does not carry the bulletin chip: the
+     * entry that stands for the whole group is not a member of the group, and folding it in would
+     * mean inventing a code for it.
+     */
+    val isWholeSectionSelected: Boolean = false,
     val content: HomeContentState = HomeContentState.Skeleton,
     val isRefreshing: Boolean = false,
     val isOffline: Boolean = false,

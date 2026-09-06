@@ -28,6 +28,7 @@ import java.util.Locale
 
 const val TAG_HEADER: String = "home_header"
 const val TAG_HEADER_COUNT: String = "home_header_count"
+const val TAG_HEADER_DATE: String = "home_header_date"
 
 /**
  * The editorial header of section 14.3.
@@ -35,6 +36,11 @@ const val TAG_HEADER_COUNT: String = "home_header_count"
  * The outlined badge carries the number of announcements and **not** a bulletin number: the
  * official feeds do not publish one, and printing an invented figure next to the shield would be
  * presenting fabricated data as official.
+ *
+ * The date is **labelled**, and with two different labels, because it means two different things: on
+ * the day's bulletin it is the date of the published edition, and inside a section it is the date of
+ * that section's most recent announcement. Unlabelled next to the count, it invited the reader to
+ * invent a relationship between the two numbers (feature 013, FR-004 and FR-005).
  */
 @Composable
 fun BulletinHeader(
@@ -59,6 +65,8 @@ fun BulletinHeader(
                 color = MaterialTheme.colorScheme.onPrimary,
             )
 
+            // Inside the `let`, so that with no date there is no orphan label either: an
+            // «Edición del» on its own would be worse than the bare date it replaces (FR-006).
             header.date?.let { date ->
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Icon(
@@ -68,10 +76,19 @@ fun BulletinHeader(
                         modifier = Modifier.size(DATE_ICON_SIZE),
                     )
                     Text(
-                        text = date.format(SPANISH_LONG_DATE),
+                        text = stringResource(
+                            if (header.isTodaysBulletin) {
+                                R.string.home_header_date_bulletin
+                            } else {
+                                R.string.home_header_date_section
+                            },
+                            date.format(SPANISH_LONG_DATE),
+                        ),
                         style = MaterialTheme.typography.bodyLarge,
                         color = BocTheme.colors.onPrimaryMuted,
-                        modifier = Modifier.padding(start = BocTheme.spacing.space2),
+                        modifier = Modifier
+                            .padding(start = BocTheme.spacing.space2)
+                            .testTag(TAG_HEADER_DATE),
                     )
                 }
             }

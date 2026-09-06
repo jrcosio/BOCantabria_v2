@@ -6,14 +6,17 @@ import com.jrblanco.boccantabria.domain.model.HomeSelection
 /**
  * What the sections panel draws.
  *
- * [expanded] is the **effective** set, not the one the person toggled: filtering by text opens
- * the sections whose subsections match, because a match hidden behind a closed chevron is a
- * match the person will never find.
+ * [expanded] is exactly what the person has opened, and nothing else. Until feature 013 it was the
+ * **effective** set, which also carried the sections a text filter had opened on their own; that
+ * filter is gone, and with it the only reason the two ever differed.
  */
 data class SectionsUiState(
-    val query: String = "",
     val rows: List<SectionRow> = emptyList(),
     val expanded: Set<String> = emptySet(),
+    /**
+     * The panel lives above the navigation host, so it is told what is currently selected rather
+     * than reading it. Nothing to do with the filter that was removed: this stays.
+     */
     val selection: HomeSelection = HomeSelection.TodaysBulletin,
 )
 

@@ -724,7 +724,9 @@ José Ramón Blanco Gutiérrez
 - Padding: 24 dp horizontal y 24 dp vertical.
 - Icono editorial pequeño en `Secondary` claro.
 - Título `Boletín de hoy` en blanco, `HeadlineLarge`. Al elegir una sección, su nombre.
-- Fecha debajo en `BodyLarge`.
+- Fecha debajo en `BodyLarge`, **con rótulo**: `Edición del 4 de septiembre de 2026` en el
+  boletín del día, `Última publicación: 4 de septiembre de 2026` con una sección o subsección
+  elegida.
 - **Número de publicaciones** en un contenedor outlined alineado a la derecha.
 
 > **Enmienda (29 de agosto de 2026, feature 003).** El contenedor mostraba el número de boletín.
@@ -741,6 +743,13 @@ Boletín de hoy
 48 anuncios
 ```
 
+> **Enmienda (6 de septiembre de 2026, feature 013).** La fecha iba sola. Nadie sabía de qué
+> fecha era, y junto al recuento invitaba a inventarse la relación entre los dos números. Ahora
+> lleva rótulo, y son **dos rótulos distintos** porque la fecha significa dos cosas distintas: la
+> de la edición publicada en el boletín del día, y la de la publicación más reciente dentro de una
+> sección. Sin fecha no se pinta ningún rótulo: un `Edición del` huérfano en la primera ejecución
+> sería peor que la fecha desnuda que sustituye.
+
 La cabecera debe sentirse editorial, no promocional. No usar fotografía, degradado ni ilustración de fondo.
 
 ## 14.4. Filtros rápidos
@@ -750,9 +759,9 @@ La cabecera debe sentirse editorial, no promocional. No usar fotografía, degrad
 - Separación: 8 dp.
 - Margen superior e inferior: 16 dp.
 
-Etiquetas: `Todo` y las **nueve secciones** con su nombre corto, en orden oficial:
+Etiquetas: `Boletín de hoy` y las **nueve secciones** con su nombre corto, en orden oficial:
 
-- `Todo`.
+- `Boletín de hoy`.
 - `Disposiciones`.
 - `Personal`.
 - `Contratación`.
@@ -768,6 +777,18 @@ Etiquetas: `Todo` y las **nueve secciones** con su nombre corto, en orden oficia
 > si un chip lleva a una sección y otra sección solo es alcanzable por el panel, la persona tiene
 > que aprender dos vocabularios distintos para lo mismo.
 
+> **Enmienda (6 de septiembre de 2026, feature 013).** Dos cambios.
+>
+> **Uno.** El primer chip decía `Todo` y no mostraba todo: muestra el **boletín del día**, es decir
+> los anuncios de la última fecha publicada, mientras que un chip de sección muestra el archivo
+> entero de esa sección sin restricción de fecha. Treinta y nueve anuncios frente a trescientos
+> treinta y seis se leía como que la aplicación perdía datos. El comportamiento era el correcto; la
+> palabra era la equivocada. Pasa a decir `Boletín de hoy`, la misma denominación que ya usaba la
+> cabecera editorial para esa selección.
+>
+> **Dos.** La fila deja de ser una y pasa a ser **dos** cuando la sección elegida tiene
+> subsecciones. Ver el apartado 14.7.
+
 ## 14.5. Listado
 
 - Fondo general `Background`.
@@ -781,6 +802,28 @@ Etiquetas: `Todo` y las **nueve secciones** con su nombre corto, en orden oficia
 - La barra superior puede mantenerse fija.
 - Los filtros pueden fijarse bajo la barra superior con fondo sólido y una línea inferior.
 - No usar cambios bruscos de color.
+
+## 14.7. Segunda fila: subsecciones
+
+> **Añadido (6 de septiembre de 2026, feature 013).** Antes solo el panel lateral llegaba a las
+> subsecciones, y son justo las secciones grandes las que las tienen.
+
+- Aparece **debajo** de la fila de secciones, y solo cuando la sección elegida tiene subsecciones:
+  2 (tres), 4 (cuatro), 7 (cinco) y 8 (dos). Con el boletín del día, o con una de las cinco secciones
+  sin subsecciones, no existe.
+- Un toque en el chip de una sección con subsecciones hace **las dos cosas a la vez**: la lista pasa
+  a la sección completa y la segunda fila se despliega. El caso común es querer ver la sección;
+  afinar es la excepción, y cobrar dos toques por el caso común sería el reparto equivocado.
+- Etiquetas: `Toda la sección` y el nombre corto de cada subsección, en orden oficial.
+- Fila horizontal con scroll, mismo padding y misma separación que la de arriba.
+- **Estilo secundario**: fondo `SurfaceSoft` en reposo, texto en `LabelMedium` y color de texto
+  secundario. Seleccionada, igual que la fila de arriba.
+- **Sin divisor y sin sangría.** Una jerarquía se comunica con peso y color; un divisor diría lo
+  contrario —que son dos listas de iguales— y la sangría se perdería al desplazar la fila. El fondo
+  `SurfaceSoft` es el mismo que usa el panel lateral para sus subsecciones desplegadas: un solo
+  vocabulario para los dos sitios donde aparecen subsecciones.
+- La primera fila **sigue marcando la sección padre** mientras hay una subsección elegida: estar en
+  2.2 es estar en 2, y si la de arriba se apagara la segunda fila parecería no depender de nada.
 
 ---
 
@@ -824,22 +867,38 @@ Hoja inferior de gran altura o pantalla completa en dispositivos compactos.
 > devuelve a la lista de un toque.
 >
 > No choca con el apartado 33, que elimina el «menú lateral con gran cabecera de autor»: lo que
-> aquel eliminaba era la cabecera de autor, y este panel no la lleva. Empieza directamente por el
-> campo de filtro.
+> aquel eliminaba era la cabecera de autor, y este panel no la lleva.
 >
 > Se elimina además la tarjeta inferior de alertas y las campanas de cada fila, junto con el resto
 > del trabajo de notificaciones. El apartado 16.5 queda en suspenso hasta entonces.
 
+> **Enmienda (6 de septiembre de 2026, feature 013).** El panel empezaba por un campo de filtro
+> sobre la lista de secciones. Se **retira**: sobre nueve filas no aportaba, y una lupa dentro de un
+> panel de secciones se lee como «buscar publicaciones», que es lo único que ese campo nunca hizo.
+> En su lugar el panel gana una **cabecera** que dice de quién es el panel y ofrece una salida
+> explícita, para quien no conoce el gesto de deslizar. Con el campo se va toda su lógica: el
+> filtrado, la poda de subsecciones no coincidentes, la apertura automática de una sección cuyas
+> hijas coincidían —que solo existía porque había filtro— y el estado vacío
+> `Ninguna sección coincide con la búsqueda`, que ya no puede darse.
+
 ## 16.1. Estructura
 
-1. Campo `Buscar una sección`.
-2. Grupos expandibles.
+1. Cabecera con escudo, nombre y flecha de recoger.
+2. Divisor.
+3. Grupos expandibles.
 
-## 16.2. Campo de búsqueda
+## 16.2. Cabecera
 
-- Margen de 16 dp.
-- Ancho completo.
-- Fondo blanco.
+- Altura mínima: 72 dp, la misma que una fila de sección.
+- Escudo de Cantabria de 40 dp de alto, con relación de aspecto 79:137 fijada.
+- `BOC Cantabria` en `TitleLarge`, color `Primary`, ocupando el espacio intermedio.
+- Al **final de la fila**, botón de icono con la flecha de volver atrás, color `Primary`, que recoge
+  el panel. Apunta a la izquierda, que es hacia donde el panel se retira: la flecha y el movimiento
+  coinciden. Descripción accesible `Recoger el panel`.
+- Divisor inferior en `OutlineVariant`.
+
+> Se usa la flecha de volver y no una equis: en esta aplicación la equis es lo que cierra un campo
+> de texto o una hoja inferior. Para un panel que se retira lateralmente, una flecha dice más.
 
 ## 16.3. Fila de sección principal
 

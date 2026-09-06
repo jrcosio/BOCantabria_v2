@@ -55,6 +55,19 @@ class HomeViewModel(
 
     private val chips: List<SectionChip> = buildChips()
 
+    /**
+     * The subsections of the selected section, and whether the whole of it is what is being shown.
+     *
+     * Worked out once, here, and **not** folded into the `combine` below: neither depends on the
+     * store or on the synchronisation, and adding them there would push it from five flows to six —
+     * the `vararg` overload, which demands one common type and hands back `Array<Any?>`. This view
+     * model already dodged that once by grouping its own state.
+     */
+    private val subsections: List<SectionChip> = buildSubsectionChips()
+
+    private val isWholeSectionSelected: Boolean =
+        selection is HomeSelection.Section && selection.subsectionCode == null
+
     private val syncState = MutableStateFlow(SyncState())
 
     /**
@@ -88,6 +101,8 @@ class HomeViewModel(
             selection = selection,
             header = header,
             chips = chips,
+            subsections = subsections,
+            isWholeSectionSelected = isWholeSectionSelected,
             content = contentFor(publications, sync, own.search),
             isRefreshing = sync.isRefreshing,
             isOffline = sync.isOffline,
@@ -99,7 +114,12 @@ class HomeViewModel(
     }.stateIn(
         scope = viewModelScope,
         started = SharingStarted.WhileSubscribed(SUBSCRIPTION_TIMEOUT_MILLIS),
-        initialValue = HomeUiState(selection = selection, chips = chips),
+        initialValue = HomeUiState(
+            selection = selection,
+            chips = chips,
+            subsections = subsections,
+            isWholeSectionSelected = isWholeSectionSelected,
+        ),
     )
 
     init {
@@ -260,6 +280,27 @@ class HomeViewModel(
                     colorGroup = section.colorGroup,
                     isSelected = section.code == selectedCode ||
                         selectedCode?.startsWith("${section.code}.") == true,
+                )
+            }
+    }
+
+    /**
+     * The subsections of the selected section, in the order of the official catalogue.
+     *
+     * Empty for the day's bulletin and for the five sections that have no subsections. The entry
+     * that returns to the whole section is not here: like the bulletin chip, its label is interface
+     * copy and the screen adds it.
+     */
+    private fun buildSubsectionChips(): List<SectionChip> {
+        val section = selection as? HomeSelection.Section ?: return emptyList()
+        return getSections()
+            .filter { it.parentCode == section.sectionCode }
+            .map { subsection ->
+                SectionChip(
+                    code = subsection.code,
+                    label = subsection.shortName,
+                    colorGroup = subsection.colorGroup,
+                    isSelected = subsection.code == section.subsectionCode,
                 )
             }
     }
