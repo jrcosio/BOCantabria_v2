@@ -12,7 +12,14 @@ import java.io.File
  */
 interface DocumentCache {
 
-    /** The stored document, refreshing its last use, or `null` if it is not there. */
+    /**
+     * The stored document, refreshing its last use, or `null` if it is not there.
+     *
+     * Never throws for a malformed entry: a checksum sidecar that exists but is not a valid checksum
+     * reads as [OfficialDocument.UNKNOWN_CHECKSUM], exactly like a missing one. The document's bytes
+     * were verified when they arrived and the file is only ever visible complete; what was lost is
+     * the fingerprint, not the document (feature 014, STAB-001).
+     */
     suspend fun get(externalKey: String): OfficialDocument?
 
     /** Moves a verified temporary into place. The move is what makes it visible. */

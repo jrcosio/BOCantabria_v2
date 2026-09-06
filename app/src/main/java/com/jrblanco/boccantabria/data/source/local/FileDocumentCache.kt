@@ -18,6 +18,13 @@ import java.security.MessageDigest
  * - **A download writes to `<name>.part` and is renamed at the end.** A rename within one file
  *   system is atomic, so a file under the good name is always complete. An interrupted download
  *   leaves a temporary, and a temporary is never mistaken for a document.
+ * - **The checksum sidecar follows the same rule, and is written first.** Since feature 014 the
+ *   sidecar goes through its own `.part` and rename, **before** the document is moved into place, so
+ *   a document under its good name always has a complete sidecar beside it. And a sidecar that exists
+ *   but is not a checksum — empty, cut short, upper case — reads as a lost fingerprint, never as a
+ *   reason to throw. Until then a plain `writeText`, interrupted by a full disk or a dying process,
+ *   left a truncated file that made the model's `require` close the application on every reopen
+ *   (audit finding STAB-001; research.md D-601 to D-603).
  *
  * Last use is kept as the file's modification time rather than in a table: it is one fact, the file
  * system already stores it, and a row that outlives its file is a lie someone has to reconcile.
@@ -46,7 +53,7 @@ class FileDocumentCache(
             externalKey = externalKey,
             localPath = file.absolutePath,
             byteCount = file.length(),
-            checksum = readChecksum(externalKey) ?: EMPTY_CHECKSUM,
+            checksum = readChecksum(externalKey) ?: OfficialDocument.UNKNOWN_CHECKSUM,
             lastUsedAt = now,
         )
     }
@@ -58,14 +65,21 @@ class FileDocumentCache(
         checksum: String,
     ): OfficialDocument = mutex.withLock {
         val destination = fileFor(externalKey)
+
+        // Sidecar first. The checksum has a consumer — the AI summary compares it with the one it
+        // stored to decide whether a summary is stale — and the other order left a window in which a
+        // visible document had no sidecar yet, read as UNKNOWN_CHECKSUM, and a good summary was
+        // regenerated for nothing (D-603).
+        writeChecksum(externalKey, checksum)
         destination.delete()
-        check(temporary.renameTo(destination)) {
-            "could not move the verified document into place: ${temporary.absolutePath}"
+        if (!temporary.renameTo(destination)) {
+            // No document, no promise about one.
+            checksumFileFor(externalKey).delete()
+            error("could not move the verified document into place: ${temporary.absolutePath}")
         }
 
         val now = time.nowMillis()
         destination.setLastModified(now)
-        writeChecksum(externalKey, checksum)
 
         OfficialDocument(
             externalKey = externalKey,
@@ -93,6 +107,11 @@ class FileDocumentCache(
                 total -= size
             }
         }
+
+        // What a sidecar write that never finished leaves behind. Nothing reads it, so it can go.
+        store.listFiles().orEmpty()
+            .filter { it.isFile && it.name.endsWith("$CHECKSUM_SUFFIX$TEMPORARY_SUFFIX") }
+            .forEach { it.delete() }
     }
 
     override suspend fun discardTemporary(externalKey: String) {
@@ -102,13 +121,34 @@ class FileDocumentCache(
     /**
      * The checksum lives beside the file rather than in the database, for the same reason the last
      * use does: one fact, one place, and nothing to reconcile when the system clears the cache.
+     *
+     * Written through a temporary and a rename, like the document: a plain write cut short by a full
+     * disk or a dying process is exactly how the truncated sidecar of STAB-001 came to exist.
      */
     private fun writeChecksum(externalKey: String, checksum: String) {
-        File(store, "${digest(externalKey)}$CHECKSUM_SUFFIX").writeText(checksum)
+        val target = checksumFileFor(externalKey)
+        val part = File(target.path + TEMPORARY_SUFFIX)
+        part.writeText(checksum)
+        target.delete()
+        if (!part.renameTo(target)) {
+            part.delete()
+            error("could not move the checksum into place: ${part.absolutePath}")
+        }
     }
 
-    private fun readChecksum(externalKey: String): String? =
-        File(store, "${digest(externalKey)}$CHECKSUM_SUFFIX").takeIf { it.isFile }?.readText()?.trim()
+    /**
+     * `null` for a sidecar that is missing **or that is not a checksum**. Both are a lost fingerprint,
+     * and the caller reports both as [OfficialDocument.UNKNOWN_CHECKSUM]. Validated with the model's
+     * own rule, so the cache can never hand the model something the model would refuse (D-602).
+     */
+    private fun readChecksum(externalKey: String): String? = checksumFileFor(externalKey)
+        .takeIf { it.isFile }
+        ?.readText()
+        ?.trim()
+        ?.takeIf { OfficialDocument.isValidChecksum(it) }
+
+    private fun checksumFileFor(externalKey: String): File =
+        File(store, "${digest(externalKey)}$CHECKSUM_SUFFIX")
 
     private fun digest(externalKey: String): String = MessageDigest
         .getInstance("SHA-256")
@@ -124,8 +164,5 @@ class FileDocumentCache(
 
         /** Sixteen bytes of the digest: thirty-two hex characters, and no realistic collision. */
         const val NAME_BYTES = 16
-
-        /** What a file whose checksum was lost reports. Never written by this class. */
-        const val EMPTY_CHECKSUM = "0000000000000000000000000000000000000000000000000000000000000000"
     }
 }

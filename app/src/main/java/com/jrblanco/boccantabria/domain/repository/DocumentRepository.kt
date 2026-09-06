@@ -14,11 +14,15 @@ import kotlinx.coroutines.flow.Flow
  * - [observeDocument] never terminates with an error: it emits [DocumentStatus.Failed].
  * - `CancellationException` is always rethrown.
  *
- * And two of its own, which the specification demands:
+ * And four of its own, which the specifications demand:
  * - [ensureLocalCopy] is **idempotent and deduplicated**: two concurrent calls for the same key
  *   share a single download rather than racing to write the same file.
  * - Nothing is ever stored unless it has been verified to be the document. A response that arrives
  *   with a success code and holds something else is rejected, not cached.
+ * - Cancelling the call that owns a download leaves the status [DocumentStatus.Absent], never
+ *   `Downloading` (feature 014, FR-010).
+ * - A call waiting for another's download does **not** end with that other's cancellation: if its
+ *   own context is still active it takes the download over (feature 014, FR-011).
  */
 interface DocumentRepository {
 

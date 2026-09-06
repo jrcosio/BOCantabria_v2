@@ -142,7 +142,9 @@ class OkHttpGeminiSummaryDataSource(
         // Three 500s spend three requests of the daily quota for zero summaries.
         coordinator.recordRequest()
 
-        client.newCall(request).execute().use { response ->
+        // `await`, not `execute()`: cancelling the coroutine cancels the call, so leaving the screen
+        // frees the socket and the one AI request the application allows at a time (014, PERF-002).
+        client.newCall(request).await { response ->
             val bodyText = response.body.string()
 
             when {
@@ -174,12 +176,12 @@ class OkHttpGeminiSummaryDataSource(
     } catch (cancellation: CancellationException) {
         throw cancellation
     } catch (error: IOException) {
-        // **A blocking OkHttp call does not throw `CancellationException` when the coroutine is
-        // cancelled.** `Call.execute()` blocks; cancelling tears the socket down, and what comes out
-        // is an `IOException` — `SocketException: Software caused connection abort` on a real phone.
-        // Without this line, leaving the screen mid-request is reported as `Network`, and the reader
-        // sees «No hay conexión» for a failure that never happened. Seen on a device on 4 September
-        // 2026; there is a regression test.
+        // **A cancelled OkHttp call surfaces as an `IOException` on OkHttp's side** —
+        // `SocketException: Software caused connection abort` on a real phone. Without this line,
+        // leaving the screen mid-request was reported as `Network`, and the reader saw «No hay
+        // conexión» for a failure that never happened. Seen on a device on 4 September 2026; there is
+        // a regression test. Since feature 014 `await` cancels the call itself; this stays as the
+        // second line of defence.
         currentCoroutineContext().ensureActive()
         report("network: ${error.javaClass.simpleName}: ${error.message}")
         rejected(GeminiRefusal.Network)

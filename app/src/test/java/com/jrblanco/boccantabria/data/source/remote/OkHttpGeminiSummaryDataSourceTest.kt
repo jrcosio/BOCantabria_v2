@@ -13,18 +13,15 @@ import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.test.TestScope
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.runTest
+import com.jrblanco.boccantabria.fake.TlsMockWebServer
 import mockwebserver3.MockResponse
 import mockwebserver3.MockWebServer
 import okhttp3.OkHttpClient
-import okhttp3.tls.HandshakeCertificates
-import okhttp3.tls.HeldCertificate
-import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
-import org.junit.Before
+import org.junit.Rule
 import org.junit.Test
-import java.net.InetAddress
 import java.util.concurrent.TimeUnit
 
 /**
@@ -43,31 +40,11 @@ class OkHttpGeminiSummaryDataSourceTest {
 
     private val crashReporter = RecordingCrashReporter()
 
-    private lateinit var server: MockWebServer
-    private lateinit var client: OkHttpClient
+    @get:Rule
+    val tls = TlsMockWebServer()
 
-    @Before
-    fun setUp() {
-        val localhost = InetAddress.getByName("localhost").canonicalHostName
-        val certificate = HeldCertificate.Builder().addSubjectAlternativeName(localhost).build()
-        val serverCertificates = HandshakeCertificates.Builder().heldCertificate(certificate).build()
-        val clientCertificates = HandshakeCertificates.Builder()
-            .addTrustedCertificate(certificate.certificate)
-            .build()
-
-        server = MockWebServer()
-        server.useHttps(serverCertificates.sslSocketFactory())
-        server.start()
-        client = OkHttpClient.Builder()
-            .sslSocketFactory(clientCertificates.sslSocketFactory(), clientCertificates.trustManager)
-            .retryOnConnectionFailure(false)
-            .build()
-    }
-
-    @After
-    fun tearDown() {
-        runCatching { server.close() }
-    }
+    private val server: MockWebServer get() = tls.server
+    private val client: OkHttpClient get() = tls.client
 
     // ---------- What comes back ----------
 
@@ -398,15 +375,23 @@ class OkHttpGeminiSummaryDataSourceTest {
                 source.summarise("sistema", "usuario", DOCUMENT)
             }
             while (server.requestCount == 0) delay(20)
+            delay(100)
 
+            // Feature 014 (PERF-002): the socket is no longer broken by hand here. Cancelling has to
+            // cancel the call itself and come back promptly; before, that only happened because the
+            // test closed the server, and on a phone it happened when the read timed out.
+            val started = System.nanoTime()
             job.cancel() // la persona pulsa Atrás
-            server.close() // y el socket se rompe, como en el dispositivo
             job.join()
+            val elapsedMillis = (System.nanoTime() - started) / 1_000_000
 
             assertFalse(
                 "irse de la pantalla no es un problema de red: ${crashReporter.messages}",
                 crashReporter.messages.any { it.contains("network:") },
             )
+            assertTrue("tardó $elapsedMillis ms en volver", elapsedMillis < 5_000)
+            assertTrue("la llamada no se canceló", tls.calls.last().isCanceled())
+            server.close()
         }
 
     // ---------- The log has to talk, and only about the right things ----------

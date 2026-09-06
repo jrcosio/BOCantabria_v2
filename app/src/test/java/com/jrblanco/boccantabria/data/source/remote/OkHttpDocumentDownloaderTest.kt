@@ -1,24 +1,27 @@
 package com.jrblanco.boccantabria.data.source.remote
 
+import com.jrblanco.boccantabria.core.util.DispatcherProvider
+import com.jrblanco.boccantabria.fake.RealDispatchers
 import com.jrblanco.boccantabria.fake.TestDispatcherProvider
+import com.jrblanco.boccantabria.fake.TlsMockWebServer
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.test.runTest
 import mockwebserver3.MockResponse
 import mockwebserver3.MockWebServer
 import okhttp3.OkHttpClient
-import okhttp3.tls.HandshakeCertificates
-import okhttp3.tls.HeldCertificate
 import okio.Buffer
-import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
-import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
 import org.junit.rules.TemporaryFolder
 import java.io.File
-import java.net.InetAddress
 import java.security.MessageDigest
+import java.util.concurrent.TimeUnit
 
 /**
  * The tests that decide whether the application can be trusted to show an official document.
@@ -35,32 +38,49 @@ class OkHttpDocumentDownloaderTest {
     @get:Rule
     val folder = TemporaryFolder()
 
-    private lateinit var server: MockWebServer
-    private lateinit var client: OkHttpClient
+    @get:Rule
+    val tls = TlsMockWebServer()
 
-    @Before
-    fun setUp() {
-        val localhost = InetAddress.getByName("localhost").canonicalHostName
-        val certificate = HeldCertificate.Builder().addSubjectAlternativeName(localhost).build()
-        val serverCertificates = HandshakeCertificates.Builder().heldCertificate(certificate).build()
-        val clientCertificates = HandshakeCertificates.Builder()
-            .addTrustedCertificate(certificate.certificate)
-            .build()
+    private val server: MockWebServer get() = tls.server
+    private val client: OkHttpClient get() = tls.client
 
-        server = MockWebServer()
-        server.useHttps(serverCertificates.sslSocketFactory())
-        server.start()
+    // ---------- Cancellation (feature 014, PERF-002) ----------
 
-        client = OkHttpClient.Builder()
-            .sslSocketFactory(clientCertificates.sslSocketFactory(), clientCertificates.trustManager)
-            .retryOnConnectionFailure(false)
-            .build()
-    }
+    /**
+     * Before feature 014, cancelling the coroutine left `execute()` blocked and the socket open until
+     * the response or the 180-second call timeout — and the download kept writing to the temporary.
+     * Real dispatchers and `runBlocking`: the property is a race, and in virtual time it does not exist.
+     */
+    @Test
+    fun `cancelling mid-body is a cancellation, the call is cancelled and no refusal is reported`() =
+        runBlocking {
+            server.enqueue(
+                MockResponse.Builder()
+                    .code(200)
+                    .setHeader("Content-Type", "application/pdf")
+                    .bodyDelay(30, TimeUnit.SECONDS)
+                    .body(Buffer().write(pdfBytes(64 * 1024)))
+                    .build(),
+            )
+            val target = folder.newFile("out.pdf")
 
-    @After
-    fun tearDown() {
-        runCatching { server.close() }
-    }
+            var outcome: Any? = null
+            val job = launch(Dispatchers.IO) {
+                outcome = runCatching { downloader(dispatchers = RealDispatchers).download(url(), target) }
+                    .getOrElse { it }
+            }
+            while (server.requestCount == 0) Thread.sleep(10)
+            Thread.sleep(100)
+
+            val started = System.nanoTime()
+            job.cancel()
+            job.join()
+            val elapsedMillis = (System.nanoTime() - started) / 1_000_000
+
+            assertTrue("tardó $elapsedMillis ms en volver", elapsedMillis < 5_000)
+            assertTrue("una cancelación no es un rechazo, fue: $outcome", outcome is CancellationException)
+            assertTrue("la llamada no se canceló", tls.calls.last().isCanceled())
+        }
 
     // ---------- The happy path ----------
 
@@ -207,9 +227,12 @@ class OkHttpDocumentDownloaderTest {
 
     // ---------- Helpers ----------
 
-    private fun downloader(withClient: OkHttpClient = client) = OkHttpDocumentDownloader(
+    private fun downloader(
+        withClient: OkHttpClient = client,
+        dispatchers: DispatcherProvider = TestDispatcherProvider(),
+    ) = OkHttpDocumentDownloader(
         client = withClient,
-        dispatchers = TestDispatcherProvider(),
+        dispatchers = dispatchers,
         allowedHost = server.hostName,
     )
 

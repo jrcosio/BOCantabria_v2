@@ -3,7 +3,7 @@ package com.jrblanco.boccantabria.data.repository
 import android.app.Application
 import androidx.room.Room
 import androidx.test.core.app.ApplicationProvider
-import com.jrblanco.boccantabria.core.telemetry.NoOpCrashReporter
+import app.cash.turbine.test
 import com.jrblanco.boccantabria.core.util.TimeProvider
 import com.jrblanco.boccantabria.data.source.local.BocDatabase
 import com.jrblanco.boccantabria.data.source.local.SavedPublicationDao
@@ -12,11 +12,13 @@ import com.jrblanco.boccantabria.di.ROBOLECTRIC_SDK
 import com.jrblanco.boccantabria.domain.model.AppResult
 import com.jrblanco.boccantabria.domain.model.DomainError
 import com.jrblanco.boccantabria.fake.RecordingAnalyticsTracker
+import com.jrblanco.boccantabria.fake.RecordingCrashReporter
 import com.jrblanco.boccantabria.fake.TestDispatcherProvider
 import com.jrblanco.boccantabria.fake.publication
 import io.mockk.coEvery
 import io.mockk.every
 import io.mockk.mockk
+import kotlinx.coroutines.flow.emitAll
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.test.runTest
@@ -140,16 +142,33 @@ class SavedPublicationRepositoryImplTest {
         assertEquals(AppResult.Failure(DomainError.Unknown), result)
     }
 
-    /** Un fallo de lectura no puede terminar el flujo: la pantalla se quedaría sin estado. */
+    /**
+     * Un fallo de lectura no puede terminar el flujo: la pantalla se quedaría vacía para siempre.
+     *
+     * Feature 014 (STAB-004): hasta entonces esta prueba usaba `.first()`, que toma el primer valor y
+     * cancela, y por eso nunca vio que el flujo **terminaba** tras el vacío. Se afirma sobre lo que
+     * llega después de recuperarse, y el doble falla una sola vez —`retryWhen` re-colecciona el mismo
+     * objeto, así que el fallo se cuenta dentro del constructor del flujo—.
+     */
     @Test
-    fun `a read failure emits empty instead of terminating the flow`() = runTest {
-        val brokenDao = mockk<SavedPublicationDao>()
-        every { brokenDao.observeSaved() } returns flow { throw IllegalStateException("base corrupta") }
-        every { brokenDao.observeSavedKeys() } returns flow { throw IllegalStateException("base corrupta") }
-        val repository = repository(dao = brokenDao)
+    fun `a read failure emits empty and keeps observing`() = runTest {
+        storePublications("boc:1")
+        database.savedPublicationDao().setSavedAt("boc:1", 1_000L)
+        val real = database.savedPublicationDao()
+        var attempts = 0
+        val brokenOnce = mockk<SavedPublicationDao>()
+        every { brokenOnce.observeSaved() } returns flow {
+            if (attempts++ == 0) throw IllegalStateException("base ocupada")
+            emitAll(real.observeSaved())
+        }
+        val repository = repository(dao = brokenOnce)
 
-        assertEquals(emptyList<Any>(), repository.observeSaved().first())
-        assertEquals(emptySet<String>(), repository.observeSavedKeys().first())
+        repository.observeSaved().test {
+            assertEquals(emptyList<Any>(), awaitItem())
+            assertEquals(listOf("boc:1"), awaitItem().map { it.externalKey })
+            cancelAndIgnoreRemainingEvents()
+        }
+        assertEquals(1, crashReporter.nonFatals.size)
     }
 
     @Test
@@ -171,6 +190,8 @@ class SavedPublicationRepositoryImplTest {
         assertFalse(reported.any { it.contains("PIÉLAGOS", ignoreCase = true) })
     }
 
+    private val crashReporter = RecordingCrashReporter()
+
     private fun repository(
         dao: SavedPublicationDao = database.savedPublicationDao(),
     ) = SavedPublicationRepositoryImpl(
@@ -178,7 +199,7 @@ class SavedPublicationRepositoryImplTest {
         time = time,
         dispatchers = TestDispatcherProvider(),
         analytics = analytics,
-        crashReporter = NoOpCrashReporter(),
+        crashReporter = crashReporter,
     )
 
     private suspend fun storePublications(vararg keys: String) {

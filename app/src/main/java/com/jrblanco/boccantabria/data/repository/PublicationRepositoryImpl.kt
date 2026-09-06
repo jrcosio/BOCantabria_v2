@@ -16,6 +16,7 @@ import com.jrblanco.boccantabria.data.source.remote.FeedFetchResult
 import com.jrblanco.boccantabria.data.source.remote.NormalizationResult
 import com.jrblanco.boccantabria.data.source.remote.PublicationNormalizer
 import com.jrblanco.boccantabria.data.source.remote.PublicationRemoteDataSource
+import com.jrblanco.boccantabria.domain.model.AlertCandidate
 import com.jrblanco.boccantabria.domain.model.AppResult
 import com.jrblanco.boccantabria.domain.model.BulletinHeaderData
 import com.jrblanco.boccantabria.domain.model.DomainError
@@ -29,7 +30,6 @@ import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.sync.Semaphore
@@ -70,28 +70,24 @@ class PublicationRepositoryImpl(
     private val backfillBatchSize: Int = BACKFILL_BATCH_SIZE,
 ) : PublicationRepository {
 
+    // A local read failure must not kill the flow: the screen would be left with no state at all,
+    // which reads as a frozen application rather than as an empty one. Until feature 014 this was a
+    // `catch` that emitted the empty list — and then the flow was over, so the screen kept that empty
+    // list for as long as it lived (STAB-004). `recoverReads` emits it, retries and keeps observing.
+    // Always the last operator: see its KDoc.
     override fun observePublications(selection: HomeSelection): Flow<List<Publication>> =
         selection.query()
             .map { entities -> entities.map { it.toDomain() } }
-            // A local read failure must not kill the flow: the screen would be left with no state
-            // at all, which reads as a frozen application rather than as an empty one.
-            .catch { cause ->
-                if (cause is CancellationException) throw cause
-                crashReporter.recordNonFatal(cause)
-                emit(emptyList())
-            }
             .flowOn(dispatchers.io)
+            .recoverReads(fallback = emptyList(), name = "publications", crashReporter = crashReporter)
 
     override fun observePublication(externalKey: String): Flow<Publication?> =
         publicationDao.observePublication(externalKey)
             .map { entity -> entity?.toDomain() }
-            .catch { cause ->
-                if (cause is CancellationException) throw cause
-                crashReporter.recordNonFatal(cause)
-                emit(null)
-            }
             .flowOn(dispatchers.io)
+            .recoverReads(fallback = null, name = "publication", crashReporter = crashReporter)
 
+    /** Derived from [observePublications], so its recovery is that one's: not wrapped again. */
     override fun observeHeader(selection: HomeSelection): Flow<BulletinHeaderData> =
         observePublications(selection).map { publications ->
             BulletinHeaderData(
@@ -101,17 +97,31 @@ class PublicationRepositoryImpl(
             )
         }
 
-    override suspend fun byKeys(keys: Set<String>): List<Publication> = withContext(dispatchers.io) {
-        if (keys.isEmpty()) return@withContext emptyList()
+    override suspend fun pendingAlertCandidates(): AppResult<List<AlertCandidate>> = withContext(dispatchers.io) {
         try {
-            keys.chunked(SQLITE_VARIABLE_LIMIT)
-                .flatMap { chunk -> publicationDao.byKeys(chunk) }
-                .map { it.toDomain() }
+            AppResult.Success(
+                publicationDao.pendingAlertEvaluation().map { AlertCandidate(it.toDomain(), storedAt = it.firstSeenAt) },
+            )
+        } catch (cancellation: CancellationException) {
+            throw cancellation
+        } catch (unexpected: Throwable) {
+            // A Failure and not an empty list: «nothing pending» would let the cycle move on and lose
+            // whatever is really there (014 research.md D-610).
+            crashReporter.recordNonFatal(unexpected)
+            AppResult.Failure(DomainError.Unknown)
+        }
+    }
+
+    override suspend fun markAlertsEvaluated(keys: Set<String>): AppResult<Unit> = withContext(dispatchers.io) {
+        if (keys.isEmpty()) return@withContext AppResult.Success(Unit)
+        try {
+            keys.chunked(SQLITE_VARIABLE_LIMIT).forEach { chunk -> publicationDao.markAlertsEvaluated(chunk) }
+            AppResult.Success(Unit)
         } catch (cancellation: CancellationException) {
             throw cancellation
         } catch (unexpected: Throwable) {
             crashReporter.recordNonFatal(unexpected)
-            emptyList()
+            AppResult.Failure(DomainError.Unknown)
         }
     }
 
@@ -148,12 +158,13 @@ class PublicationRepositoryImpl(
             val permits = Semaphore(MAX_CONCURRENT_FEEDS)
             val folded = coroutineScope {
                 feeds.filter { it.enabled }
-                    .map { definition -> async { permits.withPermit { syncFeed(definition) } } }
+                    .map { definition -> async { permits.withPermit { syncFeed(definition, isBaseline) } } }
                     .awaitAll()
             }.fold(SyncSummary(), SyncSummary::plus)
 
             // The first successful synchronisation of an installation is history, not news: the
-            // keys are emptied here so that no consumer can forget to.
+            // keys are emptied here so that no consumer can forget to, and `syncFeed` has already
+            // stored its rows with the pending mark off (014 D-608).
             val summary = folded.copy(
                 isBaseline = isBaseline,
                 newKeys = if (isBaseline) emptySet() else folded.newKeys,
@@ -203,8 +214,14 @@ class PublicationRepositoryImpl(
     /**
      * One source, start to finish. Writes as soon as it has something, so the screen does not
      * wait for the slowest of the nineteen.
+     *
+     * [isBaseline] travels down to the INSERT: the rows of the first synchronisation are stored with
+     * the pending mark **off**, instead of being marked and cleared afterwards. Clearing afterwards
+     * had a window — a process dying halfway through the baseline, with `last_success_at` already
+     * written for the feeds that finished — in which the next cycle would no longer be a baseline
+     * and would replay hundreds of historic rows as news (014 research.md D-608).
      */
-    private suspend fun syncFeed(definition: BocFeedDefinition): SyncSummary = try {
+    private suspend fun syncFeed(definition: BocFeedDefinition, isBaseline: Boolean): SyncSummary = try {
         val state = feedSyncStateDao.byFeedId(definition.feedId)
 
         when (val result = remoteDataSource.fetchFeed(definition, state?.bodyHash)) {
@@ -224,7 +241,9 @@ class PublicationRepositoryImpl(
                 val now = time.nowMillis()
 
                 val counts = publicationDao.upsertAll(
-                    accepted.map { it.publication.toEntity(now, searchTextOf(it.publication)) },
+                    accepted.map {
+                        it.publication.toEntity(now, searchTextOf(it.publication), pendingAlertEvaluation = !isBaseline)
+                    },
                 )
                 markSuccess(definition, result.bodyHash)
 

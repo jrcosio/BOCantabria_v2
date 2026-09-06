@@ -2,6 +2,8 @@ package com.jrblanco.boccantabria.data.source.remote
 
 import com.jrblanco.boccantabria.core.util.DispatcherProvider
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.currentCoroutineContext
+import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.withContext
 import okhttp3.OkHttpClient
 import okhttp3.Request
@@ -45,14 +47,20 @@ class OkHttpDocumentDownloader(
 
         return withContext(dispatchers.io) {
             try {
-                client.newCall(request(url)).execute().use { response ->
-                    writeVerified(response, into)
-                }
+                // `await`, not `execute()`: cancelling the coroutine cancels the call, which closes the
+                // socket and makes the write loop below die with an IOException instead of pumping up to
+                // 25 MB into a temporary nobody wants (feature 014, PERF-002; research.md D-617).
+                client.newCall(request(url)).await { response -> writeVerified(response, into) }
             } catch (cancellation: CancellationException) {
                 // Cancelling a coroutine is not a network problem, and the caller has to know the
-                // difference: one leaves a temporary to clean up, the other is a real refusal.
+                // difference: one leaves a temporary to clean up, the other is a real refusal. The
+                // temporary is deliberately NOT truncated here — OkHttp's thread may still be inside
+                // `writeVerified` for a few milliseconds — the repository deletes it (D-621).
                 throw cancellation
-            } catch (_: IOException) {
+            } catch (error: IOException) {
+                // A cancelled call surfaces as an IOException on OkHttp's side too; only a live
+                // coroutine may report a network refusal.
+                currentCoroutineContext().ensureActive()
                 into.truncate()
                 DownloadResult.Rejected(DownloadRefusal.Network)
             }

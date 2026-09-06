@@ -70,9 +70,9 @@ class OkHttpGeminiDocumentUploader(
             } catch (cancellation: CancellationException) {
                 throw cancellation
             } catch (error: IOException) {
-                // Cancelling a coroutine does not interrupt a blocking call with a
-                // CancellationException: it breaks the socket, and what comes out is an IOException
-                // (009 research.md D-119, 010 D-218).
+                // A cancelled call surfaces as an IOException on OkHttp's side (009 research.md D-119,
+                // 010 D-218); since feature 014 `await` cancels the call itself, and this check stays
+                // as the second line of defence.
                 currentCoroutineContext().ensureActive()
                 crashReporter.log("upload: network: ${error.javaClass.simpleName}")
                 UploadResult.Rejected(GeminiRefusal.Network)
@@ -82,8 +82,11 @@ class OkHttpGeminiDocumentUploader(
             }
         }
 
+    // The four calls below go through `Call.await` rather than `execute()`: cancelling the coroutine
+    // cancels the call and frees the socket, also halfway through the streamed bytes (014, PERF-002).
+
     /** Step one: announce the file and get the address the bytes go to. */
-    private fun beginUpload(key: String, length: Long, displayName: String): String? {
+    private suspend fun beginUpload(key: String, length: Long, displayName: String): String? {
         val request = Request.Builder()
             .url("$baseUrl/upload/$API_VERSION/files")
             .header(HEADER_API_KEY, key)
@@ -97,10 +100,10 @@ class OkHttpGeminiDocumentUploader(
             )
             .build()
 
-        return client.newCall(request).execute().use { response ->
+        return client.newCall(request).await { response ->
             if (!response.isSuccessful) {
                 crashReporter.log("upload: start HTTP ${response.code}")
-                return@use null
+                return@await null
             }
             response.header(HEADER_UPLOAD_URL)
                 ?: null.also { crashReporter.log("upload: start gave no upload url") }
@@ -108,7 +111,7 @@ class OkHttpGeminiDocumentUploader(
     }
 
     /** Step two: the bytes, in one go. */
-    private fun sendBytes(key: String, uploadUrl: String, file: File): GeminiFile? {
+    private suspend fun sendBytes(key: String, uploadUrl: String, file: File): GeminiFile? {
         val request = Request.Builder()
             .url(uploadUrl)
             .header(HEADER_API_KEY, key)
@@ -117,11 +120,11 @@ class OkHttpGeminiDocumentUploader(
             .post(file.asRequestBody(MIME_TYPE_PDF.toMediaType()))
             .build()
 
-        return client.newCall(request).execute().use { response ->
+        return client.newCall(request).await { response ->
             val body = response.body.string()
             if (!response.isSuccessful) {
                 crashReporter.log("upload: bytes HTTP ${response.code}")
-                return@use null
+                return@await null
             }
             runCatching { json.decodeFromString<GeminiFileEnvelope>(body).file }.getOrNull()
         }
@@ -163,18 +166,18 @@ class OkHttpGeminiDocumentUploader(
         }
     }
 
-    private fun fetch(key: String, name: String): GeminiFile? {
+    private suspend fun fetch(key: String, name: String): GeminiFile? {
         val request = Request.Builder()
             .url("$baseUrl/$API_VERSION/$name")
             .header(HEADER_API_KEY, key)
             .get()
             .build()
 
-        return client.newCall(request).execute().use { response ->
+        return client.newCall(request).await { response ->
             val body = response.body.string()
             if (!response.isSuccessful) {
                 crashReporter.log("upload: poll HTTP ${response.code}")
-                return@use null
+                return@await null
             }
             runCatching { json.decodeFromString<GeminiFile>(body) }.getOrNull()
         }
@@ -189,9 +192,15 @@ class OkHttpGeminiDocumentUploader(
                 .delete()
                 .build()
             // A deletion that fails must not cover up whatever else was happening, and the service
-            // expires the file on its own anyway (FR-011).
-            runCatching { client.newCall(request).execute().close() }
-                .onFailure { crashReporter.log("delete failed: ${it.javaClass.simpleName}") }
+            // expires the file on its own anyway (FR-011). A cancellation is not a failure to cover
+            // up, though: it is rethrown, where `runCatching` used to swallow it (014 D-620).
+            try {
+                client.newCall(request).await { }
+            } catch (cancellation: CancellationException) {
+                throw cancellation
+            } catch (@Suppress("TooGenericExceptionCaught") failure: Throwable) {
+                crashReporter.log("delete failed: ${failure.javaClass.simpleName}")
+            }
         }
     }
 

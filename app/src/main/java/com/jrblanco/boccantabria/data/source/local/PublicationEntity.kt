@@ -33,6 +33,14 @@ import java.time.LocalDate
  *
  * It carries no index on purpose. A `LIKE '%…%'` cannot use one, so it would be writes and bytes
  * bought for nothing.
+ *
+ * [pendingAlertEvaluation] (feature 014) is the synchronisation's bookkeeping, like [firstSeenAt]:
+ * `1` for a row a synchronisation inserted and the alerts have not seen yet, `0` for everything
+ * else. It rides the INSERT — the baseline inserts it at `0`, because history is not news — and it
+ * is **absent from `updateColumns`**, so a correction from the source never turns an old
+ * announcement back into news. `PublicationDaoTest` guards that, the way `SavedPublicationDaoTest`
+ * guards `saved_at`. Only `markAlertsEvaluated` clears it, and only after the matches are recorded:
+ * that is what makes a match survive a failed write or a process death (STAB-003; D-607).
  */
 @Entity(
     tableName = "publications",
@@ -44,6 +52,7 @@ import java.time.LocalDate
         Index(value = ["edition_type"]),
         Index(value = ["saved_at"]),
         Index(value = ["feed_id", "publication_date"]),
+        Index(value = ["pending_alert_evaluation"]),
     ],
 )
 data class PublicationEntity(
@@ -74,6 +83,8 @@ data class PublicationEntity(
      * backfill find its work without a flag stored anywhere.
      */
     @ColumnInfo(name = "search_text", defaultValue = "''") val searchText: String = "",
+    /** Whether a synchronisation cycle still has to evaluate the alerts against this row. */
+    @ColumnInfo(name = "pending_alert_evaluation", defaultValue = "0") val pendingAlertEvaluation: Boolean = false,
 )
 
 internal fun PublicationEntity.toDomain(): Publication = Publication(
@@ -101,8 +112,15 @@ internal fun PublicationEntity.toDomain(): Publication = Publication(
  *
  * [searchText] is passed in rather than computed here: it needs the section catalogue, which this
  * file has no business knowing about and the repository already holds.
+ *
+ * [pendingAlertEvaluation] defaults to `false` so that only the synchronisation, which knows whether
+ * this is the baseline, ever marks a row; the tests that store rows by hand store them evaluated.
  */
-internal fun Publication.toEntity(seenAt: Long, searchText: String): PublicationEntity = PublicationEntity(
+internal fun Publication.toEntity(
+    seenAt: Long,
+    searchText: String,
+    pendingAlertEvaluation: Boolean = false,
+): PublicationEntity = PublicationEntity(
     externalKey = externalKey,
     blobId = blobId,
     idSource = idSource,
@@ -120,4 +138,5 @@ internal fun Publication.toEntity(seenAt: Long, searchText: String): Publication
     firstSeenAt = seenAt,
     lastSeenAt = seenAt,
     searchText = searchText,
+    pendingAlertEvaluation = pendingAlertEvaluation,
 )

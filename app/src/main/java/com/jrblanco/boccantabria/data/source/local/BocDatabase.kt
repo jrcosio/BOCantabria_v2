@@ -34,6 +34,13 @@ import androidx.room.TypeConverters
  * version 4: two empty tables, nothing to backfill, and having no alerts is the normal state of an
  * installation. It is also the version that brings the project's **only** delete statement, in
  * `AlertRuleDao`, and the reason it is allowed is written there (012 research.md D-410, D-412).
+ *
+ * Version 6 (feature 014) adds one `NOT NULL DEFAULT 0` column to `publications`: whether the alerts
+ * still have to evaluate the row. Nothing to backfill, and deliberately so: every row that was
+ * already there arrives at `0`, which is exactly what "history is not news" means. The mark lives in
+ * the row, like the searchable text, so a match that could not be recorded — or a process that died
+ * between storing the bulletin and recording the match — is picked up by the next cycle instead of
+ * being lost for good (014 research.md D-607).
  */
 @Database(
     entities = [
@@ -43,13 +50,14 @@ import androidx.room.TypeConverters
         AlertRuleEntity::class,
         AlertMatchEntity::class,
     ],
-    version = 5,
+    version = 6,
     exportSchema = true,
     autoMigrations = [
         AutoMigration(from = 1, to = 2),
         AutoMigration(from = 2, to = 3),
         AutoMigration(from = 3, to = 4),
         AutoMigration(from = 4, to = 5),
+        AutoMigration(from = 5, to = 6),
     ],
 )
 @TypeConverters(Converters::class)

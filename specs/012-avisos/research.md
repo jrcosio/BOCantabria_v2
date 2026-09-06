@@ -591,3 +591,27 @@ de esta casa cruza esa frontera; se recorre a mano y se registra.
 - **Cambio de zona horaria** entre dos aperturas: «hoy» se recalcula al observar; una coincidencia de
   madrugada puede cambiar de día. Aceptado.
 - **Orden de nombres en «Coincide con A y B»**: el de `GROUP_CONCAT`. Si molesta, subconsulta ordenada.
+
+---
+
+## 11. Decisiones superadas por la feature 014 (6 de septiembre de 2026)
+
+La auditoría técnica del 6 de septiembre de 2026 (`docs/auditoria/01-hallazgos.md`, STAB-003) demostró
+que el ciclo perdía un aviso para siempre si registrar la coincidencia fallaba o el proceso moría entre
+guardar el boletín y registrarla: el siguiente ciclo ya no veía esas publicaciones como nuevas. Dos
+decisiones de este fichero quedan **superadas, no incumplidas**, por
+`specs/014-estabilidad-auditoria/research.md`:
+
+- **D-401** («las claves nuevas las transporta `SyncSummary.newKeys` y el ciclo las lee con `byKeys`»):
+  superada por **D-607**. Las claves siguen viajando en el resumen para los recuentos y el registro, pero
+  lo que el ciclo evalúa es la marca `pending_alert_evaluation` que cada fila nueva lleva en el almacén,
+  y que solo se retira cuando las coincidencias han quedado registradas. `byKeys` se retiró.
+- **D-405** («nunca retroactivo se cumple por el orden del ciclo, sin comparar una sola fecha»): superada
+  por **D-609**. El orden sigue garantizándolo para lo que inserta el ciclo en curso; un resto de un ciclo
+  anterior puede ser anterior a una regla creada entre los dos, así que `AlertCandidate.isVisibleTo(rule)`
+  compara `activeSince` con `first_seen_at` (`<=`, porque con el reloj congelado de estas pruebas los dos
+  instantes coinciden). Una sola regla para los dos casos.
+
+Se mantienen tal cual D-402, D-403 (la línea base, que ahora además inserta sus filas con la marca a
+cero), D-410 (el índice único deduplica, y es lo que hace que el reintento entregue cada pareja una vez)
+y D-423 (el Worker devuelve siempre `success`).

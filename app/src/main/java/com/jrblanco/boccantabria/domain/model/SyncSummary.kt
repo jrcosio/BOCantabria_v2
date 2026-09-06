@@ -8,10 +8,13 @@ package com.jrblanco.boccantabria.domain.model
  * content. Only the fourth —every source failed and there is nothing stored— is a failure, and
  * that one never produces a summary.
  *
- * Since feature 012 it also says **which** publications were new, not just how many: [newKeys] is
- * what the alerts are evaluated against. [isBaseline] marks the first successful synchronisation of
- * an installation, whose thousand-odd "new" rows are history, not news — the repository leaves
- * [newKeys] empty in that case, so no consumer can forget to (research.md D-402, D-403).
+ * Since feature 012 it also says **which** publications were new, not just how many. [newKeys] used
+ * to be what the alerts were evaluated against; since feature 014 the alerts read the store's own
+ * pending mark, which the repository sets for exactly these rows as it inserts them, so the work
+ * survives a failure or a process death (014 research.md D-607). The keys stay here for the counts,
+ * the log and the tests. [isBaseline] marks the first successful synchronisation of an installation,
+ * whose thousand-odd "new" rows are history, not news — the repository leaves [newKeys] empty and
+ * marks nothing pending in that case, so no consumer can forget to (research.md D-402, D-403).
  */
 data class SyncSummary(
     val succeededFeeds: Int = 0,

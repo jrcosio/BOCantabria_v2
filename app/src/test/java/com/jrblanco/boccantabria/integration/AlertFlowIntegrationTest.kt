@@ -9,6 +9,7 @@ import com.jrblanco.boccantabria.data.repository.AlertRepositoryImpl
 import com.jrblanco.boccantabria.data.repository.BocSectionRepositoryImpl
 import com.jrblanco.boccantabria.data.repository.InMemoryInAppAlertStore
 import com.jrblanco.boccantabria.data.repository.PublicationRepositoryImpl
+import com.jrblanco.boccantabria.data.source.local.AlertMatchDao
 import com.jrblanco.boccantabria.data.source.local.BocDatabase
 import com.jrblanco.boccantabria.data.source.remote.BocFeedCatalog
 import com.jrblanco.boccantabria.data.source.remote.FeedFailure
@@ -30,6 +31,7 @@ import com.jrblanco.boccantabria.domain.usecase.SaveAlertRuleUseCase
 import com.jrblanco.boccantabria.domain.usecase.SetAlertRuleEnabledUseCase
 import com.jrblanco.boccantabria.fake.FakeAppVisibilityProvider
 import com.jrblanco.boccantabria.fake.FakeBackgroundSyncScheduler
+import com.jrblanco.boccantabria.fake.FailingOnceAlertMatchDao
 import com.jrblanco.boccantabria.fake.FakeDocumentRepository
 import com.jrblanco.boccantabria.fake.FakePublicationRemoteDataSource
 import com.jrblanco.boccantabria.fake.RecordingAlertNotifier
@@ -83,6 +85,14 @@ class AlertFlowIntegrationTest {
             .inMemoryDatabaseBuilder(ApplicationProvider.getApplicationContext(), BocDatabase::class.java)
             .allowMainThreadQueries()
             .build()
+        build()
+    }
+
+    /**
+     * Wires the real repositories and the cycle over the database. [matchDao] can be wrapped to make
+     * the match store fail on demand, which is how the recovery of feature 014 is exercised.
+     */
+    private fun build(matchDao: AlertMatchDao = database.alertMatchDao()) {
         val sections = BocSectionRepositoryImpl()
         val dispatchers = TestDispatcherProvider()
         publications = PublicationRepositoryImpl(
@@ -99,7 +109,7 @@ class AlertFlowIntegrationTest {
         )
         alerts = AlertRepositoryImpl(
             ruleDao = database.alertRuleDao(),
-            matchDao = database.alertMatchDao(),
+            matchDao = matchDao,
             sections = sections,
             time = time,
             dispatchers = dispatchers,
@@ -280,6 +290,63 @@ class AlertFlowIntegrationTest {
         bulletin("h3", "1" to "Aprobación definitiva.", "2" to "Ayudas a la ganadería.", "3" to "Ganadería de montaña.")
         val outcome = run()
         assertEquals(listOf("boc:3"), outcome.notifications.map { it.publication.externalKey })
+    }
+
+    // ---------- Feature 014 (STAB-003): a match the store could not record is not lost ----------
+
+    /**
+     * The audit's scenario on the real database: the match store throws once, the cycle ends with no
+     * delivery, and the next cycle finds the source unchanged — `NotModified`, `newKeys` empty. Until
+     * feature 014 the alert was gone for good. Now the publication is still pending in the store, the
+     * next cycle delivers it, and the one after that delivers nothing more.
+     */
+    @Test
+    fun `a match the store could not record is delivered by the next cycle, once`() = runTest {
+        build(matchDao = FailingOnceAlertMatchDao(database.alertMatchDao(), failuresLeft = 1))
+        rule("Ganadería", "ganadería")
+        bulletin("h1", "1" to "Aprobación definitiva.")
+        run()
+
+        bulletin("h2", "1" to "Aprobación definitiva.", "2" to "Ayudas a la ganadería.")
+        val failed = run()
+
+        assertEquals(AlertDelivery.NONE, failed.delivery)
+        assertTrue(notifier.posted.isEmpty())
+        assertEquals(listOf("boc:2"), database.publicationDao().pendingAlertEvaluation().map { it.externalKey })
+        assertTrue(crashReporter.messages.any { it == "cycle: recording failed, 1 key(s) kept pending" })
+
+        val recovered = run()
+
+        assertEquals(AlertDelivery.SYSTEM, recovered.delivery)
+        assertEquals("boc:2", notifier.posted.single().single().publication.externalKey)
+        assertEquals(1, alerts.observeUnreadCount().first())
+        assertTrue(database.publicationDao().pendingAlertEvaluation().isEmpty())
+
+        assertEquals(AlertDelivery.NONE, run().delivery)
+        assertEquals(1, notifier.posted.size)
+        assertEquals(1, database.alertMatchDao().count())
+    }
+
+    /**
+     * The clock moves between the two cycles on purpose: with it frozen, `activeSince` equals
+     * `first_seen_at` and the date filter of `AlertCandidate` is inert. A rule created after the
+     * leftover was stored is newer than it, and must not fire for it (FR-017).
+     */
+    @Test
+    fun `a rule created after a leftover was stored does not fire for it`() = runTest {
+        build(matchDao = FailingOnceAlertMatchDao(database.alertMatchDao(), failuresLeft = 1))
+        rule("Ganadería", "ganadería")
+        bulletin("h1", "1" to "Aprobación definitiva.")
+        run()
+        bulletin("h2", "1" to "Aprobación definitiva.", "2" to "Ayudas a la ganadería.")
+        run()
+
+        now += 1_000_000
+        rule("Ayudas", "ayudas")
+        val outcome = run()
+
+        assertEquals(listOf("Ganadería"), outcome.notifications.single().ruleNames)
+        assertEquals(1, database.alertMatchDao().count())
     }
 
     // ---------- Delivery ----------

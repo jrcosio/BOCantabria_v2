@@ -64,9 +64,22 @@ interface PublicationDao {
     @Query("SELECT external_key FROM publications WHERE external_key IN (:keys)")
     suspend fun existingKeys(keys: List<String>): List<String>
 
-    /** The rows behind [keys]. What a synchronisation cycle reads to evaluate the alerts (012). */
-    @Query("SELECT * FROM publications WHERE external_key IN (:keys)")
-    suspend fun byKeys(keys: List<String>): List<PublicationEntity>
+    /**
+     * The rows a synchronisation cycle evaluates the alerts against: what was inserted and not yet
+     * evaluated, whichever cycle inserted it (feature 014). Same order as every list of the bulletin.
+     */
+    @Query(
+        """
+        SELECT * FROM publications
+        WHERE pending_alert_evaluation = 1
+        ORDER BY publication_date DESC, CAST(blob_id AS INTEGER) DESC, external_key DESC
+        """,
+    )
+    suspend fun pendingAlertEvaluation(): List<PublicationEntity>
+
+    /** Clears the mark on exactly [keys]; touches nothing else. Callers chunk the `IN` list at 900. */
+    @Query("UPDATE publications SET pending_alert_evaluation = 0 WHERE external_key IN (:keys)")
+    suspend fun markAlertsEvaluated(keys: List<String>): Int
 
     /** The newest rows, for the alert form's preview. Same order as every list of the bulletin. */
     @Query(
@@ -92,6 +105,11 @@ interface PublicationDao {
      * the issuer and the classification the source publishes, so when the source corrects a title
      * the searchable text has to be corrected with it. Leaving it out would mean a corrected
      * announcement stayed findable only by its old wording.
+     *
+     * `pending_alert_evaluation` (feature 014) is absent for the same reason as `first_seen_at`: a
+     * publication the store already had is not news, however many times the source corrects it.
+     * Adding it here would make every corrected announcement fire the alerts again;
+     * `PublicationDaoTest` is the regression that keeps it out.
      */
     @Query(
         """
@@ -209,8 +227,10 @@ interface PublicationDao {
 /**
  * How a single upsert broke down. Feeds the synchronisation summary.
  *
- * [insertedKeys] are the rows that did not exist before — exactly what the alerts are evaluated
- * against. `inserted` is kept as a count for the callers that only need one.
+ * [insertedKeys] are the rows that did not exist before. Until feature 014 they were what the alerts
+ * were evaluated against; now the same rows carry the pending mark in the store, and these keys feed
+ * the summary, the log and the tests. `inserted` is kept as a count for the callers that only need
+ * one.
  */
 data class UpsertCounts(
     val inserted: Int = 0,

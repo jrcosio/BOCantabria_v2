@@ -1,7 +1,9 @@
 package com.jrblanco.boccantabria.fake
 
+import com.jrblanco.boccantabria.domain.model.AlertCandidate
 import com.jrblanco.boccantabria.domain.model.AppResult
 import com.jrblanco.boccantabria.domain.model.BulletinHeaderData
+import com.jrblanco.boccantabria.domain.model.DomainError
 import com.jrblanco.boccantabria.domain.model.HomeSelection
 import com.jrblanco.boccantabria.domain.model.Publication
 import com.jrblanco.boccantabria.domain.model.SyncSummary
@@ -67,18 +69,56 @@ class FakePublicationRepository(
     override suspend fun refresh(): AppResult<SyncSummary> {
         refreshCount++
         onRefresh?.invoke()
-        return refreshResult
+        val result = refreshResult
+        // What the real repository does since feature 014: the rows a refresh inserts are marked
+        // pending, stamped with when they were stored; the baseline marks nothing.
+        if (result is AppResult.Success && !result.data.isBaseline) {
+            result.data.newKeys.forEach { key -> pendingKeys.putIfAbsent(key, now) }
+        }
+        return result
     }
 
     /** Runs inside [refresh], so a test can change the world mid-synchronisation. */
     var onRefresh: (suspend () -> Unit)? = null
 
-    val keysAsked: MutableList<Set<String>> = mutableListOf()
+    // ---------- What the alerts evaluate (feature 014) ----------
 
-    override suspend fun byKeys(keys: Set<String>): List<Publication> {
-        keysAsked += keys
-        val known = publications.value + publicationsByKey.values
-        return known.filter { it.externalKey in keys }.distinctBy { it.externalKey }
+    /** The clock that stamps `storedAt`. Mirrors `FakeAlertRepository.now`. */
+    var now: Long = 1_000_000L
+
+    /** Key → when it was stored. What a cycle reads, and what it clears when it is done. */
+    val pendingKeys: MutableMap<String, Long> = mutableMapOf()
+
+    /** How many times the pending set was read: the cycle must ask once, and only when it may. */
+    var pendingReads: Int = 0
+        private set
+
+    /** Every `markAlertsEvaluated` call, in order. */
+    val markCalls: MutableList<Set<String>> = mutableListOf()
+
+    var failPendingRead: Boolean = false
+    var failMarkEvaluated: Boolean = false
+
+    /** Leaves a publication as an earlier cycle would have: stored, known, and still pending. */
+    fun seedPending(publication: Publication, storedAt: Long) {
+        publicationsByKey = publicationsByKey + (publication.externalKey to publication)
+        pendingKeys[publication.externalKey] = storedAt
+    }
+
+    override suspend fun pendingAlertCandidates(): AppResult<List<AlertCandidate>> {
+        pendingReads++
+        if (failPendingRead) return AppResult.Failure(DomainError.Unknown)
+        val known = (publications.value + publicationsByKey.values).associateBy { it.externalKey }
+        return AppResult.Success(
+            pendingKeys.mapNotNull { (key, storedAt) -> known[key]?.let { AlertCandidate(it, storedAt) } },
+        )
+    }
+
+    override suspend fun markAlertsEvaluated(keys: Set<String>): AppResult<Unit> {
+        markCalls += keys
+        if (failMarkEvaluated) return AppResult.Failure(DomainError.Unknown)
+        keys.forEach(pendingKeys::remove)
+        return AppResult.Success(Unit)
     }
 
     override suspend fun newest(limit: Int): List<Publication> = publications.value.take(limit)

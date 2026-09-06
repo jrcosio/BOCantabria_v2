@@ -13,7 +13,6 @@ import com.jrblanco.boccantabria.domain.model.Publication
 import com.jrblanco.boccantabria.domain.repository.SavedPublicationRepository
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.withContext
@@ -34,19 +33,22 @@ class SavedPublicationRepositoryImpl(
     private val crashReporter: CrashReporter,
 ) : SavedPublicationRepository {
 
+    // A local read failure must not kill the flow: the screen would be left with no state at all,
+    // which reads as a frozen application rather than as an empty one. Until feature 014 a `catch`
+    // emitted the empty list and the flow was over: Guardados showed «nada guardado» until the screen
+    // was recreated (STAB-004). `recoverReads` retries and keeps observing; always the last operator.
     override fun observeSaved(): Flow<List<Publication>> =
         savedPublicationDao.observeSaved()
             .map { entities -> entities.map { it.toDomain() } }
-            // A local read failure must not kill the flow: the screen would be left with no state
-            // at all, which reads as a frozen application rather than as an empty one.
-            .catch { cause -> emitEmptyAfterReporting(cause) { emit(emptyList()) } }
             .flowOn(dispatchers.io)
+            .recoverReads(fallback = emptyList(), name = "saved", crashReporter = crashReporter)
 
+    /** Three screens draw their bookmarks from this one flow: one dead subscription blanked them all. */
     override fun observeSavedKeys(): Flow<Set<String>> =
         savedPublicationDao.observeSavedKeys()
             .map { keys -> keys.toSet() }
-            .catch { cause -> emitEmptyAfterReporting(cause) { emit(emptySet()) } }
             .flowOn(dispatchers.io)
+            .recoverReads(fallback = emptySet(), name = "saved-keys", crashReporter = crashReporter)
 
     /**
      * Writes the instant when saving and clears it when unsaving.
@@ -77,12 +79,6 @@ class SavedPublicationRepositoryImpl(
                 AppResult.Failure(DomainError.Unknown)
             }
         }
-
-    private suspend fun emitEmptyAfterReporting(cause: Throwable, emitEmpty: suspend () -> Unit) {
-        if (cause is CancellationException) throw cause
-        crashReporter.recordNonFatal(cause)
-        emitEmpty()
-    }
 
     companion object {
         /** Counts and a flag. Never which publication: that is a personal-interest signal. */

@@ -23,7 +23,6 @@ import com.jrblanco.boccantabria.domain.repository.AlertRepository
 import com.jrblanco.boccantabria.domain.repository.BocSectionRepository
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.withContext
@@ -33,9 +32,9 @@ import java.util.UUID
  * The person's alert rules and what they caught, and the only thing that writes them.
  *
  * Same shape as [SavedPublicationRepositoryImpl]: nothing throws, `CancellationException` is
- * rethrown, a failed read emits empty and stays alive, and the analytics count things without ever
- * naming them — a rule's name, its words and its organisation say what the person cares about, and
- * that never leaves the phone (012 research.md D-438).
+ * rethrown, a failed read emits empty and **recovers** with a bounded retry (feature 014), and the
+ * analytics count things without ever naming them — a rule's name, its words and its organisation
+ * say what the person cares about, and that never leaves the phone (012 research.md D-438).
  */
 @Suppress("LongParameterList")
 class AlertRepositoryImpl(
@@ -48,18 +47,23 @@ class AlertRepositoryImpl(
     private val crashReporter: CrashReporter,
 ) : AlertRepository {
 
+    // The three flows recover from a read failure with `recoverReads` (feature 014, STAB-004): a
+    // `catch` that emitted empty left the flow finished, and the bell's badge — whose owner lives for
+    // the whole session — stayed at zero for the rest of the process. Always the last operator.
     override fun observeRules(dayStart: Long): Flow<List<AlertRuleOverview>> =
         ruleDao.observeRules(dayStart)
             .map { rows -> rows.map { it.toOverview() } }
-            .catch { cause -> emitEmptyAfterReporting(cause) { emit(emptyList()) } }
             .flowOn(dispatchers.io)
+            .recoverReads(fallback = emptyList(), name = "rules", crashReporter = crashReporter)
 
     override suspend fun rule(id: String): AlertRule? = withContext(dispatchers.io) {
         runCatchingReported { ruleDao.byId(id)?.toDomain() }
     }
 
-    override suspend fun enabledRules(): List<AlertRule> = withContext(dispatchers.io) {
-        runCatchingReported { ruleDao.enabledRules().map { it.toDomain() } } ?: emptyList()
+    override suspend fun enabledRules(): AppResult<List<AlertRule>> = withContext(dispatchers.io) {
+        // A Failure, not an empty list: to the cycle «no rules» means "these publications are
+        // evaluated", and a read that failed must not clear anything (014 research.md D-610).
+        write { ruleDao.enabledRules().map { it.toDomain() } }
     }
 
     override suspend fun countRules(): Int = withContext(dispatchers.io) {
@@ -118,43 +122,49 @@ class AlertRepositoryImpl(
      * Inserts what is new and returns exactly that.
      *
      * The unique index rejects a pair already recorded and `insert` reports it as `-1`; filtering on
-     * that is what keeps a publication from being delivered twice. A failure here is reported and
-     * treated as "nothing new": the cycle must not notify what it could not record.
+     * that is what keeps a publication from being delivered twice.
+     *
+     * **One insert, one transaction.** Until feature 014 the list went in chunks of 900, and that was
+     * the defect: chunk one committed, chunk two threw, the pairs of chunk one were recorded but never
+     * delivered, and the unique index then hid them for ever. The 900 limit protects `IN (...)` lists,
+     * not inserts — Room binds one row per statement and runs the whole list in one transaction. And
+     * a failure is a [AppResult.Failure], not "nothing new": the cycle keeps those publications
+     * pending and tries again (STAB-003; 014 research.md D-611).
      */
-    override suspend fun recordMatches(candidates: List<AlertMatch>): List<AlertMatch> =
+    override suspend fun recordMatches(candidates: List<AlertMatch>): AppResult<List<AlertMatch>> =
         withContext(dispatchers.io) {
-            if (candidates.isEmpty()) return@withContext emptyList()
+            if (candidates.isEmpty()) return@withContext AppResult.Success(emptyList())
             val distinct = candidates.distinctBy { it.ruleId to it.externalKey }
-            val inserted = runCatchingReported {
-                distinct.chunked(SQLITE_VARIABLE_LIMIT).flatMap { chunk ->
-                    val ids = matchDao.insert(chunk.map { AlertMatchEntity(ruleId = it.ruleId, externalKey = it.externalKey, matchedAt = it.matchedAt) })
-                    chunk.filterIndexed { index, _ -> ids[index] != IGNORED_ROW_ID }
-                }
-            } ?: emptyList()
-            if (inserted.isNotEmpty()) {
+            val result = write {
+                val ids = matchDao.insert(
+                    distinct.map { AlertMatchEntity(ruleId = it.ruleId, externalKey = it.externalKey, matchedAt = it.matchedAt) },
+                )
+                distinct.filterIndexed { index, _ -> ids[index] != IGNORED_ROW_ID }
+            }
+            if (result is AppResult.Success && result.data.isNotEmpty()) {
                 analytics.track(
                     AnalyticsEvent(
                         name = EVENT_MATCHES,
                         parameters = mapOf(
-                            "recorded" to inserted.size.toString(),
-                            "publications" to inserted.map { it.externalKey }.distinct().size.toString(),
+                            "recorded" to result.data.size.toString(),
+                            "publications" to result.data.map { it.externalKey }.distinct().size.toString(),
                         ),
                     ),
                 )
             }
-            inserted
+            result
         }
 
     override fun observeNews(): Flow<List<AlertNews>> =
         matchDao.observeNews()
             .map { rows -> rows.mapNotNull { it.toNews() } }
-            .catch { cause -> emitEmptyAfterReporting(cause) { emit(emptyList()) } }
             .flowOn(dispatchers.io)
+            .recoverReads(fallback = emptyList(), name = "news", crashReporter = crashReporter)
 
     override fun observeUnreadCount(): Flow<Int> =
         matchDao.observeUnreadCount()
-            .catch { cause -> emitEmptyAfterReporting(cause) { emit(0) } }
             .flowOn(dispatchers.io)
+            .recoverReads(fallback = 0, name = "unread-count", crashReporter = crashReporter)
 
     override suspend fun markRead(externalKey: String): AppResult<Unit> = withContext(dispatchers.io) {
         write {
@@ -206,12 +216,6 @@ class AlertRepositoryImpl(
         null
     }
 
-    private suspend fun emitEmptyAfterReporting(cause: Throwable, emitEmpty: suspend () -> Unit) {
-        if (cause is CancellationException) throw cause
-        crashReporter.recordNonFatal(cause)
-        emitEmpty()
-    }
-
     companion object {
         const val EVENT_RULE_SAVED: String = "alert_rule_saved"
         const val EVENT_RULE_TOGGLED: String = "alert_rule_toggled"
@@ -220,7 +224,6 @@ class AlertRepositoryImpl(
         const val EVENT_READ: String = "alert_read"
 
         private const val IGNORED_ROW_ID = -1L
-        private const val SQLITE_VARIABLE_LIMIT = 900
 
         /** The list converter's separator: what `GROUP_CONCAT` joins the rule names with. */
         private const val SEPARATOR = "\u001F"

@@ -134,7 +134,8 @@ class OkHttpGeminiChatDataSource(
         // Counted when it goes out: what spends the allowance is asking.
         coordinator.recordRequest()
 
-        client.newCall(request).execute().use { response ->
+        // `await`, not `execute()`: cancelling the coroutine cancels the call (014, PERF-002).
+        client.newCall(request).await { response ->
             val bodyText = response.body.string()
 
             when {
@@ -165,11 +166,11 @@ class OkHttpGeminiChatDataSource(
     } catch (cancellation: CancellationException) {
         throw cancellation
     } catch (error: IOException) {
-        // **A blocking OkHttp call does not throw `CancellationException` when the coroutine is
-        // cancelled.** `Call.execute()` blocks; cancelling tears the socket down and what comes out is
-        // an `IOException`. Without this line, a cancelled request is reported as `Network` and the
-        // reader is told there is no connection for a failure that never happened. Learned on a real
-        // phone in feature 009; there is a regression test.
+        // **A cancelled OkHttp call surfaces as an `IOException` on OkHttp's side.** Without this line,
+        // a cancelled request was reported as `Network` and the reader was told there is no connection
+        // for a failure that never happened. Learned on a real phone in feature 009; there is a
+        // regression test. Since feature 014 `await` cancels the call itself; this stays as the second
+        // line of defence.
         currentCoroutineContext().ensureActive()
         report("network: ${error.javaClass.simpleName}: ${error.message}")
         rejected(GeminiRefusal.Network)

@@ -1,6 +1,7 @@
 package com.jrblanco.boccantabria.data.source.local
 
 import com.jrblanco.boccantabria.core.util.TimeProvider
+import com.jrblanco.boccantabria.domain.model.OfficialDocument
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -178,6 +179,69 @@ class FileDocumentCacheTest {
         assertFalse(temp.exists())
     }
 
+    // ---------- The checksum sidecar (feature 014, STAB-001) ----------
+
+    @Test
+    fun `a sidecar that is present but invalid reads back as the unknown checksum instead of throwing`() =
+        runTest {
+            val cache = cache()
+            cache.put("boc:1", tempWith(64), 64, "a".repeat(64))
+
+            // What an interrupted write leaves behind: a sidecar that exists and is not a checksum.
+            // Until feature 014 `get` built the document with it, the model's `require` threw, and it
+            // kept throwing on every reopen (audit finding STAB-001). `takeIf { isFile }` only ever
+            // produced `null` for a sidecar that did not exist.
+            listOf("", "abc", "A".repeat(64), "a".repeat(63)).forEach { damaged ->
+                sidecarFor(cache, "boc:1").writeText(damaged)
+
+                val read = cache.get("boc:1")
+
+                assertEquals("con lateral «$damaged»", OfficialDocument.UNKNOWN_CHECKSUM, read?.checksum)
+            }
+        }
+
+    @Test
+    fun `storing leaves no sidecar temporary behind`() = runTest {
+        val cache = cache()
+
+        cache.put("boc:1", tempWith(64), 64, "a".repeat(64))
+
+        assertFalse(sidecarTemporaryFor(cache, "boc:1").exists())
+        assertEquals("a".repeat(64), sidecarFor(cache, "boc:1").readText())
+    }
+
+    @Test
+    fun `a document that cannot be moved into place leaves no sidecar either`() = runTest {
+        val cache = cache()
+        // A temporary that does not exist: the rename fails, and `put` must not leave a sidecar
+        // promising a document that never arrived.
+        val missing = File(folder.root, "nowhere.pdf.part")
+
+        val failure = runCatching { cache.put("boc:1", missing, 64, "a".repeat(64)) }.exceptionOrNull()
+
+        assertTrue("debía fallar al mover: $failure", failure is IllegalStateException)
+        assertFalse(sidecarFor(cache, "boc:1").exists())
+        assertNull(cache.get("boc:1"))
+    }
+
+    @Test
+    fun `a stale sidecar temporary is ignored and replaced by put`() = runTest {
+        val cache = cache()
+        sidecarTemporaryFor(cache, "boc:1").apply { parentFile?.mkdirs() }.writeText("half")
+
+        cache.put("boc:1", tempWith(64), 64, "b".repeat(64))
+
+        assertFalse(sidecarTemporaryFor(cache, "boc:1").exists())
+        assertEquals("b".repeat(64), cache.get("boc:1")?.checksum)
+    }
+
     private fun documentsInStore(): Int =
         folder.root.resolve("documents").listFiles()?.count { it.name.endsWith(".pdf") } ?: 0
+
+    /** The sidecar's name is derived from the document's, so the test never needs the digest. */
+    private fun sidecarFor(cache: FileDocumentCache, key: String): File =
+        File(cache.fileFor(key).parentFile, cache.fileFor(key).nameWithoutExtension + ".sha256")
+
+    private fun sidecarTemporaryFor(cache: FileDocumentCache, key: String): File =
+        File(sidecarFor(cache, key).path + ".part")
 }

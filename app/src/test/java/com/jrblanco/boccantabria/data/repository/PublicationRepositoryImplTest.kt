@@ -3,9 +3,11 @@ package com.jrblanco.boccantabria.data.repository
 import android.app.Application
 import androidx.room.Room
 import androidx.test.core.app.ApplicationProvider
+import app.cash.turbine.test
 import com.jrblanco.boccantabria.core.telemetry.NoOpCrashReporter
 import com.jrblanco.boccantabria.core.util.TimeProvider
 import com.jrblanco.boccantabria.data.source.local.BocDatabase
+import com.jrblanco.boccantabria.data.source.local.PublicationDao
 import com.jrblanco.boccantabria.data.source.remote.BocFeedCatalog
 import com.jrblanco.boccantabria.data.source.remote.BocFeedDefinition
 import com.jrblanco.boccantabria.data.source.remote.FeedFailure
@@ -21,7 +23,11 @@ import com.jrblanco.boccantabria.data.source.local.toEntity
 import com.jrblanco.boccantabria.fake.TestDispatcherProvider
 import com.jrblanco.boccantabria.fake.publication
 import com.jrblanco.boccantabria.fake.rssItem
+import io.mockk.every
+import io.mockk.mockk
+import kotlinx.coroutines.flow.emitAll
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.test.runTest
 import org.junit.After
 import org.junit.Assert.assertEquals
@@ -182,7 +188,57 @@ class PublicationRepositoryImplTest {
 
         assertFalse(summary.isBaseline)
         assertEquals(setOf("boc:2", "boc:3"), summary.newKeys)
-        assertEquals(2, repository.byKeys(summary.newKeys).size)
+    }
+
+    // ---------- Feature 014: the pending mark lives in the store ----------
+
+    /** History is not news, and it is decided at insert time: the baseline marks nothing (D-608). */
+    @Test
+    fun `the baseline stores nothing as pending`() = runTest {
+        remote.respondWithItems("6802081", "h1", rssItem("1"), rssItem("2"))
+        val repository = repository()
+
+        repository.refresh()
+
+        assertEquals(AppResult.Success(emptyList<Any>()), repository.pendingAlertCandidates())
+        assertTrue(database.publicationDao().pendingAlertEvaluation().isEmpty())
+    }
+
+    @Test
+    fun `a later synchronisation leaves exactly the inserted keys pending, stamped with when they were stored`() =
+        runTest {
+            remote.respondWithItems("6802081", "h1", rssItem("1"))
+            val repository = repository()
+            repository.refresh()
+
+            now = 2_000_000
+            remote.respondWithItems("6802081", "h2", rssItem("1", title = "Corregido"), rssItem("2"))
+            remote.respondWithItems("6802085", "h3", rssItem("3"))
+            repository.refresh()
+
+            val pending = (repository.pendingAlertCandidates() as AppResult.Success).data
+            assertEquals(setOf("boc:2", "boc:3"), pending.map { it.publication.externalKey }.toSet())
+            assertTrue(pending.all { it.storedAt == 2_000_000L })
+
+            assertEquals(AppResult.Success(Unit), repository.markAlertsEvaluated(setOf("boc:2")))
+            assertEquals(
+                listOf("boc:3"),
+                (repository.pendingAlertCandidates() as AppResult.Success).data.map { it.publication.externalKey },
+            )
+        }
+
+    /** The backfill fills in searchable text; the pending mark is somebody else's and it stays put. */
+    @Test
+    fun `the backfill leaves the pending flag alone`() = runTest {
+        givenStoredRowsWithoutSearchText(count = 1)
+        database.publicationDao().insert(
+            listOf(publication(key = "old:2", title = "AYUNTAMIENTO DE SANTOÑA: Bases").toEntity(seenAt = 1L, searchText = "", pendingAlertEvaluation = true)),
+        )
+
+        repository().refresh()
+
+        assertEquals(0, database.publicationDao().withoutSearchText(limit = 100).size)
+        assertEquals(listOf("old:2"), database.publicationDao().pendingAlertEvaluation().map { it.externalKey })
     }
 
     @Test
@@ -371,6 +427,29 @@ class PublicationRepositoryImplTest {
         assertEquals(0, repository.observeHeader(HomeSelection.TodaysBulletin).first().publicationCount)
     }
 
+    /**
+     * Feature 014 (STAB-004): a read that fails once used to leave Inicio on an empty list for as long
+     * as the screen lived — refreshing wrote new rows nobody observed any more.
+     */
+    @Test
+    fun `observing the bulletin survives a read failure`() = runTest {
+        remote.respondWithItems("6802081", "h1", rssItem("1"))
+        repository().refresh()
+        val real = database.publicationDao()
+        var attempts = 0
+        val flaky = mockk<PublicationDao>()
+        every { flaky.observeTodaysBulletin() } returns flow {
+            if (attempts++ == 0) throw IllegalStateException("base ocupada")
+            emitAll(real.observeTodaysBulletin())
+        }
+
+        repository(publicationDao = flaky).observePublications(HomeSelection.TodaysBulletin).test {
+            assertEquals(emptyList<Any>(), awaitItem())
+            assertEquals(listOf("boc:1"), awaitItem().map { it.externalKey })
+            cancelAndIgnoreRemainingEvents()
+        }
+    }
+
     // ---------- Telemetry ----------
 
     @Test
@@ -481,9 +560,10 @@ class PublicationRepositoryImplTest {
         remoteDataSource: com.jrblanco.boccantabria.data.source.remote.PublicationRemoteDataSource = remote,
         feeds: List<BocFeedDefinition> = BocFeedCatalog.definitions,
         backfillBatchSize: Int = PublicationRepositoryImpl.BACKFILL_BATCH_SIZE,
+        publicationDao: PublicationDao = database.publicationDao(),
     ) = PublicationRepositoryImpl(
         remoteDataSource = remoteDataSource,
-        publicationDao = database.publicationDao(),
+        publicationDao = publicationDao,
         feedSyncStateDao = database.feedSyncStateDao(),
         normalizer = PublicationNormalizer(),
         sectionRepository = BocSectionRepositoryImpl(),
