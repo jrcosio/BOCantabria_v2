@@ -1,6 +1,9 @@
 package com.jrblanco.boccantabria.ui
 
 import androidx.compose.ui.test.assertIsDisplayed
+import androidx.compose.ui.test.hasAnyAncestor
+import androidx.compose.ui.test.hasTestTag
+import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithTag
@@ -11,6 +14,7 @@ import com.jrblanco.boccantabria.fake.FakeRemoteConfigDataSource
 import com.jrblanco.boccantabria.fake.KoinOverrideRule
 import com.jrblanco.boccantabria.fake.FakeBocRemoteDataSource
 import com.jrblanco.boccantabria.fake.testGraphOverrides
+import com.jrblanco.boccantabria.ui.home.component.TAG_HOME_TOP_BAR
 import com.jrblanco.boccantabria.ui.splash.TAG_SPLASH_ROOT
 import org.junit.Rule
 import org.junit.Test
@@ -37,7 +41,12 @@ class SplashNavigationTest {
         composeRule.waitUntil(timeoutMillis = TIMEOUT_MILLIS) {
             composeRule.onAllNodesWithText(HOME_TITLE).fetchSemanticsNodes().isNotEmpty()
         }
-        composeRule.onNodeWithText(HOME_TITLE).assertIsDisplayed()
+        // Anchored to the top bar. Since feature 013 the sections panel also carries the name, and a
+        // closed drawer is still composed, so matching the words alone finds two nodes and fails on
+        // the ambiguity instead of on what this test is about.
+        composeRule.onNode(
+            hasText(HOME_TITLE) and hasAnyAncestor(hasTestTag(TAG_HOME_TOP_BAR)),
+        ).assertIsDisplayed()
     }
 
     private companion object {

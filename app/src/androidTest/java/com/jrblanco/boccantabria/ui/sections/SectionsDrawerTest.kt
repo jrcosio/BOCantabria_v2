@@ -4,11 +4,12 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.test.assertIsDisplayed
+import androidx.compose.ui.test.hasSetTextAction
 import androidx.compose.ui.test.junit4.createComposeRule
+import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
-import androidx.compose.ui.test.performTextInput
 import com.jrblanco.boccantabria.core.ui.theme.BOCantabriaTheme
 import com.jrblanco.boccantabria.data.repository.BocSectionRepositoryImpl
 import com.jrblanco.boccantabria.domain.model.BocSection
@@ -20,6 +21,9 @@ import org.junit.Test
 /**
  * The sections panel, driven by its real view model but drawn without the graph: what the panel
  * does is presentation, and presentation is what this checks.
+ *
+ * The two filtering tests and the empty-panel one are gone since feature 013, **with the field they
+ * exercised**. Their place is taken by the header: shield, name and a way to put the panel away.
  */
 class SectionsDrawerTest {
 
@@ -27,6 +31,8 @@ class SectionsDrawerTest {
     val composeRule = createComposeRule()
 
     private val selected = mutableListOf<BocSection>()
+
+    private var closed = 0
 
     @Test
     fun the_nine_sections_are_listed_with_their_number_and_name() {
@@ -56,22 +62,35 @@ class SectionsDrawerTest {
     }
 
     @Test
-    fun filtering_by_text_narrows_the_panel_and_opens_what_matched() {
+    fun the_panel_says_whose_panel_it_is() {
         setContent()
 
-        composeRule.onNodeWithTag(TAG_SECTIONS_QUERY).performTextInput("oposi")
-
-        composeRule.onNodeWithTag(sectionRowTag("1")).assertDoesNotExist()
-        composeRule.onNodeWithTag(sectionRowTag("2.2")).assertIsDisplayed()
+        composeRule.onNodeWithTag(TAG_SECTIONS_HEADER).assertIsDisplayed()
+        composeRule.onNodeWithText("BOC Cantabria").assertIsDisplayed()
     }
 
     @Test
-    fun a_filter_that_matches_nothing_leaves_a_message_and_not_a_blank_panel() {
+    fun the_arrow_puts_the_panel_away() {
         setContent()
 
-        composeRule.onNodeWithTag(TAG_SECTIONS_QUERY).performTextInput("zzz")
+        composeRule.onNodeWithTag(TAG_SECTIONS_CLOSE).performClick()
 
-        composeRule.onNodeWithTag(TAG_SECTIONS_EMPTY).assertIsDisplayed()
+        assertEquals(1, closed)
+    }
+
+    @Test
+    fun the_arrow_is_reachable_by_its_description() {
+        // FR-023: whoever cannot see the arrow has to be able to find it.
+        setContent()
+
+        composeRule.onNodeWithContentDescription("Recoger el panel").assertIsDisplayed()
+    }
+
+    @Test
+    fun there_is_no_text_field_in_the_panel_any_more() {
+        setContent()
+
+        composeRule.onNode(hasSetTextAction()).assertDoesNotExist()
     }
 
     @Test
@@ -103,9 +122,9 @@ class SectionsDrawerTest {
             BOCantabriaTheme {
                 SectionsDrawerContent(
                     state = state,
-                    onQueryChanged = viewModel::onQueryChanged,
                     onToggleExpanded = viewModel::onToggleExpanded,
                     onSelect = { selected += it },
+                    onClose = { closed++ },
                 )
             }
         }

@@ -15,8 +15,12 @@ import com.jrblanco.boccantabria.fake.FakeBocRemoteDataSource
 import com.jrblanco.boccantabria.fake.KoinOverrideRule
 import com.jrblanco.boccantabria.fake.testGraphOverrides
 import com.jrblanco.boccantabria.ui.home.TAG_PUBLICATIONS
+import com.jrblanco.boccantabria.ui.home.component.TAG_CHIP_ALL
+import com.jrblanco.boccantabria.ui.home.component.TAG_CHIP_WHOLE_SECTION
 import com.jrblanco.boccantabria.ui.home.component.TAG_HEADER
+import com.jrblanco.boccantabria.ui.home.component.TAG_SUBCHIPS
 import com.jrblanco.boccantabria.ui.home.component.TAG_MENU
+import com.jrblanco.boccantabria.ui.home.component.chipTag
 import com.jrblanco.boccantabria.ui.main.MainShell
 import com.jrblanco.boccantabria.ui.sections.TAG_SECTIONS_DRAWER
 import com.jrblanco.boccantabria.ui.sections.sectionRowTag
@@ -87,10 +91,63 @@ class HomeNavigationTest {
         composeRule.onNodeWithTag(sectionRowTag("2.2")).performClick()
         awaitText(FakeBocRemoteDataSource.OPOSICIONES_DISPLAYED)
 
-        composeRule.onNodeWithTag(com.jrblanco.boccantabria.ui.home.component.TAG_CHIP_ALL).performClick()
+        composeRule.onNodeWithTag(TAG_CHIP_ALL).performClick()
 
         awaitText(FakeBocRemoteDataSource.DISPOSICIONES_DISPLAYED)
-        composeRule.onNodeWithText("Boletín de hoy").assertIsDisplayed()
+        // Anchored to the header: since feature 013 the chip carries these same words, so plain
+        // text matching would find two nodes and fail on the ambiguity rather than on the assertion.
+        composeRule.onNode(
+            hasText("Boletín de hoy") and hasAnyAncestor(hasTestTag(TAG_HEADER)),
+        ).assertIsDisplayed()
+    }
+
+    @Test
+    fun choosing_a_subsection_from_the_chips_changes_the_list_and_the_header() {
+        setContent()
+        awaitText(FakeBocRemoteDataSource.DISPOSICIONES_DISPLAYED)
+
+        // Tapping a section with subsections does both things at once: the list becomes the whole
+        // section and the second row appears under it (feature 013, FR-010).
+        composeRule.onNodeWithTag(chipTag("2")).performClick()
+        composeRule.onNodeWithTag(TAG_SUBCHIPS).assertIsDisplayed()
+
+        composeRule.onNodeWithTag(chipTag("2.2")).performClick()
+
+        awaitText(FakeBocRemoteDataSource.OPOSICIONES_DISPLAYED)
+        composeRule.onNode(
+            hasText("Cursos, oposiciones y concursos") and hasAnyAncestor(hasTestTag(TAG_HEADER)),
+        ).assertIsDisplayed()
+        // The second row survives the move into one of its own entries.
+        composeRule.onNodeWithTag(TAG_SUBCHIPS).assertIsDisplayed()
+    }
+
+    @Test
+    fun the_whole_section_entry_comes_back_from_a_subsection() {
+        setContent()
+        awaitText(FakeBocRemoteDataSource.DISPOSICIONES_DISPLAYED)
+
+        composeRule.onNodeWithTag(chipTag("2")).performClick()
+        composeRule.onNodeWithTag(chipTag("2.2")).performClick()
+        awaitText(FakeBocRemoteDataSource.OPOSICIONES_DISPLAYED)
+
+        composeRule.onNodeWithTag(TAG_CHIP_WHOLE_SECTION).performClick()
+
+        composeRule.onNode(
+            hasText("Autoridades y personal") and hasAnyAncestor(hasTestTag(TAG_HEADER)),
+        ).assertIsDisplayed()
+    }
+
+    @Test
+    fun a_section_without_subsections_offers_no_second_row() {
+        setContent()
+        awaitText(FakeBocRemoteDataSource.DISPOSICIONES_DISPLAYED)
+
+        composeRule.onNodeWithTag(chipTag("1")).performClick()
+
+        composeRule.onNode(
+            hasText("Disposiciones generales") and hasAnyAncestor(hasTestTag(TAG_HEADER)),
+        ).assertIsDisplayed()
+        composeRule.onNodeWithTag(TAG_SUBCHIPS).assertDoesNotExist()
     }
 
     private fun setContent() {

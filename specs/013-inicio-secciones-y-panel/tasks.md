@@ -37,8 +37,8 @@ Aplicación Android de módulo único. Producto en
 
 **Purpose**: partir de una línea base conocida, para que cualquier rojo posterior sea de esta feature.
 
-- [ ] T001 Confirmar que la rama activa es `013-inicio-secciones-y-panel` y que parte de `main` con la feature 012 integrada, con `git branch --show-current` y `git log --oneline -1`
-- [ ] T002 Dejar la línea base en verde antes de tocar nada: `export JAVA_HOME="/Applications/Android Studio.app/Contents/jbr/Contents/Home"` y después `./gradlew :app:assembleDebug` y `./gradlew :app:testDebugUnitTest`
+- [X] T001 Confirmar que la rama activa es `013-inicio-secciones-y-panel` y que parte de `main` con la feature 012 integrada, con `git branch --show-current` y `git log --oneline -1`
+- [X] T002 Dejar la línea base en verde antes de tocar nada: `export JAVA_HOME="/Applications/Android Studio.app/Contents/jbr/Contents/Home"` y después `./gradlew :app:assembleDebug` y `./gradlew :app:testDebugUnitTest`
 
 ---
 
@@ -68,14 +68,14 @@ al primer chip; el contenido y el recuento son idénticos a los de antes de la f
 
 ### Implementación
 
-- [ ] T003 [US1] Renombrar el recurso `chip_all` a `chip_todays_bulletin` con valor `Boletín de hoy` en `app/src/main/res/values/strings.xml`, dentro del bloque «Filtros rápidos»
-- [ ] T004 [US1] Consumir el recurso nuevo en el primer chip de `app/src/main/java/com/jrblanco/boccantabria/ui/home/component/SectionFilterChips.kt`, **conservando la constante `TAG_CHIP_ALL` con su valor `home_chip_all`** (contrato §1: renombrarla convertiría un cambio de copia en un cambio de tres clases de prueba)
-- [ ] T005 [US1] Verificar que no queda ninguna referencia a `R.string.chip_all` con `grep -rn "chip_all" app/src/` — solo debe aparecer la etiqueta de prueba
+- [X] T003 [US1] Renombrar el recurso `chip_all` a `chip_todays_bulletin` con valor `Boletín de hoy` en `app/src/main/res/values/strings.xml`, dentro del bloque «Filtros rápidos»
+- [X] T004 [US1] Consumir el recurso nuevo en el primer chip de `app/src/main/java/com/jrblanco/boccantabria/ui/home/component/SectionFilterChips.kt`, **conservando la constante `TAG_CHIP_ALL` con su valor `home_chip_all`** (contrato §1: renombrarla convertiría un cambio de copia en un cambio de tres clases de prueba)
+- [X] T005 [US1] Verificar que no queda ninguna referencia a `R.string.chip_all` con `grep -rn "chip_all" app/src/` — solo debe aparecer la etiqueta de prueba
 
 ### Pruebas
 
-- [ ] T006 [US1] Crear `app/src/androidTest/java/com/jrblanco/boccantabria/ui/home/SectionFilterChipsTest.kt` montando `SectionFilterChips` con `createComposeRule()` —no con `createAndroidComposeRule<MainActivity>()`, que obliga a cruzar la portada— y afirmar que el primer chip muestra «Boletín de hoy» y que tocarlo emite `null`
-- [ ] T007 [US1] Ejecutar `./gradlew :app:assembleDebug` y la clase nueva con `./gradlew :app:connectedDebugAndroidTest -Pandroid.testInstrumentationRunnerArguments.class=com.jrblanco.boccantabria.ui.home.SectionFilterChipsTest`
+- [X] T006 [US1] Crear `app/src/androidTest/java/com/jrblanco/boccantabria/ui/home/SectionFilterChipsTest.kt` montando `SectionFilterChips` con `createComposeRule()` —no con `createAndroidComposeRule<MainActivity>()`, que obliga a cruzar la portada— y afirmar que el primer chip muestra «Boletín de hoy» y que tocarlo emite `null`
+- [X] T007 [US1] Ejecutar `./gradlew :app:assembleDebug` y la clase nueva con `./gradlew :app:connectedDebugAndroidTest -Pandroid.testInstrumentationRunnerArguments.class=com.jrblanco.boccantabria.ui.home.SectionFilterChipsTest`
 
 **Checkpoint**: US1 completa y demostrable sola. Ninguna otra historia depende de ella.
 
@@ -93,15 +93,15 @@ cambia y en los dos casos dice qué se está mirando.
 
 ### Implementación
 
-- [ ] T008 [P] [US2] Añadir en `app/src/main/res/values/strings.xml`, junto a la cabecera editorial, `home_header_date_bulletin` = `Edición del %1$s` y `home_header_date_section` = `Última publicación: %1$s`
-- [ ] T009 [US2] En `app/src/main/java/com/jrblanco/boccantabria/ui/home/component/BulletinHeader.kt`, elegir entre las dos cadenas con `header.isTodaysBulletin` e interpolar la fecha con el `SPANISH_LONG_DATE` que ya vive en el fichero; **no** crear un `DateTimeFormatter` nuevo (research D-509)
-- [ ] T010 [US2] Mantener el rótulo **dentro** del bloque `header.date?.let { … }` que ya existe, para que sin fecha no se pinte un rótulo huérfano (FR-006, research D-508)
-- [ ] T011 [US2] Añadir la constante `TAG_HEADER_DATE = "home_header_date"` y aplicarla al `Text` de la fecha en el mismo fichero
+- [X] T008 [P] [US2] Añadir en `app/src/main/res/values/strings.xml`, junto a la cabecera editorial, `home_header_date_bulletin` = `Edición del %1$s` y `home_header_date_section` = `Última publicación: %1$s`
+- [X] T009 [US2] En `app/src/main/java/com/jrblanco/boccantabria/ui/home/component/BulletinHeader.kt`, elegir entre las dos cadenas con `header.isTodaysBulletin` e interpolar la fecha con el `SPANISH_LONG_DATE` que ya vive en el fichero; **no** crear un `DateTimeFormatter` nuevo (research D-509)
+- [X] T010 [US2] Mantener el rótulo **dentro** del bloque `header.date?.let { … }` que ya existe, para que sin fecha no se pinte un rótulo huérfano (FR-006, research D-508)
+- [X] T011 [US2] Añadir la constante `TAG_HEADER_DATE = "home_header_date"` y aplicarla al `Text` de la fecha en el mismo fichero
 
 ### Pruebas
 
-- [ ] T012 [US2] Crear `app/src/androidTest/java/com/jrblanco/boccantabria/ui/home/BulletinHeaderTest.kt` con `createComposeRule()` y tres casos: rótulo del boletín del día, rótulo de una sección, y que con `date = null` no se dibuja `TAG_HEADER_DATE`
-- [ ] T013 [US2] Ejecutar la clase nueva con `-Pandroid.testInstrumentationRunnerArguments.class=com.jrblanco.boccantabria.ui.home.BulletinHeaderTest`
+- [X] T012 [US2] Crear `app/src/androidTest/java/com/jrblanco/boccantabria/ui/home/BulletinHeaderTest.kt` con `createComposeRule()` y tres casos: rótulo del boletín del día, rótulo de una sección, y que con `date = null` no se dibuja `TAG_HEADER_DATE`
+- [X] T013 [US2] Ejecutar la clase nueva con `-Pandroid.testInstrumentationRunnerArguments.class=com.jrblanco.boccantabria.ui.home.BulletinHeaderTest`
 
 **Checkpoint**: US2 completa y demostrable sola.
 
@@ -121,23 +121,23 @@ comprobando que la segunda fila aparece y desaparece y que cada chip lleva a lo 
 
 ### Implementación
 
-- [ ] T014 [US3] Añadir a `HomeUiState` los campos `subsections: List<SectionChip> = emptyList()` e `isWholeSectionSelected: Boolean = false` en `app/src/main/java/com/jrblanco/boccantabria/ui/home/HomeUiState.kt`, documentando en el KDoc que se **derivan** de la selección y no son estado recordado (research D-501)
-- [ ] T015 [US3] Añadir `buildSubsectionChips()` a `app/src/main/java/com/jrblanco/boccantabria/ui/home/HomeViewModel.kt`: si `selection is HomeSelection.Section`, filtrar `getSections()` por `parentCode == selection.sectionCode` y marcar `isSelected` comparando con `selection.subsectionCode`; en otro caso, lista vacía
-- [ ] T016 [US3] Calcular `isWholeSectionSelected` en el mismo modelo de pantalla: `selection is HomeSelection.Section && selection.subsectionCode == null`
-- [ ] T017 [US3] Publicar los dos valores en `HomeUiState`, tanto en el bloque del `combine` como en el `initialValue`, **sin añadir un sexto flujo**: se calculan una vez como `chips` y no dependen del almacén (data-model §2; con seis flujos `combine` cae en la sobrecarga de `vararg`, trampa ya documentada en `CLAUDE.md`)
-- [ ] T018 [P] [US3] Añadir `chip_whole_section` = `Toda la sección` en `app/src/main/res/values/strings.xml`
-- [ ] T019 [US3] Ampliar `SectionFilterChips` en `app/src/main/java/com/jrblanco/boccantabria/ui/home/component/SectionFilterChips.kt` con los tres parámetros del contrato §1 —`subsections`, `sectionCode`, `isWholeSectionSelected`, todos con valor por defecto— y un segundo `LazyRow` **debajo** del actual, visible solo si `subsections` no está vacía
-- [ ] T020 [US3] Añadir en ese fichero las constantes `TAG_SUBCHIPS = "home_subchips"` y `TAG_CHIP_WHOLE_SECTION = "home_chip_whole_section"`, y reutilizar `chipTag(code)` para los chips de subsección
-- [ ] T021 [US3] Dar a la segunda fila el estilo secundario de research D-505 —fondo `BocTheme.colors.surfaceSoft` en reposo y tipografía un punto menor—, **sin divisor y sin sangría**, y con los espaciados de `BocTheme.spacing`; ni un color, tamaño o espaciado literal (FR-033)
-- [ ] T022 [US3] Reenviar los tres valores desde `HomeContent` en `app/src/main/java/com/jrblanco/boccantabria/ui/home/HomeScreen.kt`, sacando `sectionCode` de `(state.selection as? HomeSelection.Section)?.sectionCode` (contrato §2). `MainShell.kt` **no se toca** en esta historia (research D-506)
+- [X] T014 [US3] Añadir a `HomeUiState` los campos `subsections: List<SectionChip> = emptyList()` e `isWholeSectionSelected: Boolean = false` en `app/src/main/java/com/jrblanco/boccantabria/ui/home/HomeUiState.kt`, documentando en el KDoc que se **derivan** de la selección y no son estado recordado (research D-501)
+- [X] T015 [US3] Añadir `buildSubsectionChips()` a `app/src/main/java/com/jrblanco/boccantabria/ui/home/HomeViewModel.kt`: si `selection is HomeSelection.Section`, filtrar `getSections()` por `parentCode == selection.sectionCode` y marcar `isSelected` comparando con `selection.subsectionCode`; en otro caso, lista vacía
+- [X] T016 [US3] Calcular `isWholeSectionSelected` en el mismo modelo de pantalla: `selection is HomeSelection.Section && selection.subsectionCode == null`
+- [X] T017 [US3] Publicar los dos valores en `HomeUiState`, tanto en el bloque del `combine` como en el `initialValue`, **sin añadir un sexto flujo**: se calculan una vez como `chips` y no dependen del almacén (data-model §2; con seis flujos `combine` cae en la sobrecarga de `vararg`, trampa ya documentada en `CLAUDE.md`)
+- [X] T018 [P] [US3] Añadir `chip_whole_section` = `Toda la sección` en `app/src/main/res/values/strings.xml`
+- [X] T019 [US3] Ampliar `SectionFilterChips` en `app/src/main/java/com/jrblanco/boccantabria/ui/home/component/SectionFilterChips.kt` con los tres parámetros del contrato §1 —`subsections`, `sectionCode`, `isWholeSectionSelected`, todos con valor por defecto— y un segundo `LazyRow` **debajo** del actual, visible solo si `subsections` no está vacía
+- [X] T020 [US3] Añadir en ese fichero las constantes `TAG_SUBCHIPS = "home_subchips"` y `TAG_CHIP_WHOLE_SECTION = "home_chip_whole_section"`, y reutilizar `chipTag(code)` para los chips de subsección
+- [X] T021 [US3] Dar a la segunda fila el estilo secundario de research D-505 —fondo `BocTheme.colors.surfaceSoft` en reposo y tipografía un punto menor—, **sin divisor y sin sangría**, y con los espaciados de `BocTheme.spacing`; ni un color, tamaño o espaciado literal (FR-033)
+- [X] T022 [US3] Reenviar los tres valores desde `HomeContent` en `app/src/main/java/com/jrblanco/boccantabria/ui/home/HomeScreen.kt`, sacando `sectionCode` de `(state.selection as? HomeSelection.Section)?.sectionCode` (contrato §2). `MainShell.kt` **no se toca** en esta historia (research D-506)
 
 ### Pruebas
 
-- [ ] T023 [US3] Ampliar `app/src/test/java/com/jrblanco/boccantabria/ui/home/HomeViewModelTest.kt` con los cuatro casos de `data-model.md` §2: boletín del día → sin subsecciones; sección 1 → sin subsecciones pero `isWholeSectionSelected`; sección 2 → las tres hijas y `isWholeSectionSelected`; sección 2 con subsección 2.2 → la 2.2 marcada e `isWholeSectionSelected = false`
-- [ ] T024 [US3] Añadir a esa misma clase la regresión de FR-012: con la subsección 2.2 elegida, el chip de la sección 2 de la primera fila sigue marcado
-- [ ] T025 [US3] Ampliar `app/src/androidTest/java/com/jrblanco/boccantabria/ui/home/SectionFilterChipsTest.kt` (creada en T006) con: la segunda fila aparece con subsecciones y no aparece sin ellas; `TAG_CHIPS` precede a `TAG_SUBCHIPS`; «Toda la sección» emite el código de la sección padre; y un chip de subsección emite su propio código
-- [ ] T026 [US3] Ampliar `app/src/androidTest/java/com/jrblanco/boccantabria/ui/HomeNavigationTest.kt` con el recorrido completo: tocar el chip de la sección 2, comprobar que aparece la segunda fila, tocar una subsección y comprobar que la cabecera la nombra. Afirmar que la pantalla está montada **antes** de interactuar tras cada navegación
-- [ ] T027 [US3] Ejecutar `./gradlew :app:testDebugUnitTest --tests "*HomeViewModelTest*"` y las dos clases instrumentadas con `-Pandroid.testInstrumentationRunnerArguments.class=…` (recordatorio: `--tests` **no existe** en `connectedDebugAndroidTest`)
+- [X] T023 [US3] Ampliar `app/src/test/java/com/jrblanco/boccantabria/ui/home/HomeViewModelTest.kt` con los cuatro casos de `data-model.md` §2: boletín del día → sin subsecciones; sección 1 → sin subsecciones pero `isWholeSectionSelected`; sección 2 → las tres hijas y `isWholeSectionSelected`; sección 2 con subsección 2.2 → la 2.2 marcada e `isWholeSectionSelected = false`
+- [X] T024 [US3] Añadir a esa misma clase la regresión de FR-012: con la subsección 2.2 elegida, el chip de la sección 2 de la primera fila sigue marcado
+- [X] T025 [US3] Ampliar `app/src/androidTest/java/com/jrblanco/boccantabria/ui/home/SectionFilterChipsTest.kt` (creada en T006) con: la segunda fila aparece con subsecciones y no aparece sin ellas; `TAG_CHIPS` precede a `TAG_SUBCHIPS`; «Toda la sección» emite el código de la sección padre; y un chip de subsección emite su propio código
+- [X] T026 [US3] Ampliar `app/src/androidTest/java/com/jrblanco/boccantabria/ui/HomeNavigationTest.kt` con el recorrido completo: tocar el chip de la sección 2, comprobar que aparece la segunda fila, tocar una subsección y comprobar que la cabecera la nombra. Afirmar que la pantalla está montada **antes** de interactuar tras cada navegación
+- [X] T027 [US3] Ejecutar `./gradlew :app:testDebugUnitTest --tests "*HomeViewModelTest*"` y las dos clases instrumentadas con `-Pandroid.testInstrumentationRunnerArguments.class=…` (recordatorio: `--tests` **no existe** en `connectedDebugAndroidTest`)
 
 **Checkpoint**: US3 completa. Es la historia que más valor añade y la única que crea capacidad nueva.
 
@@ -156,27 +156,27 @@ filtro de la feature 003.
 
 ### Implementación — retirar el filtro
 
-- [ ] T028 [US4] Retirar `query` de `SectionsUiState` en `app/src/main/java/com/jrblanco/boccantabria/ui/sections/SectionsUiState.kt` y actualizar su KDoc: `expanded` deja de ser «el conjunto efectivo» y pasa a ser exactamente lo que la persona ha desplegado. **`selection` se queda**: no tiene relación con el filtro (research D-512)
-- [ ] T029 [US4] En `app/src/main/java/com/jrblanco/boccantabria/ui/sections/SectionsViewModel.kt`, retirar `onQueryChanged`, el flujo `query`, el predicado privado `BocSection.matches` y la auto-apertura por coincidencia; dejar `stateFor` componiendo las nueve filas con **todas** sus hijas
-- [ ] T030 [P] [US4] Retirar de `app/src/main/res/values/strings.xml` los recursos `sections_search_hint` y `sections_empty`
+- [X] T028 [US4] Retirar `query` de `SectionsUiState` en `app/src/main/java/com/jrblanco/boccantabria/ui/sections/SectionsUiState.kt` y actualizar su KDoc: `expanded` deja de ser «el conjunto efectivo» y pasa a ser exactamente lo que la persona ha desplegado. **`selection` se queda**: no tiene relación con el filtro (research D-512)
+- [X] T029 [US4] En `app/src/main/java/com/jrblanco/boccantabria/ui/sections/SectionsViewModel.kt`, retirar `onQueryChanged`, el flujo `query`, el predicado privado `BocSection.matches` y la auto-apertura por coincidencia; dejar `stateFor` componiendo las nueve filas con **todas** sus hijas
+- [X] T030 [P] [US4] Retirar de `app/src/main/res/values/strings.xml` los recursos `sections_search_hint` y `sections_empty`
 
 ### Implementación — la cabecera
 
-- [ ] T031 [P] [US4] Añadir `sections_close` = `Recoger el panel` en `app/src/main/res/values/strings.xml`
-- [ ] T032 [US4] En `app/src/main/java/com/jrblanco/boccantabria/ui/sections/SectionsDrawerContent.kt`, retirar el `OutlinedTextField` y el bloque de estado vacío con su `return@Column`, y con ellos las constantes `TAG_SECTIONS_QUERY` y `TAG_SECTIONS_EMPTY`
-- [ ] T033 [US4] Añadir en ese fichero la cabecera del contrato §4: `Row` con `Image(R.drawable.ic_escudo_cantabria)`, `Text(R.string.app_bar_title)` con `weight(1f)` y un `IconButton` con `R.drawable.ic_arrow_back` al final de la fila que invoca `onClose`, seguida de un `HorizontalDivider`
-- [ ] T034 [US4] Fijar en esa `Image` **tanto `height` como `aspectRatio(79f / 137f)`**: con solo `height`, un `Image` toma el ancho intrínseco del vector —32 dp— y el escudo sale diminuto. Es la trampa que documenta `CLAUDE.md` y que `SplashScreen.Emblem()` ya sortea (research D-511)
-- [ ] T035 [US4] Añadir las constantes `TAG_SECTIONS_HEADER = "sections_header"` y `TAG_SECTIONS_CLOSE = "sections_close"`, y dar al `IconButton` el `contentDescription` de `R.string.sections_close` (FR-023)
-- [ ] T036 [US4] Cambiar la firma de `SectionsDrawerContent` al contrato §4: fuera `onQueryChanged`, dentro `onClose: () -> Unit`
-- [ ] T037 [US4] En `app/src/main/java/com/jrblanco/boccantabria/ui/main/MainShell.kt`, cablear `onClose = { scope.launch { drawerState.close() } }` y retirar el paso de `onQueryChanged`
-- [ ] T038 [US4] Reescribir en ese mismo fichero el comentario de la línea 86 sobre por qué se usa el árbol completo y no `sectionsState.rows`: su motivo —«están filtradas por lo que se teclea en el panel»— deja de existir, pero la conclusión sigue siendo correcta. Se actualiza la razón, no se borra la nota
+- [X] T031 [P] [US4] Añadir `sections_close` = `Recoger el panel` en `app/src/main/res/values/strings.xml`
+- [X] T032 [US4] En `app/src/main/java/com/jrblanco/boccantabria/ui/sections/SectionsDrawerContent.kt`, retirar el `OutlinedTextField` y el bloque de estado vacío con su `return@Column`, y con ellos las constantes `TAG_SECTIONS_QUERY` y `TAG_SECTIONS_EMPTY`
+- [X] T033 [US4] Añadir en ese fichero la cabecera del contrato §4: `Row` con `Image(R.drawable.ic_escudo_cantabria)`, `Text(R.string.app_bar_title)` con `weight(1f)` y un `IconButton` con `R.drawable.ic_arrow_back` al final de la fila que invoca `onClose`, seguida de un `HorizontalDivider`
+- [X] T034 [US4] Fijar en esa `Image` **tanto `height` como `aspectRatio(79f / 137f)`**: con solo `height`, un `Image` toma el ancho intrínseco del vector —32 dp— y el escudo sale diminuto. Es la trampa que documenta `CLAUDE.md` y que `SplashScreen.Emblem()` ya sortea (research D-511)
+- [X] T035 [US4] Añadir las constantes `TAG_SECTIONS_HEADER = "sections_header"` y `TAG_SECTIONS_CLOSE = "sections_close"`, y dar al `IconButton` el `contentDescription` de `R.string.sections_close` (FR-023)
+- [X] T036 [US4] Cambiar la firma de `SectionsDrawerContent` al contrato §4: fuera `onQueryChanged`, dentro `onClose: () -> Unit`
+- [X] T037 [US4] En `app/src/main/java/com/jrblanco/boccantabria/ui/main/MainShell.kt`, cablear `onClose = { scope.launch { drawerState.close() } }` y retirar el paso de `onQueryChanged`
+- [X] T038 [US4] Reescribir en ese mismo fichero el comentario de la línea 86 sobre por qué se usa el árbol completo y no `sectionsState.rows`: su motivo —«están filtradas por lo que se teclea en el panel»— deja de existir, pero la conclusión sigue siendo correcta. Se actualiza la razón, no se borra la nota
 
 ### Pruebas
 
-- [ ] T039 [US4] Podar `app/src/test/java/com/jrblanco/boccantabria/ui/sections/SectionsViewModelTest.kt`: caen los casos de filtrado, auto-apertura, mayúsculas y acentos, filtro por número, filtro vacío y limpiar filtro. **Sobreviven** los de las nueve secciones, los expandibles `["2","4","7","8"]`, el toggle y `onSelectionChanged`. Dejar una nota en la clase diciendo que la funcionalidad se retiró en la feature 013, no que las pruebas estorbaban
-- [ ] T040 [US4] Reescribir `app/src/androidTest/java/com/jrblanco/boccantabria/ui/sections/SectionsDrawerTest.kt`: fuera los dos casos de `TAG_SECTIONS_QUERY` y el de `TAG_SECTIONS_EMPTY`; **nuevos**: la cabecera muestra el escudo y «BOC Cantabria», la flecha invoca `onClose`, y el panel ya no tiene ningún campo de texto. Se conservan los de las nueve secciones, expandir/contraer y seleccionar sección y subsección
-- [ ] T041 [US4] Comprobar que `app/src/androidTest/java/com/jrblanco/boccantabria/ui/HomeNavigationTest.kt` sigue en verde: usa `TAG_MENU` y `sectionToggleTag("2")`, que no cambian, pero la cabecera desplaza las filas
-- [ ] T042 [US4] Ejecutar `./gradlew :app:testDebugUnitTest --tests "*SectionsViewModelTest*"` y las dos clases instrumentadas afectadas
+- [X] T039 [US4] Podar `app/src/test/java/com/jrblanco/boccantabria/ui/sections/SectionsViewModelTest.kt`: caen los casos de filtrado, auto-apertura, mayúsculas y acentos, filtro por número, filtro vacío y limpiar filtro. **Sobreviven** los de las nueve secciones, los expandibles `["2","4","7","8"]`, el toggle y `onSelectionChanged`. Dejar una nota en la clase diciendo que la funcionalidad se retiró en la feature 013, no que las pruebas estorbaban
+- [X] T040 [US4] Reescribir `app/src/androidTest/java/com/jrblanco/boccantabria/ui/sections/SectionsDrawerTest.kt`: fuera los dos casos de `TAG_SECTIONS_QUERY` y el de `TAG_SECTIONS_EMPTY`; **nuevos**: la cabecera muestra el escudo y «BOC Cantabria», la flecha invoca `onClose`, y el panel ya no tiene ningún campo de texto. Se conservan los de las nueve secciones, expandir/contraer y seleccionar sección y subsección
+- [X] T041 [US4] Comprobar que `app/src/androidTest/java/com/jrblanco/boccantabria/ui/HomeNavigationTest.kt` sigue en verde: usa `TAG_MENU` y `sectionToggleTag("2")`, que no cambian, pero la cabecera desplaza las filas
+- [X] T042 [US4] Ejecutar `./gradlew :app:testDebugUnitTest --tests "*SectionsViewModelTest*"` y las dos clases instrumentadas afectadas
 
 **Checkpoint**: US4 completa. El panel lateral queda con cabecera, sin filtro y con cierre explícito.
 
@@ -194,16 +194,16 @@ que el mensaje y la salida hacia Buscar siguen ahí.
 
 ### Implementación
 
-- [ ] T043 [US5] En `app/src/main/res/values/strings.xml`, cambiar `home_search_hint` de `Buscar en esta edición…` a `Filtrar lo que estás viendo…` (FR-028)
-- [ ] T044 [US5] En el mismo fichero, cambiar `app_bar_search` de `Buscar` a `Filtrar esta lista` (FR-029)
-- [ ] T045 [US5] En el mismo fichero, cambiar `home_no_results_title` de `Nada en esta edición` a `Nada en esta lista` (FR-030)
-- [ ] T046 [US5] Comprobar que **no se toca nada más**: `home_no_results_body` ya dice «en lo que estás viendo», y `home_search_globally` (`Buscar en todo el BOC`) es el puente y se conserva literal (FR-031)
+- [X] T043 [US5] En `app/src/main/res/values/strings.xml`, cambiar `home_search_hint` de `Buscar en esta edición…` a `Filtrar lo que estás viendo…` (FR-028)
+- [X] T044 [US5] En el mismo fichero, cambiar `app_bar_search` de `Buscar` a `Filtrar esta lista` (FR-029)
+- [X] T045 [US5] En el mismo fichero, cambiar `home_no_results_title` de `Nada en esta edición` a `Nada en esta lista` (FR-030)
+- [X] T046 [US5] Comprobar que **no se toca nada más**: `home_no_results_body` ya dice «en lo que estás viendo», y `home_search_globally` (`Buscar en todo el BOC`) es el puente y se conserva literal (FR-031)
 
 ### Pruebas
 
-- [ ] T047 [US5] Actualizar los dos literales de `app/src/androidTest/java/com/jrblanco/boccantabria/ui/home/HomeSearchTest.kt`: la línea 44 afirma `"Buscar en esta edición…"` y la 139 afirma `"Nada en esta edición"`. El resto de la clase —incluido el caso del puente hacia Buscar— no se toca
-- [ ] T048 [US5] Comprobar que `app/src/androidTest/java/com/jrblanco/boccantabria/ui/SearchHandoffTest.kt` sigue en verde sin modificarse: es la prueba de que el puente no se ha roto
-- [ ] T049 [US5] Ejecutar ambas clases con `-Pandroid.testInstrumentationRunnerArguments.class=…`
+- [X] T047 [US5] Actualizar los dos literales de `app/src/androidTest/java/com/jrblanco/boccantabria/ui/home/HomeSearchTest.kt`: la línea 44 afirma `"Buscar en esta edición…"` y la 139 afirma `"Nada en esta edición"`. El resto de la clase —incluido el caso del puente hacia Buscar— no se toca
+- [X] T048 [US5] Comprobar que `app/src/androidTest/java/com/jrblanco/boccantabria/ui/SearchHandoffTest.kt` sigue en verde sin modificarse: es la prueba de que el puente no se ha roto
+- [X] T049 [US5] Ejecutar ambas clases con `-Pandroid.testInstrumentationRunnerArguments.class=…`
 
 **Checkpoint**: las cinco historias completas.
 
@@ -211,15 +211,15 @@ que el mensaje y la salida hacia Buscar siguen ahí.
 
 ## Phase 8: Polish & Cross-Cutting Concerns
 
-- [ ] T050 [P] Actualizar `docs/diseno/` — es la fuente de verdad de la interfaz y aquí cambian la fila de filtros rápidos, la cabecera editorial y el panel lateral
-- [ ] T051 [P] Actualizar `CLAUDE.md`: el panel lateral ya no contiene «un campo de filtro, las nueve secciones y sus subsecciones», y conviene anotar que «Todo» pasó a llamarse «Boletín de hoy» y por qué, para que nadie vuelva a plantear la misma pregunta dentro de un año
-- [ ] T052 Ejecutar las comprobaciones de no-regresión de `quickstart.md` §4: `git diff --stat main` sobre `app/schemas/`, `data/`, `domain/`, `gradle/libs.versions.toml` y `app/build.gradle.kts` debe salir **vacío** en los cinco
-- [ ] T053 Puerta 1: `./gradlew :app:assembleDebug`
-- [ ] T054 Puerta 2: `./gradlew :app:testDebugUnitTest`
-- [ ] T055 Puerta 3: `adb shell settings put secure navigation_mode 0` y después `./gradlew :app:connectedDebugAndroidTest` con **un solo dispositivo** conectado o `ANDROID_SERIAL` fijado. Tarda dos o tres horas; lanzarla en segundo plano
-- [ ] T056 Puerta 4: `./gradlew :app:lintDebug`
-- [ ] T057 Recorrido manual completo de `quickstart.md` §3, los treinta y un pasos, en dispositivo o emulador con datos sincronizados. Es lo único que comprueba de verdad lo que esta feature promete, porque lo que se corrige es comprensión
-- [ ] T058 Comprobar en la pantalla más estrecha disponible que «Boletín de hoy» cabe en el chip; si chirría, cambiar la cadena a `Hoy`, que es la alternativa acordada en `spec.md` (Assumptions)
+- [X] T050 [P] Actualizar `docs/diseno/` — es la fuente de verdad de la interfaz y aquí cambian la fila de filtros rápidos, la cabecera editorial y el panel lateral
+- [X] T051 [P] Actualizar `CLAUDE.md`: el panel lateral ya no contiene «un campo de filtro, las nueve secciones y sus subsecciones», y conviene anotar que «Todo» pasó a llamarse «Boletín de hoy» y por qué, para que nadie vuelva a plantear la misma pregunta dentro de un año
+- [X] T052 Ejecutar las comprobaciones de no-regresión de `quickstart.md` §4: `git diff --stat main` sobre `app/schemas/`, `data/`, `domain/`, `gradle/libs.versions.toml` y `app/build.gradle.kts` debe salir **vacío** en los cinco
+- [X] T053 Puerta 1: `./gradlew :app:assembleDebug`
+- [X] T054 Puerta 2: `./gradlew :app:testDebugUnitTest`
+- [X] T055 Puerta 3: `adb shell settings put secure navigation_mode 0` y después `./gradlew :app:connectedDebugAndroidTest` con **un solo dispositivo** conectado o `ANDROID_SERIAL` fijado. Tarda dos o tres horas; lanzarla en segundo plano
+- [X] T056 Puerta 4: `./gradlew :app:lintDebug`
+- [X] T057 Recorrido manual completo de `quickstart.md` §3, los treinta y un pasos, en dispositivo o emulador con datos sincronizados. Es lo único que comprueba de verdad lo que esta feature promete, porque lo que se corrige es comprensión
+- [X] T058 Comprobar en la pantalla más estrecha disponible que «Boletín de hoy» cabe en el chip; si chirría, cambiar la cadena a `Hoy`, que es la alternativa acordada en `spec.md` (Assumptions)
 
 ---
 
@@ -310,3 +310,48 @@ Persona C: US4           (el panel lateral entero)
   se toca.
 - Un commit por tarea o por grupo lógico, en español, imperativo, con prefijo Conventional Commits.
 - Se puede parar en cualquier checkpoint y validar la historia sola.
+
+---
+
+## Cierre — 6 de septiembre de 2026
+
+**Las cuatro puertas en verde**, con un solo dispositivo (`emulator-5554`, Pixel 10, API 37) y
+navegación de tres botones:
+
+| Puerta | Resultado |
+|---|---|
+| `assembleDebug` | ✅ |
+| `testDebugUnitTest` | ✅ **1.193** pruebas, 0 fallos (159 clases) |
+| `connectedDebugAndroidTest` | ✅ **229** pruebas, 0 fallos, en 1 min 35 s |
+| `lintDebug` | ✅ **17** incidencias, las **mismas 17** que en `main`: esta feature no añade ninguna |
+
+**Recorrido manual hecho sobre el emulador con datos reales sincronizados.** Lo que se vio, en el
+orden de `quickstart.md` §3: la cabecera dice `Edición del 4 de septiembre de 2026` sobre `39
+anuncios` —los treinta y nueve de la pregunta que originó la feature, ahora explicados—; «Personal»
+da `Última publicación: 4 de septiembre de 2026` sobre `300 anuncios` y despliega
+`Toda la sección · Nombramientos · Oposiciones · Otros de personal`; «Oposiciones» lleva a
+`Cursos, oposiciones y concursos` con `100 anuncios` y la segunda fila se queda; «Disposiciones»
+—sin hijas— la hace desaparecer sin dejar hueco; 8.1 «Subastas» está vacía y muestra el estado vacío,
+**sin fecha y sin rótulo huérfano**; matar el proceso y volver conserva la subsección y su fila;
+Atrás desde una subsección cierra la aplicación; el panel abre con escudo, `BOC Cantabria` y la
+flecha, sin ningún campo de texto, se recorre entero con las cuatro secciones desplegadas y la flecha
+lo recoge sin navegar; y la lupa dice `Filtrar lo que estás viendo…`, el vacío dice `Nada en esta
+lista` y el puente entrega `zzzqqq` escrito al buscador global.
+
+**T058 resuelto**: «Boletín de hoy» mide 228 px de los 1.080 de ancho. Cabe de sobra; no hace falta
+la alternativa «Hoy».
+
+**Lo que el recorrido NO pudo comprobar, y por qué.** El paso 14 de `quickstart.md` pide girar el
+dispositivo: **la aplicación está bloqueada en vertical** por decisión de producto, así que no
+aplica en teléfono. El invariante que ese paso protege —que la selección y la segunda fila
+sobrevivan a la reconstrucción— queda cubierto por el paso 15, la muerte del proceso, que es el caso
+más duro de los dos y **sí** se ejecutó.
+
+**Un hallazgo ajeno a esta feature, arreglado porque el principio V no admite intermitencias.** La
+tanda completa sacó en rojo `AskScreenTest.the_failure_text_carries_no_code_and_no_provider_name`,
+de la feature 011, que esta feature no toca. Pasaba en aislado tres de tres y fallaba en la tanda.
+Causa: afirmaba sobre `fetchSemanticsNode().config.toString()`, un volcado que lleva identidades de
+objeto impresas como `@1f429ac`, y una de ellas contenía `429`. Al arreglarlo apareció el segundo
+defecto: el nodo etiquetado **no tiene texto propio** —cuelga de sus hijos—, así que la comprobación
+llevaba desde la 011 pasando sin mirar nunca el mensaje que decía proteger. Ahora recorre el
+subárbol. Queda anotado en `CLAUDE.md`.

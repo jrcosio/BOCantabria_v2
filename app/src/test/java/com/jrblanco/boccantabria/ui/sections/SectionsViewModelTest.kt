@@ -10,6 +10,15 @@ import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
+/**
+ * The panel's presentation: what is listed, what is open, and which row is current.
+ *
+ * This class used to be twelve tests; six of them described a text filter over the section list.
+ * Feature 013 removed that field — over nine rows it earned nothing, and a magnifier inside a panel
+ * of sections reads as «search publications» — so those six went **with the functionality they
+ * described**, not to make a build pass. The specification records the removal as a requirement of
+ * its own (FR-024) and as a superseded requirement of feature 003.
+ */
 class SectionsViewModelTest {
 
     private fun viewModel() =
@@ -37,6 +46,21 @@ class SectionsViewModelTest {
     }
 
     @Test
+    fun `every section carries all of its subsections, always`() = runTest {
+        // Nothing prunes the tree any more. Before feature 013 a query could hand back a section
+        // with only its matching children, and this is the assertion that says that is over.
+        viewModel().uiState.test {
+            val children = awaitItem().rows.associate { it.section.code to it.children.map { c -> c.code } }
+
+            assertEquals(listOf("2.1", "2.2", "2.3"), children.getValue("2"))
+            assertEquals(listOf("4.1", "4.2", "4.3", "4.4"), children.getValue("4"))
+            assertEquals(listOf("7.1", "7.2", "7.3", "7.4", "7.5"), children.getValue("7"))
+            assertEquals(listOf("8.1", "8.2"), children.getValue("8"))
+            cancelAndIgnoreRemainingEvents()
+        }
+    }
+
+    @Test
     fun `expanding and collapsing a section toggles it`() = runTest {
         val viewModel = viewModel()
 
@@ -51,98 +75,29 @@ class SectionsViewModelTest {
     }
 
     @Test
-    fun `filtering by text keeps only what matches`() = runTest {
+    fun `several sections can be open at once`() = runTest {
         val viewModel = viewModel()
 
         viewModel.uiState.test {
             awaitItem()
-            viewModel.onQueryChanged("oposi")
-
-            val state = awaitItem()
-            assertEquals(listOf("2"), state.rows.map { it.section.code })
-            assertEquals(listOf("2.2"), state.rows.single().children.map { it.code })
+            viewModel.onToggleExpanded("2")
+            awaitItem()
+            viewModel.onToggleExpanded("7")
+            assertEquals(setOf("2", "7"), awaitItem().expanded)
             cancelAndIgnoreRemainingEvents()
         }
     }
 
     @Test
-    fun `a section whose subsections match opens on its own`() = runTest {
+    fun `what is expanded survives a change of selection`() = runTest {
         val viewModel = viewModel()
 
         viewModel.uiState.test {
             awaitItem()
-            viewModel.onQueryChanged("urbanismo")
-
-            // Leaving the match behind a closed chevron would be the same as not finding it.
-            val state = awaitItem()
-            assertTrue("7" in state.expanded)
-            assertEquals(listOf("7.1"), state.rows.single().children.map { it.code })
-            cancelAndIgnoreRemainingEvents()
-        }
-    }
-
-    @Test
-    fun `a section that matches by its own name keeps all of its subsections`() = runTest {
-        val viewModel = viewModel()
-
-        viewModel.uiState.test {
+            viewModel.onToggleExpanded("4")
             awaitItem()
-            viewModel.onQueryChanged("Autoridades")
-
-            val state = awaitItem()
-            assertEquals(3, state.rows.single().children.size)
-            cancelAndIgnoreRemainingEvents()
-        }
-    }
-
-    @Test
-    fun `filtering ignores case and accents are matched literally`() = runTest {
-        val viewModel = viewModel()
-
-        viewModel.uiState.test {
-            awaitItem()
-            viewModel.onQueryChanged("ECONOMÍA")
-            assertEquals(listOf("4"), awaitItem().rows.map { it.section.code })
-            cancelAndIgnoreRemainingEvents()
-        }
-    }
-
-    @Test
-    fun `filtering by a section number finds it`() = runTest {
-        val viewModel = viewModel()
-
-        viewModel.uiState.test {
-            awaitItem()
-            viewModel.onQueryChanged("4.3")
-            val state = awaitItem()
-            assertEquals(listOf("4"), state.rows.map { it.section.code })
-            assertEquals(listOf("4.3"), state.rows.single().children.map { it.code })
-            cancelAndIgnoreRemainingEvents()
-        }
-    }
-
-    @Test
-    fun `a filter that matches nothing leaves an empty panel, not a broken one`() = runTest {
-        val viewModel = viewModel()
-
-        viewModel.uiState.test {
-            awaitItem()
-            viewModel.onQueryChanged("zzz")
-            assertTrue(awaitItem().rows.isEmpty())
-            cancelAndIgnoreRemainingEvents()
-        }
-    }
-
-    @Test
-    fun `clearing the filter brings the whole tree back`() = runTest {
-        val viewModel = viewModel()
-
-        viewModel.uiState.test {
-            awaitItem()
-            viewModel.onQueryChanged("oposi")
-            awaitItem()
-            viewModel.onQueryChanged("")
-            assertEquals(9, awaitItem().rows.size)
+            viewModel.onSelectionChanged(HomeSelection.Section("2", "2.2"))
+            assertTrue("4" in awaitItem().expanded)
             cancelAndIgnoreRemainingEvents()
         }
     }
@@ -155,22 +110,6 @@ class SectionsViewModelTest {
             assertEquals(HomeSelection.TodaysBulletin, awaitItem().selection)
             viewModel.onSelectionChanged(HomeSelection.Section("2", "2.2"))
             assertEquals(HomeSelection.Section("2", "2.2"), awaitItem().selection)
-            cancelAndIgnoreRemainingEvents()
-        }
-    }
-
-    @Test
-    fun `what was expanded by hand survives a filter and its clearing`() = runTest {
-        val viewModel = viewModel()
-
-        viewModel.uiState.test {
-            awaitItem()
-            viewModel.onToggleExpanded("4")
-            awaitItem()
-            viewModel.onQueryChanged("urbanismo")
-            awaitItem()
-            viewModel.onQueryChanged("")
-            assertTrue("4" in awaitItem().expanded)
             cancelAndIgnoreRemainingEvents()
         }
     }

@@ -83,9 +83,12 @@ fun MainShell(
     val backStackEntry by navController.currentBackStackEntryAsState()
     val snackbarHostState = remember { SnackbarHostState() }
 
-    // The whole tree, not `sectionsState.rows`: those are filtered by whatever is typed in the
-    // panel, so using them would empty the chips and strip the section label off every card the
-    // moment someone searched.
+    // The whole tree, from the use case, and not `sectionsState.rows`. The panel's rows are its
+    // presentation — grouped into parents and children, and carrying whatever it has expanded — and
+    // the chips and the cards need the flat catalogue. Until feature 013 there was a sharper reason:
+    // those rows were filtered by whatever was typed in the panel, so using them emptied the chips
+    // and stripped the section label off every card the moment somebody searched. The filter is
+    // gone; the separation still belongs.
     val sections = remember(getSections) { getSections() }
 
     /**
@@ -178,9 +181,11 @@ fun MainShell(
             ModalDrawerSheet {
                 SectionsDrawerContent(
                     state = sectionsState,
-                    onQueryChanged = sectionsViewModel::onQueryChanged,
                     onToggleExpanded = sectionsViewModel::onToggleExpanded,
                     onSelect = ::openSection,
+                    // The same `scope` and `drawerState` that `openSection` already uses. The panel
+                    // asks to be put away; it does not know how, and must not navigate to do it.
+                    onClose = { scope.launch { drawerState.close() } },
                 )
             }
         },

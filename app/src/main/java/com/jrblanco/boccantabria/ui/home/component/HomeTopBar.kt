@@ -32,6 +32,13 @@ import com.jrblanco.boccantabria.R
 import com.jrblanco.boccantabria.core.ui.theme.BocTheme
 import com.jrblanco.boccantabria.ui.home.HomeSearchState
 
+/**
+ * The bar itself.
+ *
+ * It needs an identity of its own since feature 013: the application name is no longer only
+ * here — the sections panel says it too — so an assertion on the words alone is ambiguous.
+ */
+const val TAG_HOME_TOP_BAR: String = "home_top_bar"
 const val TAG_MENU: String = "home_menu"
 const val TAG_SEARCH: String = "home_search"
 const val TAG_INFO: String = "home_info"
@@ -72,7 +79,7 @@ fun HomeTopBar(
     }
 
     TopAppBar(
-        modifier = modifier,
+        modifier = modifier.testTag(TAG_HOME_TOP_BAR),
         title = {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Image(

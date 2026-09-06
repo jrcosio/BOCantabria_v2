@@ -1,5 +1,8 @@
 package com.jrblanco.boccantabria.ui.ask
 
+import androidx.compose.ui.semantics.SemanticsNode
+import androidx.compose.ui.semantics.SemanticsProperties
+import androidx.compose.ui.semantics.getOrNull
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsEnabled
 import androidx.compose.ui.test.assertIsNotEnabled
@@ -267,18 +270,29 @@ class AskScreenTest {
         composeRule.onAllNodesWithTagCount(TAG_CHAT_RETRY, expected = 0)
     }
 
-    /** FR-031, seen from the screen rather than from the string table. */
+    /**
+     * FR-031, seen from the screen rather than from the string table.
+     *
+     * Reads the **text of the subtree**, not `config.toString()`, which is what it used to do. Two
+     * things were wrong with that. It carried more than the message — property keys, actions and
+     * object identities rendered as `@1f429ac` — and one of those identity hashes containing `429`
+     * failed this test roughly once every few full runs and never in isolation, printing a message
+     * («el mensaje visible menciona 429») that was true of the dump and false of the text. And it
+     * carried **less**: the tagged node holds no text of its own, so the assertion never actually
+     * looked at the message it was written to protect. It passed for the wrong reason and failed for
+     * a different wrong reason.
+     */
     @Test
     fun the_failure_text_carries_no_code_and_no_provider_name() {
         setContent(
             state(status = AiChatStatus.Failed(AiChatError.Unknown, retryableQuestionId = "q1")),
         )
 
-        val text = composeRule.onNodeWithTag(TAG_CHAT_ERROR).fetchSemanticsNode()
-            .config.toString()
+        val text = composeRule.onNodeWithTag(TAG_CHAT_ERROR).fetchSemanticsNode().visibleText()
+        assertTrue("el nodo de error no muestra ningún texto", text.isNotBlank())
         listOf("500", "429", "gemini", "http", "json").forEach { forbidden ->
             assertTrue(
-                "el mensaje visible menciona «$forbidden»",
+                "el mensaje visible «$text» menciona «$forbidden»",
                 !text.lowercase().contains(forbidden),
             )
         }
@@ -388,6 +402,16 @@ class AskScreenTest {
     )
 
     @Suppress("LongParameterList")
+    /**
+     * Every piece of text under a node, its own included.
+     *
+     * The tag sits on a container, and what a reader sees hangs off its children; asking only the
+     * tagged node returns nothing at all.
+     */
+    private fun SemanticsNode.visibleText(): String =
+        (config.getOrNull(SemanticsProperties.Text).orEmpty().map { it.text } +
+            children.map { it.visibleText() }).joinToString(" ").trim()
+
     private fun setContent(
         state: AskUiState,
         onBack: () -> Unit = {},

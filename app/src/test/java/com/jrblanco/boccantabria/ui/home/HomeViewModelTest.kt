@@ -243,6 +243,95 @@ class HomeViewModelTest {
         }
     }
 
+    // ---------- The second row: subsections (feature 013) ----------
+
+    @Test
+    fun `the day's bulletin offers no subsections`() = runTest(dispatcher) {
+        val viewModel = viewModel(FakePublicationRepository())
+
+        viewModel.uiState.test {
+            val state = awaitItem()
+            assertTrue(state.subsections.isEmpty())
+            assertFalse(state.isWholeSectionSelected)
+            cancelAndIgnoreRemainingEvents()
+        }
+    }
+
+    @Test
+    fun `a section without subsections offers none, but is whole-section selected`() = runTest(dispatcher) {
+        val viewModel = viewModel(FakePublicationRepository(), sectionCode = "1")
+
+        viewModel.uiState.test {
+            val state = awaitItem()
+            assertTrue(state.subsections.isEmpty())
+            assertTrue(state.isWholeSectionSelected)
+            cancelAndIgnoreRemainingEvents()
+        }
+    }
+
+    @Test
+    fun `a section with subsections offers them in official order, none marked`() = runTest(dispatcher) {
+        val viewModel = viewModel(FakePublicationRepository(), sectionCode = "2")
+
+        viewModel.uiState.test {
+            val state = awaitItem()
+            assertEquals(listOf("2.1", "2.2", "2.3"), state.subsections.map { it.code })
+            assertTrue(state.subsections.none { it.isSelected })
+            assertTrue(state.isWholeSectionSelected)
+            cancelAndIgnoreRemainingEvents()
+        }
+    }
+
+    @Test
+    fun `only the four sections with subsections offer a second row`() = runTest(dispatcher) {
+        // The whole tree in one assertion: five sections offer nothing and four offer 3, 4, 5 and 2.
+        // A `value` read is enough here — the list is derived in the constructor, so it is already
+        // in the very first state and no emission has to be awaited.
+        val counts = listOf("1", "2", "3", "4", "5", "6", "7", "8", "9").associateWith { code ->
+            viewModel(FakePublicationRepository(), sectionCode = code).uiState.value.subsections.size
+        }
+
+        assertEquals(mapOf("2" to 3, "4" to 4, "7" to 5, "8" to 2), counts.filterValues { it > 0 })
+    }
+
+    @Test
+    fun `the selected subsection is marked and the whole-section entry is not`() = runTest(dispatcher) {
+        val viewModel = viewModel(FakePublicationRepository(), sectionCode = "2", subsectionCode = "2.2")
+
+        viewModel.uiState.test {
+            val state = awaitItem()
+            assertEquals(listOf("2.2"), state.subsections.filter { it.isSelected }.map { it.code })
+            assertFalse(state.isWholeSectionSelected)
+            cancelAndIgnoreRemainingEvents()
+        }
+    }
+
+    @Test
+    fun `with a subsection selected its parent chip stays marked in the first row`() = runTest(dispatcher) {
+        // FR-012. Being in 2.2 is being in 2, and the row above has to keep saying so — otherwise
+        // the second row would look like it belonged to nothing.
+        val viewModel = viewModel(FakePublicationRepository(), sectionCode = "2", subsectionCode = "2.2")
+
+        viewModel.uiState.test {
+            val state = awaitItem()
+            assertEquals(listOf("2"), state.chips.filter { it.isSelected }.map { it.code })
+            assertEquals(listOf("2.2"), state.subsections.filter { it.isSelected }.map { it.code })
+            cancelAndIgnoreRemainingEvents()
+        }
+    }
+
+    @Test
+    fun `the subsections carry their short names, not the official ones`() = runTest(dispatcher) {
+        // The official names do not fit in a chip; that is what shortName exists for.
+        val viewModel = viewModel(FakePublicationRepository(), sectionCode = "8")
+
+        viewModel.uiState.test {
+            val state = awaitItem()
+            assertEquals(listOf("Subastas", "Otros judiciales"), state.subsections.map { it.label })
+            cancelAndIgnoreRemainingEvents()
+        }
+    }
+
     // ---------- Telemetry ----------
 
     @Test

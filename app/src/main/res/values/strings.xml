@@ -24,18 +24,23 @@
     <!-- Barra superior -->
     <string name="app_bar_title">BOC Cantabria</string>
     <string name="app_bar_open_sections">Abrir las secciones del boletín</string>
-    <string name="app_bar_search">Buscar</string>
+    <string name="app_bar_search">Filtrar esta lista</string>
     <string name="app_bar_info">Información</string>
 
     <!-- Cabecera editorial -->
     <string name="home_bulletin_today">Boletín de hoy</string>
+    <!-- La fecha va rotulada: sola no se sabe qué fecha es, y junto al recuento invita a inventarse
+         la relación entre ambos. Son dos rótulos porque la fecha significa dos cosas distintas. -->
+    <string name="home_header_date_bulletin">Edición del %1$s</string>
+    <string name="home_header_date_section">Última publicación: %1$s</string>
     <plurals name="home_publication_count">
         <item quantity="one">%d anuncio</item>
         <item quantity="other">%d anuncios</item>
     </plurals>
 
     <!-- Filtros rápidos -->
-    <string name="chip_all">Todo</string>
+    <string name="chip_todays_bulletin">Boletín de hoy</string>
+    <string name="chip_whole_section">Toda la sección</string>
 
     <!-- Estados del listado -->
     <string name="home_empty_today">Todavía no hay publicaciones para esta fecha.</string>
@@ -51,10 +56,9 @@
     <string name="publication_section">Sección %1$s</string>
 
     <!-- Panel de secciones -->
-    <string name="sections_search_hint">Buscar una sección</string>
     <string name="sections_expand">Desplegar %1$s</string>
     <string name="sections_collapse">Contraer %1$s</string>
-    <string name="sections_empty">Ninguna sección coincide con la búsqueda.</string>
+    <string name="sections_close">Recoger el panel</string>
 
     <!-- Barra de navegación inferior -->
     <string name="nav_home">Inicio</string>
@@ -172,15 +176,18 @@
     <string name="search_sort_newest">Más recientes</string>
     <string name="search_sort_oldest">Más antiguas</string>
 
-    <!-- Búsqueda rápida en Inicio -->
-    <string name="home_search_hint">Buscar en esta edición…</string>
+    <!-- Búsqueda rápida en Inicio. Los textos hablan de «lo que estás viendo» y no de «esta
+         edición»: con una sección elegida lo que se filtra son cientos de anuncios de muchas
+         fechas, y llamarlo edición hacía pensar que la lupa buscaba en todo el BOC. El puente
+         hacia el buscador global (home_search_globally) se conserva literal. -->
+    <string name="home_search_hint">Filtrar lo que estás viendo…</string>
     <string name="home_search_close">Cerrar la búsqueda</string>
     <string name="home_search_clear">Borrar el texto</string>
     <plurals name="home_search_match_count">
         <item quantity="one">%d coincidencia</item>
         <item quantity="other">%d coincidencias</item>
     </plurals>
-    <string name="home_no_results_title">Nada en esta edición</string>
+    <string name="home_no_results_title">Nada en esta lista</string>
     <string name="home_no_results_body">No hay publicaciones que coincidan con «%1$s» en lo que estás viendo.</string>
     <string name="home_search_globally">Buscar en todo el BOC</string>
 

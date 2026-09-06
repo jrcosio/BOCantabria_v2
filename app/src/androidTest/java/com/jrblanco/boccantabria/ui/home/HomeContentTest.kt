@@ -150,10 +150,13 @@ class HomeContentTest {
         )
 
         composeRule.onNodeWithTag(TAG_HEADER).assertIsDisplayed()
-        composeRule.onNodeWithText("Boletín de hoy").assertIsDisplayed()
-        // Anchored to the header: the date also appears on every card, so plain text matching
-        // would find two nodes and say nothing about which one carries it.
-        composeRule.onNode(inHeader(hasText("27 de agosto de 2026"))).assertIsDisplayed()
+        // Anchored to the header, both of them. The date also appears on every card, and since
+        // feature 013 the bulletin chip carries the header's own words too, so plain text matching
+        // finds two nodes and says nothing about which one is being checked.
+        composeRule.onNode(inHeader(hasText("Boletín de hoy"))).assertIsDisplayed()
+        // And the date is labelled now: what the header shows is the whole sentence, which is the
+        // point of FR-004 — a bare date said nothing about what date it was.
+        composeRule.onNode(inHeader(hasText("Edición del 27 de agosto de 2026"))).assertIsDisplayed()
         composeRule.onNodeWithTag(TAG_HEADER_COUNT).assertIsDisplayed()
         composeRule.onNodeWithText("48 anuncios").assertIsDisplayed()
     }

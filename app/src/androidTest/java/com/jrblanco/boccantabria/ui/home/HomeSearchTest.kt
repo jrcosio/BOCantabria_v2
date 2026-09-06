@@ -41,7 +41,7 @@ class HomeSearchTest {
         setContent(HomeUiState(search = HomeSearchState(isOpen = true)))
 
         composeRule.onNodeWithTag(TAG_HOME_SEARCH_FIELD).assertIsDisplayed()
-        composeRule.onNodeWithText("Buscar en esta edición…").assertIsDisplayed()
+        composeRule.onNodeWithText("Filtrar lo que estás viendo…").assertIsDisplayed()
         // El escudo y el menú dejan sitio: es la misma barra cambiando de forma.
         composeRule.onNodeWithTag(TAG_MENU).assertDoesNotExist()
     }
@@ -136,7 +136,7 @@ class HomeSearchTest {
         )
 
         composeRule.onNodeWithTag(TAG_HOME_NO_RESULTS).assertIsDisplayed()
-        composeRule.onNodeWithText("Nada en esta edición").assertIsDisplayed()
+        composeRule.onNodeWithText("Nada en esta lista").assertIsDisplayed()
         composeRule.onNodeWithTag(TAG_HOME_SEARCH_GLOBALLY).assertIsDisplayed()
     }
 

@@ -104,9 +104,12 @@ domain/
 ui/
   splash/         Arranque: SplashScreen + SplashViewModel + SplashUiState
   main/           MainShell: panel lateral + barra inferior alrededor del NavHost interno
-  home/           Inicio: HomeScreen + HomeViewModel + HomeUiState + component/
+  home/           Inicio: HomeScreen + HomeViewModel + HomeUiState + component/. Desde la 013 la
+                  fila de filtros son DOS: secciones arriba y, si la elegida tiene hijas, sus
+                  subsecciones debajo
   info/           Acerca de: InfoScreen + InfoViewModel + InfoUiState; enlaces HTTPS delegados al sistema
-  sections/       Panel lateral de secciones del BOC
+  sections/       Panel lateral de secciones del BOC. Desde la 013, cabecera con escudo, nombre y
+                  flecha de recoger, y SIN campo de filtro: se retiró con toda su lógica
   detail/         Detalle de la publicación + component/ (cabecera, pestañas, ficha)
   pdf/            Visor del documento. ÚNICO sitio que toca androidx.pdf
   share/          ShareState y el envío por FileProvider, común a las tres pantallas
@@ -345,7 +348,28 @@ Composable → ViewModel → UseCase → Repository (interfaz en domain)
   Inicio filtra **en memoria** lo que la pantalla ya tiene, sin tocar el almacén ni la red; la pestaña
   Buscar consulta todo lo almacenado, con filtros y orden. Lo único que comparten es
   `core/util/SearchText`. Entre las dos hay un puente: sin coincidencias en la edición, se ofrece la
-  misma consulta en el buscador global, que la recibe por el argumento de `Route.Search`.
+  misma consulta en el buscador global, que la recibe por el argumento de `Route.Search`. **La 013
+  estuvo a punto de eliminar la lupa** —el propietario la encontraba confusa— y se conservó justamente
+  porque llevarse la lupa se habría llevado el puente. Lo que cambió fueron cuatro cadenas: ahora los
+  textos dicen «lo que estás viendo» y no «esta edición», que con una sección elegida son cientos de
+  anuncios de muchas fechas.
+- **«Todo» decía todo y mostraba una fecha, y por eso hoy se llama «Boletín de hoy» (feature 013).**
+  El primer chip de Inicio consulta `WHERE publication_date = (SELECT MAX(publication_date) …)`: los
+  anuncios de la última edición publicada, de todas las secciones. Un chip de sección, en cambio, **no
+  filtra por fecha** y muestra el archivo entero, que aquí solo crece porque no se borra nunca una
+  publicación. Treinta y nueve frente a trescientos treinta y seis se lee como que la aplicación pierde
+  datos, y quien lo leyó así tenía razón: no hay ningún `LIMIT` ni truncado, el comportamiento era el
+  correcto y **la palabra era la equivocada**. Si vuelve la pregunta, la respuesta es esta y no hay que
+  volver a auditar el DAO. Por lo mismo la fecha de la cabecera va **rotulada**, con dos rótulos
+  distintos según se mire el boletín del día o una sección: sola, invitaba a inventarse su relación con
+  el recuento.
+- **La segunda fila de chips se DERIVA de la selección; no hay estado de expansión (feature 013).**
+  `HomeUiState.subsections` e `isWholeSectionSelected` se calculan una vez, junto a `chips`, y **no
+  entran en el `combine`**: no dependen del almacén, y meterlos allí lo llevaría de cinco flujos a seis,
+  que es la sobrecarga de `vararg` que este mismo fichero documenta. Que sobrevivan al giro y a la
+  muerte del proceso sale gratis, porque la selección ya viaja en `Route.Home`. Si alguien añade un
+  `expandedSection` al estado, el síntoma del día que se desincronice será una fila de subsecciones de
+  una sección que no se está viendo.
 - **Acerca de existe desde la feature 008 y es un destino exterior.** `Route.Info` queda fuera de
   `MainShell`, no muestra navegación inferior y vuelve con Atrás. Sus URL públicas se abren con el
   `UriHandler` de Compose: Android decide entre la aplicación asociada y el navegador. Solo se
@@ -622,6 +646,26 @@ Si añades una clase de dominio sin test, la build falla.
   controla es la **pila de retroceso**, así que es eso lo que se afirma (`SplashBackStackTest`); el
   cierre efectivo es comportamiento de Android y se comprueba a mano según `quickstart.md`.
 
+- **`fetchSemanticsNode().config.toString()` NO es «el texto que se ve», y afirmar sobre ese volcado
+  falla y pasa por motivos igual de equivocados.** `AskScreenTest` comprobaba que el mensaje de error
+  del chat no menciona códigos ni proveedor buscando `429`, `500`, `gemini`… dentro de ese volcado.
+  Dos defectos a la vez. Sobra: el volcado lleva claves de propiedad, acciones e **identidades de
+  objeto** impresas como `@1f429ac`, y una de esas contenía `429` **una de cada pocas tandas
+  completas y nunca en aislado** —el fallo decía «el mensaje visible menciona 429», que era cierto del
+  volcado y falso del mensaje—. Y falta: la etiqueta está en un contenedor y el texto cuelga de sus
+  hijos, así que el volcado del nodo etiquetado **no contenía el mensaje**; la comprobación llevaba
+  desde la feature 011 pasando sin mirar lo que decía proteger. Se afirma sobre el texto del
+  **subárbol**, recorriendo `children`. Diagnosticado en la 013, al salir en rojo en una tanda que no
+  tocaba esa pantalla.
+- **El contenido de un `ModalNavigationDrawer` está en el árbol de semántica aunque el panel esté
+  cerrado.** No se ve, pero se encuentra. Desde la feature 013 la cabecera del panel dice «BOC
+  Cantabria», que es lo mismo que dice la barra superior de Inicio, y eso puso en rojo a
+  `SplashNavigationTest` con `Expected at most 1 node but found 2`. Lo mismo pasó con «Boletín de hoy»,
+  que ahora está en la cabecera editorial **y** en el primer chip. La salida no es debilitar la
+  aserción: es anclarla —`hasText(x) and hasAnyAncestor(hasTestTag(TAG_HOME_TOP_BAR))`—. Para eso la
+  barra superior tiene etiqueta propia desde la 013. **Toda cadena que aparezca en dos sitios de la
+  misma pantalla necesita ancla**, y el fallo no dice «hay dos textos iguales», dice que la aserción es
+  ambigua, que suena a otra cosa.
 - **Un `Card` con `onClick` no traga los toques de sus botones internos.** Se comprueba a
   propósito (`PublicationCardTest`): compartir desde la tarjeta no debe además abrir la
   publicación.
