@@ -14,6 +14,9 @@ import com.jrblanco.boccantabria.domain.usecase.GetBocSectionsUseCase
 import com.jrblanco.boccantabria.domain.usecase.ObserveOfficialDocumentUseCase
 import com.jrblanco.boccantabria.domain.usecase.AcceptAiNoticeUseCase
 import com.jrblanco.boccantabria.domain.usecase.DiscardAiConversationUseCase
+import com.jrblanco.boccantabria.domain.usecase.MarkAlertReadUseCase
+import com.jrblanco.boccantabria.fake.FakeAlertRepository
+import com.jrblanco.boccantabria.fake.alertRule
 import com.jrblanco.boccantabria.domain.usecase.ReleaseAiDocumentSessionUseCase
 import com.jrblanco.boccantabria.domain.usecase.GenerateAiSummaryUseCase
 import com.jrblanco.boccantabria.domain.usecase.ObserveAiNoticeAcceptedUseCase
@@ -54,6 +57,7 @@ class PublicationDetailViewModelTest {
 
     private val dispatcher = StandardTestDispatcher()
     private val analytics = RecordingAnalyticsTracker()
+    private val alerts = FakeAlertRepository(listOf(alertRule(id = "r1")))
     private val documents = FakeDocumentRepository()
     private var online = true
     private val savedRepository = FakeSavedPublicationRepository()
@@ -657,8 +661,25 @@ class PublicationDetailViewModelTest {
             acceptAiNotice = AcceptAiNoticeUseCase(aiSummaries),
             releaseAiDocumentSession = ReleaseAiDocumentSessionUseCase(aiSummaries),
             discardAiConversation = DiscardAiConversationUseCase(aiChat),
+            markAlertRead = MarkAlertReadUseCase(alerts),
             getSections = GetBocSectionsUseCase(BocSectionRepositoryImpl()),
             analytics = analytics,
         )
+    }
+
+    // ---------- Feature 012: opening reads the news ----------
+
+    /** FR-056: wherever it was opened from — notification, Novedades, the bulletin. */
+    @Test
+    fun `opening the detail marks the publication's news read`() = runTest {
+        alerts.seedMatch("r1", "boc:439765")
+
+        val viewModel = viewModel(key = "boc:439765")
+        viewModel.uiState.test {
+            advanceUntilIdle()
+            cancelAndIgnoreRemainingEvents()
+        }
+
+        assertTrue(alerts.calls.contains("markRead(boc:439765)"))
     }
 }

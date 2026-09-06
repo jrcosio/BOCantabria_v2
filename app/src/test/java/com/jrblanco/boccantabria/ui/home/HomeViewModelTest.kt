@@ -12,12 +12,11 @@ import com.jrblanco.boccantabria.domain.usecase.GetBocSectionsUseCase
 import com.jrblanco.boccantabria.domain.usecase.ObserveBulletinHeaderUseCase
 import com.jrblanco.boccantabria.domain.usecase.ObservePublicationsUseCase
 import com.jrblanco.boccantabria.domain.usecase.ObserveSavedKeysUseCase
-import com.jrblanco.boccantabria.domain.usecase.RefreshPublicationsUseCase
 import com.jrblanco.boccantabria.domain.repository.ConnectivityRepository
-import com.jrblanco.boccantabria.domain.usecase.ReleaseUnusedDocumentsUseCase
 import com.jrblanco.boccantabria.domain.usecase.SetPublicationSavedUseCase
 import com.jrblanco.boccantabria.domain.usecase.ShareOfficialDocumentUseCase
 import com.jrblanco.boccantabria.fake.FakeDocumentRepository
+import com.jrblanco.boccantabria.fake.testSyncCycle
 import com.jrblanco.boccantabria.fake.FakePublicationRepository
 import com.jrblanco.boccantabria.fake.FakeSavedPublicationRepository
 import com.jrblanco.boccantabria.fake.RecordingAnalyticsTracker
@@ -541,7 +540,7 @@ class HomeViewModelTest {
             savedStateHandle = handle,
             observePublications = ObservePublicationsUseCase(repository),
             observeHeader = ObserveBulletinHeaderUseCase(repository),
-            refreshPublications = RefreshPublicationsUseCase(repository),
+            runSyncCycle = testSyncCycle(repository),
             getSections = GetBocSectionsUseCase(BocSectionRepositoryImpl()),
             filterPublications = FilterPublicationsUseCase(),
             observeSavedKeys = ObserveSavedKeysUseCase(savedRepository),
@@ -552,7 +551,6 @@ class HomeViewModelTest {
             documents = FakeDocumentRepository(),
             connectivity = object : ConnectivityRepository { override fun isOnline() = true },
         ),
-        releaseUnusedDocuments = ReleaseUnusedDocumentsUseCase(FakeDocumentRepository()),
             analytics = analytics,
         )
     }

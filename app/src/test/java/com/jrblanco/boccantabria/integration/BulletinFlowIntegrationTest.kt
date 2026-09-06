@@ -24,12 +24,11 @@ import com.jrblanco.boccantabria.domain.usecase.GetBocSectionsUseCase
 import com.jrblanco.boccantabria.domain.usecase.ObserveBulletinHeaderUseCase
 import com.jrblanco.boccantabria.domain.usecase.ObservePublicationsUseCase
 import com.jrblanco.boccantabria.domain.usecase.ObserveSavedKeysUseCase
-import com.jrblanco.boccantabria.domain.usecase.RefreshPublicationsUseCase
 import com.jrblanco.boccantabria.domain.repository.ConnectivityRepository
-import com.jrblanco.boccantabria.domain.usecase.ReleaseUnusedDocumentsUseCase
 import com.jrblanco.boccantabria.domain.usecase.SetPublicationSavedUseCase
 import com.jrblanco.boccantabria.domain.usecase.ShareOfficialDocumentUseCase
 import com.jrblanco.boccantabria.fake.FakeDocumentRepository
+import com.jrblanco.boccantabria.fake.testSyncCycle
 import com.jrblanco.boccantabria.fake.RecordingAnalyticsTracker
 import com.jrblanco.boccantabria.fake.TestDispatcherProvider
 import com.jrblanco.boccantabria.ui.home.HomeContentState
@@ -202,7 +201,7 @@ class BulletinFlowIntegrationTest {
         ),
         observePublications = ObservePublicationsUseCase(repository),
         observeHeader = ObserveBulletinHeaderUseCase(repository),
-        refreshPublications = RefreshPublicationsUseCase(repository),
+        runSyncCycle = testSyncCycle(repository),
         filterPublications = FilterPublicationsUseCase(),
             getSections = GetBocSectionsUseCase(BocSectionRepositoryImpl()),
         // Lo guardado tiene su propia prueba de integración: aquí solo tiene que existir para que
@@ -215,7 +214,6 @@ class BulletinFlowIntegrationTest {
             documents = FakeDocumentRepository(),
             connectivity = object : ConnectivityRepository { override fun isOnline() = true },
         ),
-        releaseUnusedDocuments = ReleaseUnusedDocumentsUseCase(FakeDocumentRepository()),
         analytics = analytics,
     )
 

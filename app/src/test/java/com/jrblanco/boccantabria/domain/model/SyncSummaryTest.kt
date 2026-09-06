@@ -60,4 +60,26 @@ class SyncSummaryTest {
     fun `negative counters are rejected`() {
         assertThrows(IllegalArgumentException::class.java) { SyncSummary(succeededFeeds = -1) }
     }
+
+    // ---------- Feature 012: which publications were new ----------
+
+    @Test
+    fun `plus unions the new keys`() {
+        val total = SyncSummary(newKeys = setOf("boc:1")) + SyncSummary(newKeys = setOf("boc:2", "boc:1"))
+
+        assertEquals(setOf("boc:1", "boc:2"), total.newKeys)
+    }
+
+    @Test
+    fun `a baseline stays a baseline after plus`() {
+        assertTrue((SyncSummary(isBaseline = true) + SyncSummary()).isBaseline)
+        assertTrue((SyncSummary() + SyncSummary(isBaseline = true)).isBaseline)
+        assertFalse((SyncSummary() + SyncSummary()).isBaseline)
+    }
+
+    @Test
+    fun `a skipped refresh has no new keys and is not a baseline`() {
+        assertTrue(SyncSummary.SKIPPED.newKeys.isEmpty())
+        assertFalse(SyncSummary.SKIPPED.isBaseline)
+    }
 }

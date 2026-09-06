@@ -16,6 +16,7 @@ import com.jrblanco.boccantabria.domain.usecase.ObserveOfficialDocumentUseCase
 import com.jrblanco.boccantabria.domain.usecase.ObservePublicationUseCase
 import com.jrblanco.boccantabria.domain.usecase.AcceptAiNoticeUseCase
 import com.jrblanco.boccantabria.domain.usecase.DiscardAiConversationUseCase
+import com.jrblanco.boccantabria.domain.usecase.MarkAlertReadUseCase
 import com.jrblanco.boccantabria.domain.usecase.ReleaseAiDocumentSessionUseCase
 import com.jrblanco.boccantabria.domain.usecase.GenerateAiSummaryUseCase
 import com.jrblanco.boccantabria.domain.usecase.ObserveAiNoticeAcceptedUseCase
@@ -26,6 +27,7 @@ import com.jrblanco.boccantabria.domain.usecase.SetPublicationSavedUseCase
 import com.jrblanco.boccantabria.domain.usecase.ShareOfficialDocumentUseCase
 import com.jrblanco.boccantabria.fake.FakePublicationRepository
 import com.jrblanco.boccantabria.fake.FakeAiChatRepository
+import com.jrblanco.boccantabria.fake.FakeAlertRepository
 import com.jrblanco.boccantabria.fake.FakeAiSummaryRepository
 import com.jrblanco.boccantabria.fake.FakeSavedPublicationRepository
 import com.jrblanco.boccantabria.fake.RecordingAnalyticsTracker
@@ -196,6 +198,8 @@ class DocumentFlowIntegrationTest {
             acceptAiNotice = AcceptAiNoticeUseCase(FakeAiSummaryRepository()),
             releaseAiDocumentSession = ReleaseAiDocumentSessionUseCase(FakeAiSummaryRepository()),
             discardAiConversation = DiscardAiConversationUseCase(FakeAiChatRepository()),
+            // Los avisos tienen su propia prueba de integración; aquí solo hace falta que exista.
+            markAlertRead = MarkAlertReadUseCase(FakeAlertRepository()),
             getSections = GetBocSectionsUseCase(BocSectionRepositoryImpl()),
             analytics = RecordingAnalyticsTracker(),
         )

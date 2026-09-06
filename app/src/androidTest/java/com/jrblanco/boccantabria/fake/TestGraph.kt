@@ -6,7 +6,19 @@ import com.jrblanco.boccantabria.core.telemetry.AnalyticsTracker
 import com.jrblanco.boccantabria.core.telemetry.CrashReporter
 import com.jrblanco.boccantabria.core.telemetry.NoOpAnalyticsTracker
 import com.jrblanco.boccantabria.core.telemetry.NoOpCrashReporter
+import com.jrblanco.boccantabria.core.util.AppVisibilityProvider
+import com.jrblanco.boccantabria.data.repository.AlertRepositoryImpl
 import com.jrblanco.boccantabria.data.repository.BocSectionRepositoryImpl
+import com.jrblanco.boccantabria.data.repository.InMemoryInAppAlertStore
+import com.jrblanco.boccantabria.data.repository.NotificationStatusRepositoryImpl
+import com.jrblanco.boccantabria.data.source.local.AlertMatchDao
+import com.jrblanco.boccantabria.data.source.local.AlertRuleDao
+import com.jrblanco.boccantabria.data.source.local.NotificationStatusDataSource
+import com.jrblanco.boccantabria.domain.repository.AlertNotifier
+import com.jrblanco.boccantabria.domain.repository.AlertRepository
+import com.jrblanco.boccantabria.domain.repository.BackgroundSyncScheduler
+import com.jrblanco.boccantabria.domain.repository.InAppAlertStore
+import com.jrblanco.boccantabria.domain.repository.NotificationStatusRepository
 import com.jrblanco.boccantabria.data.repository.PublicationRepositoryImpl
 import com.jrblanco.boccantabria.data.repository.SavedPublicationRepositoryImpl
 import com.jrblanco.boccantabria.data.repository.SearchRepositoryImpl
@@ -50,6 +62,10 @@ import org.koin.dsl.module
 fun testGraphOverrides(
     remote: PublicationRemoteDataSource,
     documents: DocumentRepository = NeverFetchingDocumentRepository(),
+    notifier: AlertNotifier = RecordingAlertNotifier(),
+    visibility: AppVisibilityProvider = FakeAppVisibilityProvider(visible = true),
+    scheduler: BackgroundSyncScheduler = FakeBackgroundSyncScheduler(),
+    notificationStatus: NotificationStatusDataSource = FakeNotificationStatusDataSource(),
 ): List<Module> = listOf(
     module {
         single<BocDatabase> {
@@ -62,6 +78,8 @@ fun testGraphOverrides(
         single<FeedSyncStateDao> { get<BocDatabase>().feedSyncStateDao() }
         single<SavedPublicationDao> { get<BocDatabase>().savedPublicationDao() }
         single<PublicationSearchDao> { get<BocDatabase>().publicationSearchDao() }
+        single<AlertRuleDao> { get<BocDatabase>().alertRuleDao() }
+        single<AlertMatchDao> { get<BocDatabase>().alertMatchDao() }
         single<PublicationRemoteDataSource> { remote }
         single<AnalyticsTracker> { NoOpAnalyticsTracker() }
         single<CrashReporter> { NoOpCrashReporter() }
@@ -88,6 +106,25 @@ fun testGraphOverrides(
                 crashReporter = get(),
             )
         }
+        // Avisos (feature 012): la misma reconstrucción, y por el mismo motivo. Lo que llega a la
+        // plataforma —notificaciones, WorkManager, visibilidad, permiso— se sustituye por dobles.
+        single<AlertRepository> {
+            AlertRepositoryImpl(
+                ruleDao = get(),
+                matchDao = get(),
+                sections = BocSectionRepositoryImpl(),
+                time = get(),
+                dispatchers = get(),
+                analytics = get(),
+                crashReporter = get(),
+            )
+        }
+        single<InAppAlertStore> { InMemoryInAppAlertStore() }
+        single<AlertNotifier> { notifier }
+        single<AppVisibilityProvider> { visibility }
+        single<BackgroundSyncScheduler> { scheduler }
+        single<NotificationStatusDataSource> { notificationStatus }
+        single<NotificationStatusRepository> { NotificationStatusRepositoryImpl(dataSource = get()) }
         single<PublicationRepository> {
             PublicationRepositoryImpl(
                 remoteDataSource = get(),

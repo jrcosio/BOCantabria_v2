@@ -7,12 +7,14 @@ import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.performClick
 import androidx.navigation.compose.rememberNavController
 import com.jrblanco.boccantabria.core.ui.theme.BOCantabriaTheme
+import com.jrblanco.boccantabria.ui.alerts.TAG_ALERTS_SCREEN
 import com.jrblanco.boccantabria.fake.FakeBocRemoteDataSource
 import com.jrblanco.boccantabria.fake.KoinOverrideRule
 import com.jrblanco.boccantabria.fake.testGraphOverrides
 import com.jrblanco.boccantabria.ui.home.TAG_PUBLICATIONS
 import com.jrblanco.boccantabria.ui.home.component.TAG_HEADER
 import com.jrblanco.boccantabria.ui.main.MainShell
+import com.jrblanco.boccantabria.ui.navigation.TAG_BOTTOM_ALERTS
 import com.jrblanco.boccantabria.ui.navigation.TAG_BOTTOM_BAR
 import com.jrblanco.boccantabria.ui.navigation.TAG_BOTTOM_HOME
 import com.jrblanco.boccantabria.ui.navigation.TAG_BOTTOM_SAVED
@@ -23,7 +25,7 @@ import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
 
-/** Three destinations, all of which lead somewhere. */
+/** Four destinations, all of which lead somewhere. */
 class BottomBarNavigationTest {
 
     @get:Rule(order = 0)
@@ -48,12 +50,21 @@ class BottomBarNavigationTest {
     }
 
     @Test
-    fun the_bar_offers_exactly_three_destinations_and_none_of_them_is_alerts() {
+    fun the_bar_offers_four_destinations_and_alerts_opens_its_screen() {
+        // Esta prueba afirmaba hasta la feature 012 que había exactamente tres destinos y que
+        // «Avisos» no existía. La campana volvió con las notificaciones, como el documento de
+        // diseño prometió en su enmienda del 29 de agosto de 2026.
         composeRule.onNodeWithTag(TAG_BOTTOM_BAR).assertIsDisplayed()
         composeRule.onNodeWithTag(TAG_BOTTOM_HOME).assertIsDisplayed()
         composeRule.onNodeWithTag(TAG_BOTTOM_SEARCH).assertIsDisplayed()
         composeRule.onNodeWithTag(TAG_BOTTOM_SAVED).assertIsDisplayed()
-        composeRule.onNodeWithTag("bottom_alerts").assertDoesNotExist()
+        composeRule.onNodeWithTag(TAG_BOTTOM_ALERTS).assertIsDisplayed()
+
+        composeRule.onNodeWithTag(TAG_BOTTOM_ALERTS).performClick()
+        composeRule.onNodeWithTag(TAG_ALERTS_SCREEN).assertIsDisplayed()
+
+        composeRule.onNodeWithTag(TAG_BOTTOM_HOME).performClick()
+        composeRule.onNodeWithTag(TAG_HEADER).assertIsDisplayed()
     }
 
     @Test

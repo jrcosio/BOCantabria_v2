@@ -25,11 +25,10 @@ import com.jrblanco.boccantabria.domain.usecase.ObserveBulletinHeaderUseCase
 import com.jrblanco.boccantabria.domain.usecase.ObservePublicationsUseCase
 import com.jrblanco.boccantabria.domain.usecase.ObserveSavedKeysUseCase
 import com.jrblanco.boccantabria.domain.usecase.ObserveSavedPublicationsUseCase
-import com.jrblanco.boccantabria.domain.usecase.RefreshPublicationsUseCase
-import com.jrblanco.boccantabria.domain.usecase.ReleaseUnusedDocumentsUseCase
 import com.jrblanco.boccantabria.domain.usecase.SetPublicationSavedUseCase
 import com.jrblanco.boccantabria.domain.usecase.ShareOfficialDocumentUseCase
 import com.jrblanco.boccantabria.fake.FakeDocumentRepository
+import com.jrblanco.boccantabria.fake.testSyncCycle
 import com.jrblanco.boccantabria.fake.FakePublicationRemoteDataSource
 import com.jrblanco.boccantabria.fake.RecordingAnalyticsTracker
 import com.jrblanco.boccantabria.fake.TestDispatcherProvider
@@ -252,13 +251,12 @@ class SavedFlowIntegrationTest {
             savedStateHandle = SavedStateHandle(emptyMap()),
             observePublications = ObservePublicationsUseCase(publications),
             observeHeader = ObserveBulletinHeaderUseCase(publications),
-            refreshPublications = RefreshPublicationsUseCase(publications),
+            runSyncCycle = testSyncCycle(publications),
             filterPublications = FilterPublicationsUseCase(),
             getSections = GetBocSectionsUseCase(BocSectionRepositoryImpl()),
             observeSavedKeys = ObserveSavedKeysUseCase(savedRepository),
             setPublicationSaved = SetPublicationSavedUseCase(savedRepository),
             shareDocument = shareUseCase(),
-            releaseUnusedDocuments = ReleaseUnusedDocumentsUseCase(FakeDocumentRepository()),
             analytics = analytics,
         )
     }

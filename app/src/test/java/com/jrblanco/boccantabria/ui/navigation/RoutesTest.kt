@@ -36,4 +36,28 @@ class RoutesTest {
         assertEquals(null, Route.Search().query)
         assertEquals("subvenciones", Route.Search("subvenciones").query)
     }
+
+    // ---------- Feature 012: alerts ----------
+
+    /** The tab travels by name and is optional; the name is restored tolerantly on the other side. */
+    @Test
+    fun `the alerts route carries an optional tab`() {
+        assertEquals(null, Route.Alerts().tab)
+        assertEquals("NEWS", Route.Alerts(tab = "NEWS").tab)
+    }
+
+    /** Create, edit and duplicate are the same screen told apart by which argument is present. */
+    @Test
+    fun `the form route distinguishes create, edit and duplicate`() {
+        val create = Route.AlertForm()
+        val edit = Route.AlertForm(ruleId = "r1")
+        val duplicate = Route.AlertForm(duplicateOf = "r1")
+
+        assertEquals(null, create.ruleId)
+        assertEquals(null, create.duplicateOf)
+        assertEquals("r1", edit.ruleId)
+        assertEquals(null, edit.duplicateOf)
+        assertEquals(null, duplicate.ruleId)
+        assertEquals("r1", duplicate.duplicateOf)
+    }
 }
